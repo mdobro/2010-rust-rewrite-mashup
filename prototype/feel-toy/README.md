@@ -32,6 +32,7 @@ does tricks** with Skate's flick-it motions.
 | Ollie and flip tricks | Right stick flick-it (below) | Space (hold, release), then Q + WASD in the air |
 | Grab | LT / RT, or hold the right stick in the air | E |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
+| Pick the grind (hold while landing on a rail) | Right stick direction | Arrow keys |
 | Respawn | Menu | R |
 | Tuning sliders | View | Tab |
 | Help | | H |
@@ -39,7 +40,8 @@ does tricks** with Skate's flick-it motions.
 ### On a phone
 
 The touch layout turns on by itself on phones and tablets. Landscape works
-best. Each thumb gets a floating stick that appears wherever it lands:
+best. Two fixed sticks sit in the bottom corners. They don't move: a thumb
+anywhere on that half of the screen drives the stick from its centre.
 
 - **Left thumb steers.** You roll on your own (auto-push); push up to go
   faster, pull down to brake, hold left or right in the air to spin.
@@ -87,6 +89,28 @@ stick re-centres under your thumb), so the follow-through doesn't fire another
 one. The trick name pops up and, on touch, the path you drew fades behind your
 thumb.
 
+## Grinds
+
+Like Skate, where you hold the trick stick as you land on a rail or ledge
+lines the board up. Hold it the whole way; move it mid-grind to switch.
+
+| Hold | Grind |
+| --- | --- |
+| Centre (let go) | 50-50 |
+| Down | 5-0 (back truck, nose up) |
+| Up | Nosegrind (front truck, tail up) |
+| Up-right | Crooked grind |
+| Down-right | Smith grind |
+| Left / Right | Boardslide / Lipslide (board across the rail) |
+| Up-left / Down-left | Noseslide / Tailslide |
+
+Slides drag more than truck grinds and score a little more. Near a rail,
+holding the stick picks a grind instead of grabbing. Down then a flick up pops
+you off, as on the ground.
+
+Steering is the same riding regular or fakie: stick right always turns the
+board the same way.
+
 ## Camera
 
 The camera sits low and behind you and swings round to follow your direction
@@ -131,6 +155,8 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   knees bend out over the toes, the hips drop as you crouch, the upper body
   leans into carves and stays partly upright on steep ramps, the knees tuck
   when the board rises in a flip or grab, the back hand reaches the toe edge
-  on a grab, the back foot kicks the ground on each push, and the head looks
-  where you're going.
+  on a grab, and the head looks where you're going. Each push is a full
+  cycle: the front foot turns to the nose, the hips open up, the back foot
+  steps down beside the board, sweeps back along the ground and returns to
+  the tail. Poses blend smoothly and landings compress the knees.
 - Sounds are synthesized with WebAudio; nothing is loaded.

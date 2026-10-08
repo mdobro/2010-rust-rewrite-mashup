@@ -363,6 +363,8 @@ const MOBILE = matchMedia('(pointer: coarse)').matches;
 const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lastTime: -1e9 };
 // what the trick sticks (touch or controller) ask the skater to do
 const FL = { ollie: false, popNow: false, cancelPop: false, flipName: null, grab: false, grabName: null };
+// where the trick stick is held right now (touch, controller or arrow keys): picks the grind
+const GS = { x: 0, y: 0, touchX: 0, touchY: 0 };
 const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, grab: false, grind: false };
 const EDGE_IN = { ollieDown: false, ollieUp: false, flip: false, reset: false, panel: false };
 let prevBtn = {};
@@ -371,7 +373,7 @@ const canvas = document.getElementById('view');
 function isTyping(e) { return e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'); }
 addEventListener('keydown', e => {
   if (isTyping(e)) return;
-  if (['Tab', 'Space', 'ShiftLeft'].includes(e.code)) e.preventDefault();
+  if (['Tab', 'Space', 'ShiftLeft', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (!e.repeat) {
     if (e.code === 'Tab') EDGE_IN.panel = true;
     if (e.code === 'KeyR') EDGE_IN.reset = true;
@@ -412,7 +414,11 @@ function sampleInput() {
     if (nowB[9] && !prevBtn[9]) EDGE_IN.reset = true;
     prevBtn = nowB;
     if (padFlick) flickFeed(padFlick, rx, ry, now);
-  }
+    GS.x = rx; GS.y = ry;
+  } else { GS.x = 0; GS.y = 0; }
+  const ax = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0), ay = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
+  for (const [x, y] of [[ax * 0.71 ** (ax && ay ? 1 : 0), ay * 0.71 ** (ax && ay ? 1 : 0)], [GS.touchX, GS.touchY]])
+    if (Math.hypot(x, y) > Math.hypot(GS.x, GS.y)) { GS.x = x; GS.y = y; }
   const kx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
   const ky = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
   IN.steer = clamp(lx + kx + touch.sx, -1, 1);
@@ -607,7 +613,7 @@ function limbIK(upper, lower, root, target, pole, L1, L2) {
   placeBone(upper, root, _j); placeBone(lower, _j, _e);
 }
 const toRig = local => local.clone().applyQuaternion(pelvis.quaternion).add(pelvis.position);
-const pose = { push: 0, lookFwd: 1 };
+const pose = { push: 0, pushBlend: 0, crouch: 0, lookFwd: 1, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0 };
 
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
@@ -616,7 +622,7 @@ const SPAWN = { pos: V(0, 0, 8), yaw: 0 };
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
-  trick: null, flipBuf: 0, flipName: null, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
+  trick: null, flipBuf: 0, flipName: null, grindKey: 'C', grindSeg: 0, grindSwitchT: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
 };
 const stats = { score: 0, best: 0 };
 const combo = { parts: [], pts: 0, ammo: 0 };
@@ -635,7 +641,7 @@ for (const k of Object.keys(TRICKS)) TRICKS['Nollie ' + k] = { ...TRICKS[k], pts
 const DIR_TRICK = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Hardflip' };
 
 function respawn() {
-  Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, trick: null, bail: 0, crouch: 0, grabT: 0, spin: 0 });
+  Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0 });
   S.pos.y = terrainH(S.pos.x, S.pos.z);
   combo.parts = []; combo.pts = 0; combo.ammo = 0;
   cam.yaw = SPAWN.yaw; cam.pivot.copy(S.pos);
@@ -703,7 +709,7 @@ function stepGround(dt) {
   let [f] = surfaceAxes(n);
   const speed = S.vel.length();
   const vfNow = S.vel.dot(f);
-  const sign = vfNow < -0.3 ? -1 : 1;
+  const sign = 1; // same steering riding regular or fakie
   const rate = lerp(T.turnRate, T.turnRateFast, clamp(speed / Math.max(1, T.pushMax), 0, 1));
   if (S.bail <= 0) S.yaw = wrap(S.yaw - IN.steer * rate * dt * sign);
   let r; [f, r] = surfaceAxes(n);
@@ -718,7 +724,7 @@ function stepGround(dt) {
   if (S.bail <= 0) {
     const autoPush = device === 'touch' && T.autoPush && !IN.brake && Math.abs(vf) < T.autoPushSpeed;
     if ((IN.push || autoPush) && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
-      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push(); pose.push = 0.38;
+      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push(); pose.push = clamp(T.pushInterval * 0.95, 0.25, 0.6);
     }
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
   } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
@@ -836,6 +842,39 @@ function land(g) {
   bankCombo();
 }
 
+// Grinds follow Skate's idea: where you hold the trick stick as you land on the rail lines the board up.
+// pitch: nose up (+); yaw: board turned across the rail; pivot: the point that sits on the rail (board z);
+// drop: lowers the board so the deck, not the trucks, rides the rail (slides).
+const GRINDS = {
+  C:  { name: '50-50',         pitch: 0,     yaw: 0,     pivot: 0,     drop: 0,    fric: 1,   mult: 1 },
+  D:  { name: '5-0',           pitch: 0.2,   yaw: 0,     pivot: 0.27,  drop: 0,    fric: 1.3, mult: 1.15 },
+  U:  { name: 'Nosegrind',     pitch: -0.2,  yaw: 0,     pivot: -0.27, drop: 0,    fric: 1.3, mult: 1.25 },
+  UR: { name: 'Crooked Grind', pitch: -0.14, yaw: 0.38,  pivot: -0.27, drop: 0.02, fric: 1.6, mult: 1.4 },
+  DR: { name: 'Smith Grind',   pitch: -0.16, yaw: -0.38, pivot: 0.27,  drop: 0.02, fric: 1.6, mult: 1.4 },
+  L:  { name: 'Boardslide',    pitch: 0,     yaw: Math.PI / 2,  pivot: 0, drop: 0.1, fric: 2.2, mult: 1.2, slide: true },
+  R:  { name: 'Lipslide',      pitch: 0,     yaw: -Math.PI / 2, pivot: 0, drop: 0.1, fric: 2.2, mult: 1.3, slide: true },
+  UL: { name: 'Noseslide',     pitch: -0.08, yaw: 1.2,   pivot: -0.33, drop: 0.1, fric: 2.4, mult: 1.4, slide: true },
+  DL: { name: 'Tailslide',     pitch: 0.08,  yaw: -1.2,  pivot: 0.33,  drop: 0.1, fric: 2.4, mult: 1.4, slide: true },
+};
+function grindKey() {
+  const m = Math.hypot(GS.x, GS.y);
+  if (m < 0.45) return 'C';
+  return SECT[((Math.round(Math.atan2(-GS.y, GS.x) / (Math.PI / 4)) % 8) + 8) % 8];
+}
+// a rail below and close enough that holding the stick means "grind", not "grab"
+function railNearby() {
+  for (const r of RAILS) {
+    const t = clamp(S.pos.clone().sub(r.a).dot(r.dir) / r.len, 0, 1);
+    const c = r.a.clone().addScaledVector(r.dir, t * r.len);
+    if (Math.hypot(S.pos.x - c.x, S.pos.z - c.z) < 2.2 && S.pos.y - c.y > -0.3 && S.pos.y - c.y < 2.5) return true;
+  }
+  return false;
+}
+function grindSegment() {
+  const g = GRINDS[S.grindKey];
+  if (S.grindSeg > 0.12) addTrick(g.name, Math.round((60 + 180 * S.grindSeg) * g.mult), 1);
+  S.grindSeg = 0;
+}
 function tryRail() {
   let best = null, bestD = Infinity;
   const hv = Math.hypot(S.vel.x, S.vel.z);
@@ -864,6 +903,8 @@ function tryRail() {
   if (S.trick) { addTrick(S.trick.name, S.trick.pts, S.trick.ammo); S.trick = null; }
   if (S.grabT > 0) endGrab();
   S.rail = r; S.railT = t; S.railS = s; S.railTime = 0; S.grounded = false;
+  S.grindKey = grindKey(); S.grindSeg = 0; S.grindSwitchT = 0;
+  if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(GRINDS[S.grindKey].name);
   const dir = r.dir.clone().multiplyScalar(Math.sign(s));
   const keepFakie = Math.cos(wrap(yawOf(V(dir.x, 0, dir.z)) - S.yaw)) < 0;
   S.yaw = keepFakie ? wrap(yawOf(V(dir.x, 0, dir.z)) + Math.PI) : yawOf(V(dir.x, 0, dir.z));
@@ -873,14 +914,19 @@ function tryRail() {
 function stepRail(dt) {
   const r = S.rail;
   S.railS += -T.gravity * r.dir.y * dt;
-  S.railS -= Math.sign(S.railS) * Math.min(Math.abs(S.railS), T.railFriction * dt);
+  S.railS -= Math.sign(S.railS) * Math.min(Math.abs(S.railS), T.railFriction * GRINDS[S.grindKey].fric * dt);
   S.railT += S.railS * dt / r.len;
-  S.railTime += dt;
+  S.railTime += dt; S.grindSeg += dt;
+  // move the stick mid-grind to switch to another grind
+  const k = grindKey();
+  if (k !== S.grindKey) {
+    S.grindSwitchT += dt;
+    if (S.grindSwitchT > 0.1) { grindSegment(); S.grindKey = k; S.grindSwitchT = 0; if (device !== 'kbm') showTrickName(GRINDS[k].name); }
+  } else S.grindSwitchT = 0;
   S.pos.copy(r.a).addScaledVector(r.dir, clamp(S.railT, 0, 1) * r.len); S.pos.y += 0.035;
   S.vel.copy(r.dir).multiplyScalar(S.railS);
   const exitRail = () => {
-    addTrick(r.kind === 'Ledge' ? 'Ledge Grind' : r.kind === 'Coping' ? 'Coping Grind' : r.kind === 'Down rail' ? 'Down Rail' : '50-50 Grind',
-      Math.round(60 + 180 * S.railTime), 1 + Math.floor(S.railTime / 0.4));
+    grindSegment();
     S.rail = null; S.railCool = 0.3; S.grounded = false; S.sinceGround = 0; S.airTime = 0; S.coyoteOk = false; S.popped = false; S.spin = 0;
   };
   if (S.railT <= 0 || S.railT >= 1 || Math.abs(S.railS) < 0.4) { exitRail(); S.vel.y += 0.6; return; }
@@ -952,6 +998,17 @@ function updateVisuals(dt, time) {
   const r = V().crossVectors(f, bu).normalize();
   mBasis.makeBasis(r, bu, f.clone().negate());
   boardOrient.quaternion.setFromRotationMatrix(mBasis);
+  // grind stance: turn and tip the board about the point that rides the rail
+  const gk = S.rail ? GRINDS[S.grindKey] : GRINDS.C;
+  pose.gYaw = dampAngle(pose.gYaw, gk.yaw, 18, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, 18, dt);
+  pose.gPivot = damp(pose.gPivot, gk.pivot, 18, dt); pose.gDrop = damp(pose.gDrop, gk.drop, 18, dt);
+  boardOrient.position.set(0, 0, 0);
+  if (Math.abs(pose.gYaw) + Math.abs(pose.gPitch) + pose.gDrop > 1e-3) {
+    const piv = V(0, 0, pose.gPivot), p0 = piv.clone().applyQuaternion(boardOrient.quaternion);
+    boardOrient.quaternion.multiply(qA.setFromEuler(new THREE.Euler(pose.gPitch, pose.gYaw, 0, 'YXZ')));
+    boardOrient.position.copy(p0).sub(piv.applyQuaternion(boardOrient.quaternion));
+    boardOrient.position.y -= pose.gDrop;
+  }
   // flips and grabs
   boardFlip.rotation.set(0, 0, 0); boardFlip.position.set(0, 0, 0);
   if (S.trick) {
@@ -963,39 +1020,51 @@ function updateVisuals(dt, time) {
   // ---- the rider ----
   S.steerVis = damp(S.steerVis, S.grounded || S.rail ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
   const air = !S.grounded && !S.rail;
-  const crouchAmt = clamp(Math.max(S.crouch * 0.85, S.grabT > 0 ? 1 : 0, S.rail ? 0.3 : 0, air ? 0.25 : 0), 0, 1);
+  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.grabT > 0 ? 1 : 0, S.rail ? 0.3 : 0, air ? 0.25 : 0) + S.landDip * 2.5, 0, 1);
+  pose.crouch = damp(pose.crouch, crouchTarget, S.landDip > 0.05 ? 25 : 14, dt);
+  const crouchAmt = pose.crouch;
   const boardLift = boardFlip.position.y;
+  // push cycle: front foot turns to the nose, hips open up, back foot steps down beside
+  // the board, sweeps back along the ground as the board rolls, then returns to the tail
+  const pushDur = clamp(T.pushInterval * 0.95, 0.25, 0.6);
   pose.push = Math.max(0, pose.push - dt);
+  pose.pushBlend = damp(pose.pushBlend, pose.push > 0 && S.grounded ? 1 : 0, pose.push > 0 ? 12 : 5, dt);
+  const pb = pose.pushBlend, pp = pose.push > 0 ? 1 - pose.push / pushDur : 1;
   // feet over the bolts; during flips and grabs they follow the board up, so the knees tuck
   const baseY = DECK_TOP + 0.075, ankleY = baseY + (S.bail > 0 ? 0 : boardLift);
-  const frontFoot = V(0.02, ankleY, -0.22), backFoot = V(0.02, ankleY, 0.24);
-  if (pose.push > 0) { // back foot steps off and kicks along the ground
-    const p = 1 - pose.push / 0.38;
-    backFoot.set(0.2, ankleY - Math.sin(p * Math.PI) * 0.17, lerp(0.02, 0.5, p));
+  const frontFoot = V(0.02, ankleY, lerp(-0.22, -0.1, pb)), backFoot = V(0.02, ankleY, 0.24);
+  if (pose.push > 0 && S.grounded) {
+    const groundY = 0.075, onGroundZ0 = -0.02, onGroundZ1 = 0.55;
+    if (pp < 0.25) { const k = pp / 0.25; backFoot.set(lerp(0.02, 0.2, k), lerp(ankleY, groundY, k) + Math.sin(k * Math.PI) * 0.08, lerp(0.24, onGroundZ0, k)); }
+    else if (pp < 0.72) { const k = (pp - 0.25) / 0.47; backFoot.set(0.2, groundY, lerp(onGroundZ0, onGroundZ1, k)); }
+    else { const k = (pp - 0.72) / 0.28; backFoot.set(lerp(0.2, 0.02, k), lerp(groundY, ankleY, k) + Math.sin(k * Math.PI) * 0.12, lerp(onGroundZ1, 0.24, k)); }
   }
-  // hips: lower in a crouch, upper body leans over the toes and into carves,
-  // and stays partly upright to gravity on steep ramps
+  // hips: lower in a crouch (and on the standing leg while pushing), upper body leans over the
+  // toes and into carves, opens toward the nose to push, and stays partly upright on steep ramps
   const worldUpLocal = UP.clone().applyQuaternion(boardOrient.quaternion.clone().invert());
-  qA.setFromUnitVectors(UP, UP.clone().lerp(worldUpLocal, S.grounded ? 0.45 : 0.2).normalize());
+  qA.setFromUnitVectors(UP, UP.clone().lerp(worldUpLocal, S.rail ? 0.6 : S.grounded ? 0.45 : 0.2).normalize());
   const grabLean = S.grabT > 0 ? 0.45 : 0;
-  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt + grabLean) - S.steerVis * 0.3);
+  qB.setFromAxisAngle(UP, 0.85 * pb);
+  qA.multiply(qB);
+  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt + grabLean) * (1 - 0.5 * pb) - S.steerVis * 0.3);
   pelvis.quaternion.copy(qA).multiply(qB);
   // the hips don't follow the board up: when it rises the knees tuck instead
-  pelvis.position.set(-0.05 - 0.07 * crouchAmt, baseY + lerp(0.7, 0.46, crouchAmt), 0.01);
+  pelvis.position.set(-0.05 - 0.07 * crouchAmt, baseY + lerp(0.7, 0.46, crouchAmt) - 0.1 * pb, lerp(0.01, -0.1, pb));
   // head turns to look where you're going (back over the other shoulder when fakie)
   pose.lookFwd = damp(pose.lookFwd, fakie() ? -1 : 1, 6, dt);
-  head.rotation.set(0, 1.15 * pose.lookFwd, 0);
-  // legs: knees bend out over the toes
-  for (const [side, foot, hz, pz] of [['front', frontFoot, -0.09, -0.35], ['back', backFoot, 0.09, 0.35]]) {
+  head.rotation.set(0, 1.15 * pose.lookFwd - 0.85 * pb * Math.max(0, pose.lookFwd), 0);
+  // legs: knees bend out over the toes (the front knee points at the nose while pushing)
+  const frontPole = V(lerp(1, 0.3, pb), 0.1, lerp(-0.35, -1, pb)), backPole = V(lerp(1, 0.4, pb), 0.1, 0.35);
+  for (const [side, foot, hz, pole] of [['front', frontFoot, -0.09, frontPole], ['back', backFoot, 0.09, backPole]]) {
     const L = LIMBS[side];
-    limbIK(L.thigh, L.shin, toRig(V(0, -0.04, hz)), foot, V(1, 0.1, pz), THIGH, SHIN);
+    limbIK(L.thigh, L.shin, toRig(V(0, -0.04, hz)), foot, pole, THIGH, SHIN);
     L.shoe.position.set(foot.x + 0.03, foot.y - 0.04, foot.z);
-    L.shoe.rotation.set(0, side === 'front' ? 0.25 : -0.15, 0);
+    L.shoe.rotation.set(0, side === 'front' ? lerp(0.25, 1.35, pb) : lerp(-0.15, 1.2, pb * (pose.push > 0 ? 1 : 0)), 0);
   }
-  // arms out along the board for balance; on a grab the back hand reaches the toe edge
-  const sway = Math.sin(time * 1.7) * 0.03;
-  const frontHand = toRig(V(0.14, 0.12 + sway - S.steerVis * 0.12, -0.52));
-  const backHand = S.grabT > 0 ? V(0.13, DECK_TOP + boardLift + 0.02, 0.04) : toRig(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5));
+  // arms out along the board for balance (swinging with the push); on a grab the back hand reaches the toe edge
+  const sway = Math.sin(time * 1.7) * 0.03, swing = pose.push > 0 ? Math.sin(pp * Math.PI * 2) * 0.18 * pb : 0;
+  const frontHand = toRig(V(0.14 + 0.1 * pb, 0.12 + sway - S.steerVis * 0.12, -0.52 + swing));
+  const backHand = S.grabT > 0 ? V(0.13, DECK_TOP + boardLift + 0.02, 0.04) : toRig(V(0.08 + 0.1 * pb, 0.1 - sway + S.steerVis * 0.12, 0.5 - swing));
   limbIK(LIMBS.front.upper, LIMBS.front.fore, toRig(V(0, 0.5, -0.19)), frontHand, V(-0.3, -1, -0.4), UPPER_ARM, FOREARM);
   limbIK(LIMBS.back.upper, LIMBS.back.fore, toRig(V(0, 0.5, 0.19)), backHand, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
   // bail: topple off the heel side
@@ -1009,7 +1078,7 @@ function updateVisuals(dt, time) {
     rollGain.gain.setTargetAtTime(S.grounded && !S.rail && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
     rollFilter.frequency.setTargetAtTime(200 + sp * 70, t, 0.05);
     grindGain.gain.setTargetAtTime(S.rail ? 0.07 : 0, t, 0.02);
-    grindFilter.frequency.setTargetAtTime(1800 + Math.abs(S.railS) * 120, t, 0.05);
+    grindFilter.frequency.setTargetAtTime((S.rail && GRINDS[S.grindKey].slide ? 700 : 1800) + Math.abs(S.railS) * 120, t, 0.05);
   }
 }
 
@@ -1171,7 +1240,7 @@ function flickFire(f, name, now, flickMs) {
 function flickFeed(f, nx, ny, now) {
   const m = Math.min(1, Math.hypot(nx, ny));
   f.active = m > 0.05;
-  if (f.needCenter) { if (m < 0.35 || f.reanchors) f.needCenter = false; else { f.holdS = null; return; } }
+  if (f.needCenter) { if (m < 0.35) f.needCenter = false; else { f.holdS = null; return; } }
   if (now < f.settleUntil) { f.holdS = null; return; }
   if (m < T.flickRim) { f.holdS = null; return; }
   const sct = SECT[((Math.round(Math.atan2(-ny, nx) / (Math.PI / 4)) % 8) + 8) % 8];
@@ -1200,7 +1269,7 @@ function flickTick(f, now) {
   if (f.loaded && !canPop()) { flickCancel(f); f.onLoaded && f.onLoaded(false); } // rolled off something mid-crouch
   // hold a direction in the air to grab
   const air = !S.grounded && !S.rail;
-  const g = air && f.active && f.holdS && now - f.holdT > T.grabHold * 1000 && now > f.settleUntil && !S.trick;
+  const g = air && f.active && f.holdS && now - f.holdT > T.grabHold * 1000 && now > f.settleUntil && !S.trick && !railNearby();
   if (g && !f.grabbing) { FL.grabName = GRAB_NAMES[f.holdS]; f.onTrick && f.onTrick(FL.grabName); }
   if (g || f.grabbing) FL.grab = !!g;
   f.grabbing = !!g;
@@ -1221,7 +1290,7 @@ function padTick(now) {
 const stickBase = $('stick-base'), stickKnob = $('stick-knob');
 const tBase = $('tstick-base'), tKnob = $('tstick-knob'), stickLabel = $('stick-label');
 const trailCv = $('tstick-trail'), trailCtx = trailCv.getContext('2d');
-const ts = { id: null, ox: 0, oy: 0, x: 0, y: 0, t0: 0, moved: 0, trail: [] };
+const ts = { id: null, x: 0, y: 0, x0: 0, y0: 0, t0: 0, moved: 0, trail: [] };
 let labelT = 0;
 function sayAt(msg, x, y) {
   stickLabel.textContent = msg; labelT = 0.8; stickLabel.style.opacity = 1;
@@ -1229,22 +1298,28 @@ function sayAt(msg, x, y) {
 }
 function showTrickName(name) { sayAt(name, innerWidth / 2, innerHeight * 0.32); }
 const touchFlick = makeFlick({
-  reanchors: true,
-  onTrick: name => { sayAt(name, ts.x, ts.y); tsAnchor(ts.x, ts.y); },
+  onTrick: name => sayAt(name, ts.x, ts.y),
   onLoaded: on => tBase.classList.toggle('loaded', on),
 });
+// The sticks stay where they are: a thumb anywhere on that half of the screen drives the stick from its centre.
+const stickCentres = () => ({
+  left: { x: Math.max(90, innerWidth * 0.13), y: innerHeight - 100 },
+  right: { x: innerWidth - Math.max(110, innerWidth * 0.15), y: innerHeight - 100 },
+});
+function placeKnob(knob, c, nx, ny) { const R = T.stickRadius; knob.style.left = `${c.x + nx * R}px`; knob.style.top = `${c.y + ny * R}px`; }
 function placeIdleStick() {
-  stickBase.classList.add('idle'); stickKnob.hidden = true;
-  stickBase.style.left = `calc(${Math.max(90, innerWidth * 0.13)}px + env(safe-area-inset-left, 0px))`;
-  stickBase.style.top = `${innerHeight - 100}px`;
+  const c = stickCentres().left; stickBase.classList.add('idle'); stickKnob.hidden = false;
+  stickBase.style.left = `${c.x}px`; stickBase.style.top = `${c.y}px`; placeKnob(stickKnob, c, 0, 0);
 }
 function placeIdleTrickStick() {
-  tBase.classList.add('idle'); tBase.classList.remove('loaded'); tKnob.hidden = true;
-  tBase.style.left = `${innerWidth - Math.max(110, innerWidth * 0.15)}px`; tBase.style.top = `${innerHeight - 100}px`;
+  const c = stickCentres().right; tBase.classList.add('idle'); tBase.classList.remove('loaded'); tKnob.hidden = false;
+  tBase.style.left = `${c.x}px`; tBase.style.top = `${c.y}px`; placeKnob(tKnob, c, 0, 0);
 }
-function tsAnchor(x, y) {
-  ts.ox = x; ts.oy = y;
-  tBase.style.left = tKnob.style.left = `${x}px`; tBase.style.top = tKnob.style.top = `${y}px`;
+// thumb position to stick deflection (x right, y down), clamped to the rim
+function deflect(c, x, y) {
+  const R = T.stickRadius; let nx = (x - c.x) / R, ny = (y - c.y) / R; const m = Math.hypot(nx, ny);
+  if (m > 1) { nx /= m; ny /= m; }
+  return [nx, ny];
 }
 function enableTouch() {
   touch.lastTime = performance.now();
@@ -1265,49 +1340,44 @@ canvas.addEventListener('pointerdown', e => {
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
   const now = performance.now();
   if (e.clientX < innerWidth * 0.5 && touch.stickId === null) {
-    touch.stickId = e.pointerId; touch.ox = e.clientX; touch.oy = e.clientY; touch.sx = touch.sy = 0;
-    stickBase.classList.remove('idle'); stickKnob.hidden = false;
-    stickBase.style.left = stickKnob.style.left = `${e.clientX}px`; stickBase.style.top = stickKnob.style.top = `${e.clientY}px`;
+    touch.stickId = e.pointerId; stickBase.classList.remove('idle');
+    moveSteerStick(e.clientX, e.clientY);
   } else if (e.clientX >= innerWidth * 0.5 && ts.id === null) {
-    Object.assign(ts, { id: e.pointerId, x: e.clientX, y: e.clientY, t0: now, moved: 0, trail: [[e.clientX, e.clientY, now]] });
+    Object.assign(ts, { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now, moved: 0, trail: [[e.clientX, e.clientY, now]] });
     touchFlick.toks = []; touchFlick.holdS = null;
-    tBase.classList.remove('idle'); tKnob.hidden = false; tsAnchor(e.clientX, e.clientY);
+    tBase.classList.remove('idle');
+    moveTrickStick(e.clientX, e.clientY, now);
   }
 });
+function moveSteerStick(x, y) {
+  const c = stickCentres().left, [nx, ny] = deflect(c, x, y);
+  touch.sx = nx; touch.sy = ny;
+  if (Math.hypot(nx, ny) < 0.12) touch.sx = touch.sy = 0;
+  placeKnob(stickKnob, c, nx, ny);
+}
+function moveTrickStick(x, y, now) {
+  const c = stickCentres().right, [nx, ny] = deflect(c, x, y);
+  ts.x = x; ts.y = y; ts.moved = Math.max(ts.moved, Math.hypot(x - ts.x0, y - ts.y0));
+  GS.touchX = nx; GS.touchY = ny;
+  placeKnob(tKnob, c, nx, ny);
+  flickFeed(touchFlick, nx, ny, now);
+}
 canvas.addEventListener('pointermove', e => {
   if (e.pointerType !== 'touch') return;
-  const now = performance.now(), R = T.stickRadius;
+  const now = performance.now();
   touch.lastTime = now;
-  if (e.pointerId === touch.stickId) {
-    let dx = e.clientX - touch.ox, dy = e.clientY - touch.oy; const d = Math.hypot(dx, dy);
-    if (d > R) { // the stick follows your thumb so it never runs out of travel
-      touch.ox += dx * (1 - R / d); touch.oy += dy * (1 - R / d); dx = e.clientX - touch.ox; dy = e.clientY - touch.oy;
-      stickBase.style.left = `${touch.ox}px`; stickBase.style.top = `${touch.oy}px`;
-    }
-    touch.sx = dx / R; touch.sy = dy / R;
-    if (Math.hypot(touch.sx, touch.sy) < 0.12) touch.sx = touch.sy = 0;
-    stickKnob.style.left = `${e.clientX}px`; stickKnob.style.top = `${e.clientY}px`;
-  } else if (e.pointerId === ts.id) {
-    ts.x = e.clientX; ts.y = e.clientY; ts.trail.push([ts.x, ts.y, now]);
-    if (now < touchFlick.settleUntil) { tsAnchor(ts.x, ts.y); return; } // let the flick's follow-through die out
-    let dx = ts.x - ts.ox, dy = ts.y - ts.oy; const d = Math.hypot(dx, dy);
-    ts.moved = Math.max(ts.moved, d);
-    if (d > R * 1.3) { ts.ox += dx * (1 - R * 1.3 / d); ts.oy += dy * (1 - R * 1.3 / d); dx = ts.x - ts.ox; dy = ts.y - ts.oy;
-      tBase.style.left = `${ts.ox}px`; tBase.style.top = `${ts.oy}px`; }
-    tKnob.style.left = `${ts.x}px`; tKnob.style.top = `${ts.y}px`;
-    flickFeed(touchFlick, dx / R, dy / R, now);
-  }
+  if (e.pointerId === touch.stickId) moveSteerStick(e.clientX, e.clientY);
+  else if (e.pointerId === ts.id) { ts.trail.push([e.clientX, e.clientY, now]); moveTrickStick(e.clientX, e.clientY, now); }
 });
 function endCanvasPointer(e) {
   const now = performance.now();
   if (e.pointerId === touch.stickId) { touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick(); }
   if (e.pointerId === ts.id) {
-    if (e.type === 'pointerup' && now >= touchFlick.settleUntil) {
-      const R = T.stickRadius; flickFeed(touchFlick, (e.clientX - ts.ox) / R, (e.clientY - ts.oy) / R, now); // a fast flick can end on the lift
-    }
+    if (e.type === 'pointerup') moveTrickStick(e.clientX, e.clientY, now); // a fast flick can end on the lift
     const tap = now - ts.t0 < 200 && ts.moved < 12;
     if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); FL.popNow = true; sayAt('Ollie', ts.x, ts.y); touchFlick.toks = []; }
     flickRelease(touchFlick, now);
+    GS.touchX = GS.touchY = 0;
     ts.id = null; placeIdleTrickStick();
   }
 }
@@ -1361,7 +1431,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
