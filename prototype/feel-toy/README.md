@@ -84,9 +84,8 @@ drifting onto a diagonal doesn't count; a diagonal only changes the trick
 
 Slow stick movement never fires a trick: the flick has to land within the *max
 time from pull to flick* after it leaves the crouch. After a trick the stick has
-to come back to the centre (a controller does this by itself; on touch the
-stick re-centres under your thumb), so the follow-through doesn't fire another
-one. The trick name pops up and, on touch, the path you drew fades behind your
+to come back to the centre before the next one, so the follow-through doesn't
+fire another trick. The trick name pops up and, on touch, the path you drew fades behind your
 thumb.
 
 ## Grinds
