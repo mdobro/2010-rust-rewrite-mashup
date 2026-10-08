@@ -41,26 +41,37 @@ work at once (controller in one hand, mouse in the other is fine).
 
 The touch layout turns on by itself on phones and tablets. Landscape works best.
 
-| Action | Touch |
+Like Skate, tricks live on the same thumb you steer with. Normal movement
+steers; a quick snap down followed by a flick does a trick.
+
+| Action | Touch (left thumb, anywhere on the left half) |
 | --- | --- |
-| Carve / spin in air | Left thumb: a stick appears wherever you touch the left side |
-| Push / brake | You roll on your own (auto-push). Stick up goes faster, down brakes |
-| Aim | Right thumb: drag anywhere outside the trick pad |
-| Ollie | On the trick pad: pull down, then flick up. A faster flick pops higher. A quick tap is a small ollie. Pulling down and letting go without a flick cancels |
-| Ollie into a flip | Flick up-left (kickflip) or up-right (heelflip), or flick up then slide sideways |
-| Flip in the air | Swipe the pad ← kickflip, → heelflip, ↑ impossible, ↓ 360 flip. A tap is a kickflip |
-| Grab | Hold your thumb still on the pad in the air, including right after a flick up |
-| Pop off a rail | Flick up on the pad |
+| Carve / spin in air | Move the stick left / right |
+| Push / brake | You roll on your own (auto-push). Stick up goes faster; easing down brakes |
+| Ollie | Snap down, then flick up. A faster flick pops higher |
+| Kickflip / heelflip | Snap down, then flick up-left / up-right |
+| 360 flip / impossible | Snap down, then flick straight left / right |
+| Cancel a crouch | Snap down and hold past the timing window, or let go |
+| Flip in the air | Quick flick in any direction (← kickflip, → heelflip, ↑ impossible, ↓ 360 flip) |
+| Grab | Hold the stick down in the air |
+| Pop off a rail | Snap down, flick up |
+| Small ollie | Quick tap on the left side (a tap in the air is a kickflip) |
+
+| Action | Touch (right thumb) |
+| --- | --- |
+| Aim | Drag anywhere |
 | Fire | Fires on its own when the reticle is on a target. Hold **Fire** and drag it to aim yourself |
 | Aim down sights | Tap **ADS** to toggle |
 
-The pad draws a fading trail of your gesture and names the trick it read, so a
-misread swipe is easy to spot. Swipe distance, grab hold time and whether a
-tap or a plain release pops are all in the **Touch** tuning section.
+A slow pull down is braking, not a trick: only a snap faster than the
+*snap-down speed window* loads the crouch, and the stick ring turns yellow when
+it does. After each trick the stick ignores your thumb for a moment and
+re-centres under it, so the flick's follow-through doesn't steer or spin you.
+The trick name pops up above the stick.
 
 Touch gets stronger aim assist and camera recentering by default. All of it
 is in the **Touch** section of the tuning panel, along with auto-push speed,
-drag sensitivity and stick size. Phones also get a lighter render (lower
+drag sensitivity, stick size and the flick timings. Phones also get a lighter render (lower
 resolution, smaller shadow map, coarser ground mesh) and vibrate on hits and
 hard landings where the browser allows it.
 
