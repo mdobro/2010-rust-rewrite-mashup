@@ -41,15 +41,14 @@ work at once (controller in one hand, mouse in the other is fine).
 
 The touch layout turns on by itself on phones and tablets. Landscape works best.
 
-Two floating sticks, laid out like Skate's controller: the **left thumb
-steers** and the **right thumb is the flick-it trick stick**. Each stick
-appears wherever that thumb lands.
+**Left thumb: one stick for steering and tricks.** It appears wherever you
+touch the left half. Normal movement steers: carve left / right, spin left /
+right in the air. You roll on your own (auto-push); push up to go faster, ease
+down to brake.
 
-**Left stick:** carve left / right, spin left / right in the air. You roll on
-your own (auto-push); push up to go faster, pull down to brake.
-
-**Right stick (flick-it), regular stance.** Tricks are paths: where the stick
-starts, which way it swings round the bottom, and where you flick it to.
+**Tricks are Skate's flick-it motions on that same stick, done fast**
+(regular stance). A trick is a path: where the stick starts, which way it
+swings round the bottom, and where you flick it to.
 
 | Trick | Motion |
 | --- | --- |
@@ -65,8 +64,8 @@ starts, which way it swings round the bottom, and where you flick it to.
 | FS / BS 360 Pop Shuvit | Down-right, sweep round the bottom to left / down-left round to right |
 | Nollie anything | The same path upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
-| Grab | In the air, hold the stick in one direction (up nosegrab, down tailgrab, left melon, right indy) |
-| Small ollie | Tap the right side |
+| Grab | In the air, hold the stick down (tailgrab) or up (nosegrab). Left / right stay spins |
+| Small ollie | Tap the left side |
 
 The motions follow the Skate flick-it chart as published in GameSpot's trick
 list for EA's current *skate.* (kickflip up-right, 360 flip left → down →
@@ -74,15 +73,18 @@ up-right, hardflip down → down-right → up, and so on). The varial paths aren
 in that list, so they're filled in by the same pattern: where you start round
 the rim sets the shuvit, where you flick sets the flip.
 
-The pull down loads the crouch (the ring turns yellow) and the flick pops; a
-faster flick pops higher. Slow stick movement never counts: the flick has to
-reach its end within the *max time from pull to flick*. After a trick the stick
+A quick snap down loads the crouch (the ring turns yellow) and stops the stick
+braking; the flick pops, and a faster flick pops higher. A slow pull down is
+just braking, but a fast flick up out of a held brake still pops. Slow stick
+movement never fires a trick: the flick has to reach its end within the *max
+time from pull to flick* after leaving the bottom. After a trick the stick
 re-centres under your thumb for a moment so the follow-through doesn't fire
 another one. The trick name pops up above the stick and the path you drew
 fades behind your thumb.
 
-Shooting is automatic when the reticle sits on a target in clear view. Hold
-**Fire** and drag it to aim yourself; **ADS** toggles aim-down-sights.
+**Right thumb: swipe anywhere to aim.** The gun also fires on its own when
+the reticle sits on a target in clear view. Hold **Fire** to shoot (drag it to
+aim at the same time); **ADS** toggles aim-down-sights.
 
 Touch gets stronger aim assist and camera recentering by default. All of it
 is in the **Touch** section of the tuning panel, along with auto-push speed,
