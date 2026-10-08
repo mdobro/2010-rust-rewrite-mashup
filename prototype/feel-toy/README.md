@@ -41,37 +41,52 @@ work at once (controller in one hand, mouse in the other is fine).
 
 The touch layout turns on by itself on phones and tablets. Landscape works best.
 
-Like Skate, tricks live on the same thumb you steer with. Normal movement
-steers; a quick snap down followed by a flick does a trick.
+Two floating sticks, laid out like Skate's controller: the **left thumb
+steers** and the **right thumb is the flick-it trick stick**. Each stick
+appears wherever that thumb lands.
 
-| Action | Touch (left thumb, anywhere on the left half) |
+**Left stick:** carve left / right, spin left / right in the air. You roll on
+your own (auto-push); push up to go faster, pull down to brake.
+
+**Right stick (flick-it), regular stance.** Tricks are paths: where the stick
+starts, which way it swings round the bottom, and where you flick it to.
+
+| Trick | Motion |
 | --- | --- |
-| Carve / spin in air | Move the stick left / right |
-| Push / brake | You roll on your own (auto-push). Stick up goes faster; easing down brakes |
-| Ollie | Snap down, then flick up. A faster flick pops higher |
-| Kickflip / heelflip | Snap down, then flick up-left / up-right |
-| 360 flip / impossible | Snap down, then flick straight left / right |
-| Cancel a crouch | Snap down and hold past the timing window, or let go |
-| Flip in the air | Quick flick in any direction (← kickflip, → heelflip, ↑ impossible, ↓ 360 flip) |
-| Grab | Hold the stick down in the air |
-| Pop off a rail | Snap down, flick up |
-| Small ollie | Quick tap on the left side (a tap in the air is a kickflip) |
+| Ollie | Down, then flick up |
+| Kickflip / Heelflip | Down, then flick up-right / up-left |
+| FS / BS Pop Shuvit | Down, then left / right |
+| Hardflip | Down, down-right, flick up |
+| Inward Heelflip | Down, down-left, flick up |
+| Varial Kickflip / Varial Heelflip | Down-left, down, flick up-right / down-right, down, flick up-left |
+| 360 Flip | Left, swing down, flick up-right |
+| Laserflip | Right, swing down, flick up-left |
+| 360 Hardflip / 360 Inward Heelflip | Right / left, swing down, flick up |
+| FS / BS 360 Pop Shuvit | Down-right, sweep round the bottom to left / down-left round to right |
+| Nollie anything | The same path upside down: push up first, flick down |
+| Late flip | Any flip motion while already in the air |
+| Grab | In the air, hold the stick in one direction (up nosegrab, down tailgrab, left melon, right indy) |
+| Small ollie | Tap the right side |
 
-| Action | Touch (right thumb) |
-| --- | --- |
-| Aim | Drag anywhere |
-| Fire | Fires on its own when the reticle is on a target. Hold **Fire** and drag it to aim yourself |
-| Aim down sights | Tap **ADS** to toggle |
+The motions follow the Skate flick-it chart as published in GameSpot's trick
+list for EA's current *skate.* (kickflip up-right, 360 flip left → down →
+up-right, hardflip down → down-right → up, and so on). The varial paths aren't
+in that list, so they're filled in by the same pattern: where you start round
+the rim sets the shuvit, where you flick sets the flip.
 
-A slow pull down is braking, not a trick: only a snap faster than the
-*snap-down speed window* loads the crouch, and the stick ring turns yellow when
-it does. After each trick the stick ignores your thumb for a moment and
-re-centres under it, so the flick's follow-through doesn't steer or spin you.
-The trick name pops up above the stick.
+The pull down loads the crouch (the ring turns yellow) and the flick pops; a
+faster flick pops higher. Slow stick movement never counts: the flick has to
+reach its end within the *max time from pull to flick*. After a trick the stick
+re-centres under your thumb for a moment so the follow-through doesn't fire
+another one. The trick name pops up above the stick and the path you drew
+fades behind your thumb.
+
+Shooting is automatic when the reticle sits on a target in clear view. Hold
+**Fire** and drag it to aim yourself; **ADS** toggles aim-down-sights.
 
 Touch gets stronger aim assist and camera recentering by default. All of it
 is in the **Touch** section of the tuning panel, along with auto-push speed,
-drag sensitivity, stick size and the flick timings. Phones also get a lighter render (lower
+drag sensitivity, stick size and the trick-stick timings. Phones also get a lighter render (lower
 resolution, smaller shadow map, coarser ground mesh) and vibrate on hits and
 hard landings where the browser allows it.
 
