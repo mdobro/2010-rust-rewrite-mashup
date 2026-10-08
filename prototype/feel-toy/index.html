@@ -557,7 +557,7 @@ for (const r of RAILS) {
 { const ring = new THREE.Mesh(new THREE.TorusGeometry(BOWL.r0 + BOWL.dmax, 0.04, 8, 96), metal);
   ring.rotation.x = Math.PI / 2; ring.position.set(BOWL.x, 0, BOWL.z); scene.add(ring); }
 
-// Skater: capsule body that twists toward your aim, on a board that flips.
+// Skater: a jointed figure standing sideways on a board that flips.
 const skater = new THREE.Group(); scene.add(skater);
 const boardOrient = new THREE.Group(); skater.add(boardOrient);
 const boardFlip = new THREE.Group(); boardOrient.add(boardFlip);
@@ -568,15 +568,47 @@ const boardFlip = new THREE.Group(); boardOrient.add(boardFlip);
   const wheelGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.035, 12); wheelGeo.rotateZ(Math.PI / 2);
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0xf3f1ea, roughness: 0.5 });
   for (const x of [-0.085, 0.085]) for (const z of [-0.27, 0.27]) { const w = new THREE.Mesh(wheelGeo, wheelMat); w.position.set(x, 0.03, z); boardFlip.add(w); } }
-const body = new THREE.Group(); skater.add(body);
+// The rider lives in the board's space (x toe side, y up, -z the nose), so feet stay planted
+// through ramps. Regular stance: left foot forward, chest facing the toe edge.
 const shirt = new THREE.MeshStandardMaterial({ color: 0x3f7fbf, roughness: 0.7 });
 const pants = new THREE.MeshStandardMaterial({ color: 0x2b3440, roughness: 0.8 });
 const skin = new THREE.MeshStandardMaterial({ color: 0xd9a77f, roughness: 0.6 });
-const legs = new THREE.Group(); body.add(legs);
-for (const x of [-0.12, 0.12]) { const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.6, 4, 8), pants); l.position.set(x, 0.4, 0); l.castShadow = true; legs.add(l); }
-const torso = new THREE.Group(); body.add(torso);
-{ const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.38, 4, 10), shirt); t.position.y = 0.28; t.castShadow = true; torso.add(t);
-  const h = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), skin); h.position.y = 0.72; h.castShadow = true; torso.add(h); }
+const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf1efe8, roughness: 0.6 });
+const capMat = new THREE.MeshStandardMaterial({ color: 0xc8432f, roughness: 0.7 });
+const rig = new THREE.Group(); boardOrient.add(rig);
+const DECK_TOP = 0.105, THIGH = 0.44, SHIN = 0.44, UPPER_ARM = 0.31, FOREARM = 0.3;
+const shadowed = m => { m.castShadow = true; return m; };
+const capsule = (r, len, mat) => shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, len - 2 * r), 4, 10), mat));
+const pelvis = new THREE.Group(); rig.add(pelvis);
+{ const hips = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.3), pants)); hips.position.y = 0.02; pelvis.add(hips); }
+const chest = capsule(0.15, 0.46, shirt); chest.position.set(0, 0.3, 0); chest.scale.set(1, 1, 1.25); pelvis.add(chest);
+const head = new THREE.Group(); head.position.set(0, 0.7, 0); pelvis.add(head);
+head.add(shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), skin)));
+{ const cap = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat)); cap.position.y = 0.01; head.add(cap);
+  const brim = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.012, 0.15), capMat)); brim.position.set(0.12, 0.015, 0); head.add(brim); }
+const LIMBS = {};
+for (const side of ['front', 'back']) {
+  LIMBS[side] = {
+    thigh: capsule(0.075, THIGH, pants), shin: capsule(0.06, SHIN, pants),
+    upper: capsule(0.05, UPPER_ARM, shirt), fore: capsule(0.042, FOREARM, skin),
+    shoe: shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.07, 0.1), shoeMat)),
+  };
+  for (const m of Object.values(LIMBS[side])) rig.add(m);
+}
+// two-bone IK: put a capsule pair between root and target, bending towards pole
+const _d = V(), _p = V(), _j = V(), _e = V();
+function placeBone(mesh, a, b) { mesh.position.copy(a).add(b).multiplyScalar(0.5); mesh.quaternion.setFromUnitVectors(UP, _p.copy(b).sub(a).normalize()); }
+function limbIK(upper, lower, root, target, pole, L1, L2) {
+  _d.copy(target).sub(root); const dist = clamp(_d.length(), 0.02, L1 + L2 - 0.001); _d.normalize();
+  const ang = Math.acos(clamp((L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist), -1, 1));
+  const pl = pole.clone().addScaledVector(_d, -pole.dot(_d)).normalize();
+  _j.copy(root).addScaledVector(_d, Math.cos(ang) * L1).addScaledVector(pl, Math.sin(ang) * L1);
+  _e.copy(root).addScaledVector(_d, dist);
+  placeBone(upper, root, _j); placeBone(lower, _j, _e);
+}
+const toRig = local => local.clone().applyQuaternion(pelvis.quaternion).add(pelvis.position);
+const pose = { push: 0, lookFwd: 1 };
+
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
    ============================================================ */
@@ -686,7 +718,7 @@ function stepGround(dt) {
   if (S.bail <= 0) {
     const autoPush = device === 'touch' && T.autoPush && !IN.brake && Math.abs(vf) < T.autoPushSpeed;
     if ((IN.push || autoPush) && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
-      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push();
+      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push(); pose.push = 0.38;
     }
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
   } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
@@ -926,19 +958,49 @@ function updateVisuals(dt, time) {
     const p = clamp(S.trick.t / T.flipTime, 0, 1), a = p * Math.PI * 2;
     boardFlip.rotation.set(0, S.trick.shuv * DEG * p, S.trick.flip * a, 'YXZ');
     boardFlip.position.y = Math.sin(p * Math.PI) * 0.25;
-  } else if (S.grabT > 0) boardFlip.position.y = 0.28;
+  } else if (S.grabT > 0) boardFlip.position.y = 0.38;
   if (S.bail > 0) { boardFlip.rotation.z = (1.2 - S.bail) * 9; boardFlip.position.y = 0.05; }
-  // body faces the direction of travel
-  const tyaw = travelYaw();
-  S.steerVis = damp(S.steerVis, S.grounded ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
-  const tilt = UP.clone().lerp(bu, 0.6).normalize();
-  qA.setFromUnitVectors(UP, tilt); qB.setFromAxisAngle(UP, tyaw);
-  body.quaternion.copy(qA).multiply(qB);
-  body.rotateZ(-S.steerVis * 0.28);
-  const crouchAmt = Math.max(S.crouch * 0.35, S.grabT > 0 ? 0.45 : 0, S.rail ? 0.12 : 0);
-  body.position.copy(bu).multiplyScalar(0.11);
-  legs.scale.y = 1 - crouchAmt; torso.position.y = 0.8 - crouchAmt * 0.55;
-  if (S.bail > 0) { body.rotateX(-clamp((1.2 - S.bail) * 3, 0, 1.45)); }
+  // ---- the rider ----
+  S.steerVis = damp(S.steerVis, S.grounded || S.rail ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
+  const air = !S.grounded && !S.rail;
+  const crouchAmt = clamp(Math.max(S.crouch * 0.85, S.grabT > 0 ? 1 : 0, S.rail ? 0.3 : 0, air ? 0.25 : 0), 0, 1);
+  const boardLift = boardFlip.position.y;
+  pose.push = Math.max(0, pose.push - dt);
+  // feet over the bolts; during flips and grabs they follow the board up, so the knees tuck
+  const baseY = DECK_TOP + 0.075, ankleY = baseY + (S.bail > 0 ? 0 : boardLift);
+  const frontFoot = V(0.02, ankleY, -0.22), backFoot = V(0.02, ankleY, 0.24);
+  if (pose.push > 0) { // back foot steps off and kicks along the ground
+    const p = 1 - pose.push / 0.38;
+    backFoot.set(0.2, ankleY - Math.sin(p * Math.PI) * 0.17, lerp(0.02, 0.5, p));
+  }
+  // hips: lower in a crouch, upper body leans over the toes and into carves,
+  // and stays partly upright to gravity on steep ramps
+  const worldUpLocal = UP.clone().applyQuaternion(boardOrient.quaternion.clone().invert());
+  qA.setFromUnitVectors(UP, UP.clone().lerp(worldUpLocal, S.grounded ? 0.45 : 0.2).normalize());
+  const grabLean = S.grabT > 0 ? 0.45 : 0;
+  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt + grabLean) - S.steerVis * 0.3);
+  pelvis.quaternion.copy(qA).multiply(qB);
+  // the hips don't follow the board up: when it rises the knees tuck instead
+  pelvis.position.set(-0.05 - 0.07 * crouchAmt, baseY + lerp(0.7, 0.46, crouchAmt), 0.01);
+  // head turns to look where you're going (back over the other shoulder when fakie)
+  pose.lookFwd = damp(pose.lookFwd, fakie() ? -1 : 1, 6, dt);
+  head.rotation.set(0, 1.15 * pose.lookFwd, 0);
+  // legs: knees bend out over the toes
+  for (const [side, foot, hz, pz] of [['front', frontFoot, -0.09, -0.35], ['back', backFoot, 0.09, 0.35]]) {
+    const L = LIMBS[side];
+    limbIK(L.thigh, L.shin, toRig(V(0, -0.04, hz)), foot, V(1, 0.1, pz), THIGH, SHIN);
+    L.shoe.position.set(foot.x + 0.03, foot.y - 0.04, foot.z);
+    L.shoe.rotation.set(0, side === 'front' ? 0.25 : -0.15, 0);
+  }
+  // arms out along the board for balance; on a grab the back hand reaches the toe edge
+  const sway = Math.sin(time * 1.7) * 0.03;
+  const frontHand = toRig(V(0.14, 0.12 + sway - S.steerVis * 0.12, -0.52));
+  const backHand = S.grabT > 0 ? V(0.13, DECK_TOP + boardLift + 0.02, 0.04) : toRig(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5));
+  limbIK(LIMBS.front.upper, LIMBS.front.fore, toRig(V(0, 0.5, -0.19)), frontHand, V(-0.3, -1, -0.4), UPPER_ARM, FOREARM);
+  limbIK(LIMBS.back.upper, LIMBS.back.fore, toRig(V(0, 0.5, 0.19)), backHand, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
+  // bail: topple off the heel side
+  rig.rotation.set(0, 0, S.bail > 0 ? clamp((1.2 - S.bail) * 3, 0, 1.35) : 0);
+  rig.position.set(S.bail > 0 ? -clamp((1.2 - S.bail) * 0.6, 0, 0.4) : 0, 0, 0);
   // shadow camera follows the skater
   sun.position.copy(S.pos).add(V(12, 25, 8)); sun.target.position.copy(S.pos);
   // sound beds
@@ -1299,7 +1361,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

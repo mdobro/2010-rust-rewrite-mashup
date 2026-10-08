@@ -125,4 +125,12 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   to (regular or fakie).
 - Tricks score into a combo that's multiplied by the number of tricks in it and
   paid out when you land cleanly. A bail loses it.
+- The rider is a jointed figure in a regular stance (left foot forward, chest
+  to the toe edge) built in the board's own space, so the feet stay planted on
+  the deck through ramps. Legs and arms are solved with two-bone IK each frame:
+  knees bend out over the toes, the hips drop as you crouch, the upper body
+  leans into carves and stays partly upright on steep ramps, the knees tuck
+  when the board rises in a flip or grab, the back hand reaches the toe edge
+  on a grab, the back foot kicks the ground on each push, and the head looks
+  where you're going.
 - Sounds are synthesized with WebAudio; nothing is loaded.
