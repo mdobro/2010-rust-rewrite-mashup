@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Skate Shooter Feel Toy</title>
+<title>Skate Feel Toy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&display=swap">
@@ -103,8 +103,11 @@
     background: rgba(16, 20, 26, .38); border: 2px solid rgba(243, 241, 234, .38); box-sizing: border-box; }
   .tbtn.on { background: rgba(255, 181, 71, .42); border-color: var(--accent); }
   .tbtn small { display: block; font: 9px/1 var(--font-mono); letter-spacing: 0; text-transform: none; color: var(--ink-dim); margin-top: 3px; text-align: center; }
-  #tb-fire { width: 84px; height: 84px; right: calc(24px + env(safe-area-inset-right, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); }
-  #tb-ads { width: 52px; height: 52px; right: calc(40px + env(safe-area-inset-right, 0px)); bottom: calc(128px + env(safe-area-inset-bottom, 0px)); }
+  #tstick-base, #tstick-knob { position: absolute; border-radius: 50%; pointer-events: none; }
+  #tstick-base { width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 2px solid rgba(255,181,71,.45); background: rgba(16,20,26,.22); }
+  #tstick-base.idle { opacity: .45; }
+  #tstick-base.loaded { border-color: var(--accent); background: rgba(255,181,71,.2); }
+  #tstick-knob { width: 54px; height: 54px; margin: -27px 0 0 -27px; background: rgba(255,181,71,.4); border: 2px solid rgba(255,181,71,.8); }
   #stick-base.loaded { border-color: var(--accent); background: rgba(255,181,71,.2); }
   #tstick-trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #stick-label { position: absolute; transform: translate(-50%, -100%); pointer-events: none; white-space: nowrap;
@@ -144,47 +147,34 @@
 <div class="hud" id="hud-tr">
   <div class="label">Score</div>
   <div class="speed" id="score" style="font-size:26px">0</div>
-  <div class="label" id="hits">hits 0 · kills 0 · acc –</div>
-</div>
-<div class="hud" id="hud-br">
-  <div id="ammo-hint"></div>
-  <div class="label"><span id="ammo-count">15</span> rounds</div>
-  <div id="ammo"></div>
+  <div class="label" id="best">best combo –</div>
 </div>
 <div class="hud" id="hud-bl"><span id="device">mouse + keyboard</span> · <kbd>Tab</kbd> / <kbd>View</kbd> tuning · <kbd>H</kbd> help</div>
 
-<div id="reticle"><i class="dot"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
-<div id="hitmarker"></div>
 <div id="combo"><div class="name"></div><div class="pts"></div></div>
 
 <div id="intro">
   <div class="card">
-    <h1>Skate Shooter Feel Toy</h1>
-    <p>One grey park, a few targets, and every movement number on a slider. The only question: does skating while aiming feel good? Tricks reload your gun, but only when you land them.</p>
+    <h1>Skate Feel Toy</h1>
+    <p>One grey park and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
     <ul class="touch-list touch-only">
-      <li><b>Left thumb: one stick for steering and tricks.</b> It appears wherever you touch. Normal movement steers; you roll on your own, push up for speed, ease down to brake.</li>
-      <li><b>Tricks are Skate's flick-it motions, done fast</b>: snap <b>down</b>, flick <b>up</b> for an ollie. Down then up-right: kickflip. Down then up-left: heelflip. Down then left or right: pop shuvit. Steering left, swing down, flick up-right: 360 flip. Snap up and flick down for nollies.</li>
-      <li>In the air the same motions are late flips. Hold left or right to spin, hold down or up to grab.</li>
-      <li><b>Right thumb: swipe anywhere to aim.</b> The gun fires on its own when the reticle is on a target, or hold <b>Fire</b>.</li>
-      <li><b>Shooting</b> fires on its own when the reticle is on a target. Hold <b>Fire</b> and drag it to aim yourself.</li>
-      <li>Landing tricks reloads your gun. Turn the phone sideways for more room.</li>
+      <li><b>Left thumb steers.</b> A stick appears wherever you touch the left side. You roll on your own; push up to go faster, pull down to brake, hold left or right in the air to spin.</li>
+      <li><b>Right thumb does tricks</b>, also wherever you touch. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
+      <li>In the air the same motions are late flips. Hold the right stick in a direction to grab. Tap the right side for a quick ollie.</li>
     </ul>
     <div class="table-wrap desk-only">
     <table class="controls">
-      <tr><th>Action</th><th>Controller</th><th>Mouse + keyboard</th></tr>
+      <tr><th>Action</th><th>Controller</th><th>Keyboard</th></tr>
       <tr><td>Carve / spin in air</td><td>Left stick ← →</td><td><kbd>A</kbd> <kbd>D</kbd></td></tr>
-      <tr><td>Push / brake</td><td>Left stick ↑ ↓</td><td><kbd>W</kbd> <kbd>S</kbd></td></tr>
-      <tr><td>Aim / look</td><td>Right stick</td><td>Mouse</td></tr>
-      <tr><td>Aim down sights / fire</td><td>LT / RT</td><td>Right / left click</td></tr>
-      <tr><td>Ollie (hold to crouch, release to pop)</td><td>A</td><td><kbd>Space</kbd></td></tr>
-      <tr><td>Flip trick (+ stick direction)</td><td>X</td><td><kbd>Q</kbd> (+ WASD)</td></tr>
-      <tr><td>Grab (hold)</td><td>Y</td><td><kbd>E</kbd></td></tr>
+      <tr><td>Push / brake</td><td>A, or left stick ↑ / ↓</td><td><kbd>W</kbd> <kbd>S</kbd></td></tr>
+      <tr><td>Ollie and flip tricks</td><td>Right stick: down, flick up (Skate's flick-it)</td><td><kbd>Space</kbd> (hold, release), then <kbd>Q</kbd> + WASD in the air</td></tr>
+      <tr><td>Grab</td><td>LT / RT, or hold right stick in the air</td><td><kbd>E</kbd></td></tr>
       <tr><td>Grind (auto near rails; or hold)</td><td>LB</td><td><kbd>Shift</kbd></td></tr>
       <tr><td>Respawn</td><td>Menu</td><td><kbd>R</kbd></td></tr>
       <tr><td>Tuning sliders</td><td>View</td><td><kbd>Tab</kbd></td></tr>
     </table>
     </div>
-    <div class="start"><span class="desk-only">Click or press A to skate</span><span class="touch-only">Tap to skate</span></div>
+    <div class="start"><span class="desk-only">Click or press any button to skate</span><span class="touch-only">Tap to skate</span></div>
   </div>
 </div>
 
@@ -205,9 +195,7 @@
 </aside>
 <div id="touch-ui" hidden>
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div><div id="stick-label"></div>
-  <canvas id="tstick-trail"></canvas>
-  <div class="tbtn" id="tb-fire" data-act="fire">Fire<small>drag</small></div>
-  <div class="tbtn" id="tb-ads" data-act="ads">ADS</div>
+  <canvas id="tstick-trail"></canvas><div id="tstick-base" class="idle"></div><div id="tstick-knob" hidden></div>
   <div class="tbar"><button type="button" id="tb-respawn">Respawn</button><button type="button" id="tb-tune">Tuning</button></div>
   <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
 </div>
@@ -225,12 +213,9 @@ const DEFAULTS = {
   popSpeed: 5.6, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
-  camDist: 3.4, camHeight: 1.55, camSide: 0.5, camFov: 72, fovKick: 14, camLag: 12, recenterDelay: 0.7, recenterRate: 2.5,
-  recenterPad: true, recenterMouse: false, adsDist: 1.7, adsFov: 52, shoulder: 0.55,
-  padSens: 3.0, padCurve: 1.8, mouseSens: 2.2, invertY: false, assist: 0.5,
-  trickReload: true, clipSize: 15, fireRate: 9, twistLimit: 120, twistDrag: 2.0,
-  autoPush: true, autoPushSpeed: 6.5, touchSens: 4.5, touchAssist: 0.8, recenterTouch: true, autoFire: true, autoFireCone: 2.5, stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, snapTime: 0.14, flickSettle: 0.15, popWindow: 0.5, grabHold: 0.25, tapOllie: true, holdReleasePops: false,
+  camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
+  autoPush: true, autoPushSpeed: 6.5, stickRadius: 55,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, popWindow: 0.6, grabHold: 0.25, tapOllie: true, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -252,36 +237,25 @@ const SPEC = [
     ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1],
   ]],
   ['Camera', [
-    ['camDist', 'Distance', 1.5, 7, 0.05], ['camHeight', 'Height', 0.5, 3, 0.05], ['camSide', 'Side offset', -1.2, 1.2, 0.05], ['camFov', 'Field of view', 50, 100, 1],
-    ['fovKick', 'FOV boost at speed', 0, 30, 1], ['camLag', 'Follow stiffness', 2, 40, 0.5],
-    ['recenterPad', 'Auto-recenter (controller)', 'bool'], ['recenterMouse', 'Auto-recenter (mouse)', 'bool'],
-    ['recenterDelay', 'Recenter delay (s)', 0, 3, 0.05], ['recenterRate', 'Recenter speed', 0.2, 10, 0.1],
-    ['adsDist', 'ADS distance', 0.6, 4, 0.05], ['adsFov', 'ADS field of view', 30, 80, 1], ['shoulder', 'ADS shoulder offset', 0, 1.2, 0.05],
+    ['camDist', 'Distance behind', 1.5, 8, 0.05], ['camHeight', 'Height', 0.5, 3.5, 0.05], ['camPitch', 'Look down', -0.7, 0.2, 0.01],
+    ['camFov', 'Field of view', 50, 100, 1], ['fovKick', 'FOV boost at speed', 0, 30, 1],
+    ['camLag', 'Position follow stiffness', 2, 40, 0.5], ['camFollow', 'Swing behind you (ground)', 0.5, 15, 0.1],
+    ['camFollowAir', 'Swing behind you (air)', 0, 8, 0.1],
   ]],
-  ['Aiming', [
-    ['padSens', 'Stick sensitivity', 0.5, 8, 0.1], ['padCurve', 'Stick response curve', 1, 3, 0.05],
-    ['mouseSens', 'Mouse sensitivity', 0.3, 8, 0.05], ['invertY', 'Invert look', 'bool'],
-    ['assist', 'Aim assist (controller)', 0, 1, 0.01],
-    ['twistLimit', 'Free twist before drag (°)', 45, 180, 1], ['twistDrag', 'Drag when aiming behind', 0, 8, 0.1],
+  ['Trick stick', [
+    ['flickRim', 'How far counts as a direction', 0.3, 0.95, 0.01],
+    ['flickTime', 'Max time from pull to flick (s)', 0.08, 0.6, 0.01],
+    ['popWindow', 'Crouch held before it cancels (s)', 0.15, 1.5, 0.01],
+    ['flickSettle', 'Ignore stick after a trick (s)', 0, 0.5, 0.01],
+    ['grabHold', 'Hold a direction in the air to grab (s)', 0.05, 0.8, 0.01],
+    ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
   ]],
   ['Touch', [
     ['autoPush', 'Auto-push', 'bool'], ['autoPushSpeed', 'Auto-push cruise speed', 2, 12, 0.25],
-    ['touchSens', 'Drag-to-aim sensitivity', 1, 12, 0.1], ['touchAssist', 'Aim assist (touch)', 0, 1, 0.01],
-    ['recenterTouch', 'Auto-recenter (touch)', 'bool'], ['autoFire', 'Auto-fire on target', 'bool'],
-    ['autoFireCone', 'Auto-fire cone (°)', 0.5, 8, 0.1], ['stickRadius', 'Stick size (px)', 30, 100, 1],
-    ['flickRim', 'Tricks: how far counts as a direction', 0.3, 0.95, 0.01],
-    ['flickTime', 'Tricks: max time from pull to flick (s)', 0.08, 0.6, 0.01],
-    ['snapTime', 'Tricks: snap faster than this to crouch (s)', 0.05, 0.4, 0.01],
-    ['popWindow', 'Tricks: crouch held before it cancels (s)', 0.15, 1.5, 0.01],
-    ['flickSettle', 'Tricks: ignore stick after a trick (s)', 0, 0.5, 0.01],
-    ['grabHold', 'Tricks: hold down / up to grab (s)', 0.05, 0.8, 0.01],
-    ['tapOllie', 'Tap the left side to ollie', 'bool'], ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
-  ]],
-  ['Gun', [
-    ['trickReload', 'Only tricks reload', 'bool'], ['clipSize', 'Clip size', 4, 40, 1], ['fireRate', 'Fire rate (shots/s)', 2, 20, 0.5],
+    ['stickRadius', 'Stick size (px)', 30, 100, 1], ['tapOllie', 'Tap the right side to ollie', 'bool'],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v1';
+const STORE_KEY = 'skate-feel-toy-v2';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -379,18 +353,16 @@ function collideBoxes(p, v) {
 }
 
 /* ============================================================
-   Input: keyboard, mouse and the first connected gamepad,
-   all live at once. Edges are latched until a sim step reads them.
+   Input: keyboard, the first connected gamepad and touch, all live at once.
+   Edges are latched until a sim step reads them.
    ============================================================ */
 const keys = new Set();
-const mouseBtn = [false, false, false];
-let mouseDX = 0, mouseDY = 0, pointerLocked = false, lockFailed = false;
-let device = 'kbm', lastAimDevice = 'kbm';
+let device = 'kbm';
 const MOBILE = matchMedia('(pointer: coarse)').matches;
-const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lookId: null, lx: 0, ly: 0, dx: 0, dy: 0,
-  ollie: false, grab: false, fire: false, ads: false, flipDir: null, lastTime: -1e9, loaded: false };
-const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, flip: false, grab: false, grind: false,
-  fire: false, ads: false, padAimX: 0, padAimY: 0 };
+const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lastTime: -1e9 };
+// what the trick sticks (touch or controller) ask the skater to do
+const FL = { ollie: false, popNow: false, cancelPop: false, flipName: null, grab: false, grabName: null };
+const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, grab: false, grind: false };
 const EDGE_IN = { ollieDown: false, ollieUp: false, flip: false, reset: false, panel: false };
 let prevBtn = {};
 const canvas = document.getElementById('view');
@@ -403,34 +375,13 @@ addEventListener('keydown', e => {
     if (e.code === 'Tab') EDGE_IN.panel = true;
     if (e.code === 'KeyR') EDGE_IN.reset = true;
     if (e.code === 'KeyH') toggleIntro();
+    if (e.code === 'KeyQ') EDGE_IN.flip = true;
   }
-  keys.add(e.code); setDevice('kbm'); lastAimDevice = 'kbm'; startAudio();
+  keys.add(e.code); setDevice('kbm'); startAudio();
 });
 addEventListener('keyup', e => keys.delete(e.code));
-addEventListener('blur', () => { keys.clear(); mouseBtn.fill(false); });
+addEventListener('blur', () => keys.clear());
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-const fromTouch = () => performance.now() - touch.lastTime < 1000;
-canvas.addEventListener('mousedown', e => {
-  if (fromTouch()) return;
-  mouseBtn[e.button] = true; setDevice('kbm'); lastAimDevice = 'kbm'; startAudio();
-  if (!pointerLocked && !lockFailed) requestLock();
-});
-addEventListener('mouseup', e => { if (!fromTouch()) mouseBtn[e.button] = false; });
-addEventListener('mousemove', e => {
-  if (fromTouch()) return;
-  if (!pointerLocked && !lockFailed) return;
-  if (lockFailed && e.target !== canvas) return;
-  mouseDX += e.movementX || 0; mouseDY += e.movementY || 0;
-  if (Math.abs(e.movementX) + Math.abs(e.movementY) > 0) { lastAimDevice = 'kbm'; setDevice('kbm'); }
-});
-function requestLock() {
-  try {
-    const p = canvas.requestPointerLock();
-    if (p && p.catch) p.catch(() => { lockFailed = true; });
-  } catch (_) { lockFailed = true; }
-}
-document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === canvas; });
-document.addEventListener('pointerlockerror', () => { lockFailed = true; });
 
 function stick(x, y, dz) {
   const m = Math.hypot(x, y);
@@ -443,44 +394,40 @@ function readPad() {
   for (const p of pads) if (p && p.connected) return p;
   return null;
 }
+let padFlick = null; // created once the recogniser is defined
 function sampleInput() {
-  const p = readPad();
-  let lx = 0, ly = 0, rx = 0, ry = 0;
+  const p = readPad(), now = performance.now();
+  let lx = 0, ly = 0;
   const pb = i => !!(p && p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.3));
   if (p) {
     [lx, ly] = stick(p.axes[0] || 0, p.axes[1] || 0, 0.15);
-    [rx, ry] = stick(p.axes[2] || 0, p.axes[3] || 0, 0.12);
+    const [rx, ry] = stick(p.axes[2] || 0, p.axes[3] || 0, 0.12);
     const anyBtn = p.buttons.some(b => b.pressed);
     if (lx || ly || rx || ry || anyBtn) { setDevice('pad'); startAudio(); }
-    if (rx || ry) lastAimDevice = 'pad';
-    const now = {}; for (const i of [0, 2, 8, 9]) now[i] = pb(i);
-    if (now[0] && !prevBtn[0] && introVisible) hideIntro();
-    if (now[2] && !prevBtn[2]) EDGE_IN.flip = true;
-    if (now[8] && !prevBtn[8]) EDGE_IN.panel = true;
-    if (now[9] && !prevBtn[9]) EDGE_IN.reset = true;
-    prevBtn = now;
+    const nowB = {}; for (const i of [0, 2, 8, 9]) nowB[i] = pb(i);
+    if (anyBtn && introVisible) hideIntro();
+    if (nowB[2] && !prevBtn[2]) EDGE_IN.flip = true;
+    if (nowB[8] && !prevBtn[8]) EDGE_IN.panel = true;
+    if (nowB[9] && !prevBtn[9]) EDGE_IN.reset = true;
+    prevBtn = nowB;
+    if (padFlick) flickFeed(padFlick, rx, ry, now);
   }
   const kx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
   const ky = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
   IN.steer = clamp(lx + kx + touch.sx, -1, 1);
-  IN.stickY = clamp(ly + ky + (ts.loaded ? 0 : touch.sy), -1, 1);
-  IN.push = IN.stickY < -0.5;
+  IN.stickY = clamp(ly + ky + touch.sy, -1, 1);
+  IN.push = IN.stickY < -0.5 || pb(0);
   IN.brake = IN.stickY > 0.6;
-  const ollie = keys.has('Space') || pb(0) || touch.ollie;
+  const ollie = keys.has('Space') || FL.ollie;
   if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
-  if (!ollie && IN.ollie) { if (touch.cancelPop) S.crouch = 0; else EDGE_IN.ollieUp = true; }
-  touch.cancelPop = false;
-  if (touch.popNow) { touch.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
+  if (!ollie && IN.ollie) { if (FL.cancelPop) S.crouch = 0; else EDGE_IN.ollieUp = true; }
+  FL.cancelPop = false;
+  if (FL.popNow) { FL.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
   IN.ollie = ollie;
-  const flip = keys.has('KeyQ');
-  if (flip && !IN.flipKey) EDGE_IN.flip = true;
-  IN.flipKey = flip;
-  IN.grab = keys.has('KeyE') || pb(3) || touch.grab;
+  const trig = pb(6) || pb(7);
+  IN.grab = keys.has('KeyE') || trig || FL.grab;
+  if (trig && !FL.grab) FL.grabName = pb(7) ? 'Backside Grab' : 'Frontside Grab';
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
-  IN.fire = mouseBtn[0] || pb(7) || touch.fire;
-  IN.ads = mouseBtn[2] || pb(6) || touch.ads;
-  IN.padAimX = rx; IN.padAimY = ry;
-  if (introVisible) { IN.fire = false; IN.ads = false; }
 }
 function trickDir() {
   if (IN.stickY < -0.5) return 'up';
@@ -537,7 +484,7 @@ const sfx = {
 };
 
 /* ============================================================
-   Rendering: scene, park meshes, skater, targets
+   Rendering: scene, park meshes, skater
    ============================================================ */
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
@@ -629,42 +576,6 @@ for (const x of [-0.12, 0.12]) { const l = new THREE.Mesh(new THREE.CapsuleGeome
 const torso = new THREE.Group(); body.add(torso);
 { const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.38, 4, 10), shirt); t.position.y = 0.28; t.castShadow = true; torso.add(t);
   const h = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), skin); h.position.y = 0.72; h.castShadow = true; torso.add(h); }
-const gunPivot = new THREE.Group(); gunPivot.position.set(0.2, 0.42, 0); torso.add(gunPivot);
-const gun = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.5), new THREE.MeshStandardMaterial({ color: 0x1d1f22, roughness: 0.5 }));
-gun.position.set(0, 0, -0.3); gun.castShadow = true; gunPivot.add(gun);
-const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.02, -0.57); gunPivot.add(muzzle);
-const flash = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
-flash.visible = false; muzzle.add(flash);
-
-// Targets: dummies to shoot. Some patrol back and forth.
-const TARGETS = [];
-const dummyMat = () => new THREE.MeshStandardMaterial({ color: 0xe0713f, roughness: 0.7, emissive: 0x000000 });
-function addTarget(x, z, path) {
-  const g = new THREE.Group(); const mat = dummyMat();
-  const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.6, 4, 10), mat); b.position.y = 0.9; b.castShadow = true; g.add(b);
-  const h = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), mat); h.position.y = 1.6; h.castShadow = true; g.add(h);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.12, 16), new THREE.MeshStandardMaterial({ color: 0x3a3f46 })); base.position.y = 0.06; g.add(base);
-  scene.add(g);
-  TARGETS.push({ g, mat, home: V(x, 0, z), path, phase: Math.random() * 6, hp: 3, dead: 0, flash: 0, pos: V(x, terrainH(x, z), z) });
-}
-addTarget(0, -26.5); addTarget(-12, -27); addTarget(10, -27);   // on the north deck
-addTarget(BOWL.x, BOWL.z);                                        // in the bowl
-addTarget(-18, 0.5);                                              // on the platform
-addTarget(27, 6);                                                 // east deck
-addTarget(0, -9, { axis: 'x', span: 9, speed: 2.2 });             // patrolling
-addTarget(-2, 18, { axis: 'x', span: 12, speed: 3.0 });
-addTarget(15, 0, { axis: 'z', span: 8, speed: 1.6 });
-
-const tracers = [];
-for (let i = 0; i < 10; i++) {
-  const geo = new THREE.BufferGeometry().setFromPoints([V(), V()]);
-  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0 }));
-  line.frustumCulled = false; scene.add(line); tracers.push({ line, life: 0 });
-}
-let tracerIdx = 0;
-const impactMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe2a0 }));
-impactMesh.visible = false; scene.add(impactMesh);
-
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
    ============================================================ */
@@ -674,8 +585,7 @@ const S = {
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
   trick: null, flipBuf: 0, flipName: null, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
 };
-const aim = { yaw: 0, pitch: -0.12, ads: 0, idle: 9 };
-const stats = { score: 0, shots: 0, hits: 0, kills: 0, ammo: T.clipSize, fireCool: 0, reloadT: 0 };
+const stats = { score: 0, best: 0 };
 const combo = { parts: [], pts: 0, ammo: 0 };
 // flip: turns around the board's long axis (+ kickflip way, - heelflip way). shuv: board spin in degrees (+ backside).
 const TRICKS = {
@@ -694,9 +604,8 @@ const DIR_TRICK = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: '
 function respawn() {
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, trick: null, bail: 0, crouch: 0, grabT: 0, spin: 0 });
   S.pos.y = terrainH(S.pos.x, S.pos.z);
-  aim.yaw = SPAWN.yaw; aim.pitch = -0.12;
   combo.parts = []; combo.pts = 0; combo.ammo = 0;
-  camState.pivot.copy(S.pos);
+  cam.yaw = SPAWN.yaw; cam.pivot.copy(S.pos);
 }
 const travelYaw = () => {
   if (S.rail) return yawOf(S.rail.dir.clone().multiplyScalar(Math.sign(S.railS) || 1));
@@ -716,9 +625,8 @@ function addTrick(name, pts, ammo) { combo.parts.push(name); combo.pts += pts; c
 function bankCombo() {
   if (!combo.parts.length) return;
   const mult = combo.parts.length, total = Math.round(combo.pts * mult);
-  stats.score += total;
-  if (T.trickReload) stats.ammo = Math.min(T.clipSize, stats.ammo + combo.ammo);
-  showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}${T.trickReload && combo.ammo ? `  ·  +${combo.ammo} rounds` : ''}`, 'landed');
+  stats.score += total; stats.best = Math.max(stats.best, total);
+  showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}`, 'landed');
   combo.parts = []; combo.pts = 0; combo.ammo = 0; combo.sketchy = false;
 }
 function doBail(reason) {
@@ -782,8 +690,6 @@ function stepGround(dt) {
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
   } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
   vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.rollFriction * dt);
-  const twist = Math.abs(wrap(aim.yaw - travelYaw())) / DEG;
-  if (twist > T.twistLimit && Math.abs(vf) > 1) vf -= Math.sign(vf) * T.twistDrag * dt;
   S.vel.copy(f).multiplyScalar(vf).addScaledVector(r, newVl);
 
   if (S.bail <= 0) {
@@ -859,7 +765,7 @@ function moveAir(dt) {
   }
 }
 function endGrab() {
-  if (S.grabT > 0.12) addTrick(touch.grabName || (S.grabT > 0.6 ? 'Long Grab' : 'Grab'), Math.round(120 * S.grabT + 40), 1 + Math.floor(S.grabT / 0.3));
+  if (S.grabT > 0.12) addTrick(FL.grabName || (S.grabT > 0.6 ? 'Long Grab' : 'Grab'), Math.round(120 * S.grabT + 40), 1 + Math.floor(S.grabT / 0.3));
   S.grabT = 0;
 }
 
@@ -957,7 +863,7 @@ function stepRail(dt) {
 function step(dt) {
   if (EDGE_IN.reset) { EDGE_IN.reset = false; respawn(); }
   if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
-  if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipName = touch.flipName; touch.flipName = null; }
+  if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipName = FL.flipName; FL.flipName = null; }
   S.flipBuf -= dt;
   S.railCool -= dt;
   if (S.bail > 0) {
@@ -972,174 +878,36 @@ function step(dt) {
 }
 
 /* ============================================================
-   Aim, camera and shooting
+   Camera: low and behind, swinging round to follow where you're going
    ============================================================ */
-const camState = { pivot: S.pos.clone(), dip: 0 };
-const ray = new THREE.Ray();
-function aimAssistTarget(origin, dir, cone = 6) {
-  let best = null, bestA = cone * DEG;
-  for (const t of TARGETS) {
-    if (t.dead > 0) continue;
-    const c = t.pos.clone().add(V(0, 1.1, 0));
-    const to = c.clone().sub(origin); const dist = to.length(); if (dist > 45) continue;
-    const a = to.normalize().angleTo(dir);
-    if (a < bestA) { bestA = a; best = c; }
-  }
-  return best;
-}
-function updateAim(dt) {
-  const sens = T.mouseSens * 0.001;
-  let dyaw = -mouseDX * sens, dpitch = -mouseDY * sens * (T.invertY ? -1 : 1);
-  mouseDX = mouseDY = 0;
-  const assist = lastAimDevice === 'pad' ? T.assist : lastAimDevice === 'touch' ? T.touchAssist : 0;
-  if (touch.dx || touch.dy) {
-    const ts = T.touchSens * 0.001 * (aim.ads > 0.5 ? 0.6 : 1);
-    const camFwd = V(); camera.getWorldDirection(camFwd);
-    const slow = assist > 0 && aimAssistTarget(camera.position, camFwd) ? 1 - 0.5 * assist : 1;
-    dyaw += -touch.dx * ts * slow; dpitch += -touch.dy * ts * 0.8 * slow * (T.invertY ? -1 : 1);
-    touch.dx = touch.dy = 0;
-  }
-  const m = Math.hypot(IN.padAimX, IN.padAimY);
-  if (m > 0) {
-    const k = Math.pow(m, T.padCurve) / m;
-    let ps = T.padSens * (aim.ads > 0.5 ? 0.6 : 1);
-    const camFwd = V(); camera.getWorldDirection(camFwd);
-    if (assist > 0 && aimAssistTarget(camera.position, camFwd)) ps *= 1 - 0.5 * assist;
-    dyaw += -IN.padAimX * k * ps * dt;
-    dpitch += -IN.padAimY * k * ps * 0.75 * dt * (T.invertY ? -1 : 1);
-  }
-  if (dyaw || dpitch) aim.idle = 0; else aim.idle += dt;
-  aim.yaw = wrap(aim.yaw + dyaw);
-  aim.pitch = clamp(aim.pitch + dpitch, -1.25, 1.0);
-  // Controller pull toward a target while you're moving or aiming
-  if (assist > 0 && (m > 0.1 || dyaw || dpitch || Math.abs(IN.steer) > 0.1 || S.vel.length() > 2)) {
-    const camFwd = V(); camera.getWorldDirection(camFwd);
-    const tgt = aimAssistTarget(camera.position, camFwd);
-    if (tgt) {
-      const to = tgt.sub(camera.position).normalize();
-      const ty = yawOf(V(to.x, 0, to.z)), tp = Math.asin(clamp(to.y, -1, 1));
-      const pull = assist * 2.2 * dt;
-      aim.yaw = wrap(aim.yaw + wrap(ty - aim.yaw) * pull);
-      aim.pitch += (tp - aim.pitch) * pull * 0.6;
-    }
-  }
-  aim.ads = damp(aim.ads, IN.ads && S.bail <= 0 ? 1 : 0, 12, dt);
-  const recenter = lastAimDevice === 'pad' ? T.recenterPad : lastAimDevice === 'touch' ? T.recenterTouch : T.recenterMouse;
-  const moving = Math.hypot(S.vel.x, S.vel.z) > 1.2;
-  if (recenter && aim.ads < 0.2 && aim.idle > T.recenterDelay && (S.grounded || S.rail) && moving && S.bail <= 0) {
-    const sp = clamp(S.vel.length() / 6, 0.3, 1.2);
-    aim.yaw = dampAngle(aim.yaw, travelYaw(), T.recenterRate * sp, dt);
-    aim.pitch = damp(aim.pitch, -0.12, T.recenterRate * 0.5, dt);
-  }
-}
+const cam = { yaw: 0, pivot: S.pos.clone() };
 function updateCamera(dt) {
-  const target = S.pos.clone();
-  camState.pivot.x = damp(camState.pivot.x, target.x, T.camLag * 1.6, dt);
-  camState.pivot.z = damp(camState.pivot.z, target.z, T.camLag * 1.6, dt);
-  camState.pivot.y = damp(camState.pivot.y, target.y, T.camLag * 0.7, dt);
+  cam.pivot.x = damp(cam.pivot.x, S.pos.x, T.camLag * 1.6, dt);
+  cam.pivot.z = damp(cam.pivot.z, S.pos.z, T.camLag * 1.6, dt);
+  cam.pivot.y = damp(cam.pivot.y, S.pos.y, T.camLag * 0.7, dt);
   S.landDip = damp(S.landDip, 0, 6, dt);
-  const fwd = V(-Math.sin(aim.yaw) * Math.cos(aim.pitch), Math.sin(aim.pitch), -Math.cos(aim.yaw) * Math.cos(aim.pitch));
-  const right = V(Math.cos(aim.yaw), 0, -Math.sin(aim.yaw));
-  const dist = lerp(T.camDist, T.adsDist, aim.ads);
-  const shoulder = lerp(T.camSide, T.shoulder, aim.ads);
-  const pivot = camState.pivot.clone().add(V(0, T.camHeight - S.landDip - 0.25 * S.crouch, 0));
-  const pos = pivot.clone().addScaledVector(fwd, -dist).addScaledVector(right, shoulder);
+  // follow the direction of travel; hold steady in the air so spins don't spin the view
+  const hv = Math.hypot(S.vel.x, S.vel.z);
+  let target = cam.yaw, rate = T.camFollow;
+  if (S.rail) target = travelYaw();
+  else if (S.grounded) { target = hv > 1.2 ? yawOf(V(S.vel.x, 0, S.vel.z)) : travelYaw(); rate *= clamp(hv / 4, 0.35, 1.3); }
+  else { if (hv > 2) target = yawOf(V(S.vel.x, 0, S.vel.z)); rate = T.camFollowAir; }
+  if (S.bail > 0) rate *= 0.3;
+  cam.yaw = dampAngle(cam.yaw, target, rate, dt);
+  const pitch = T.camPitch;
+  const fwd = V(-Math.sin(cam.yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(cam.yaw) * Math.cos(pitch));
+  const pivot = cam.pivot.clone().add(V(0, T.camHeight - S.landDip - 0.25 * S.crouch, 0));
+  const pos = pivot.clone().addScaledVector(fwd, -T.camDist);
   const floor = groundAt(pos.x, pos.z, pos.y + 1).h + 0.25;
   if (pos.y < floor) pos.y = floor;
   camera.position.copy(pos);
-  camera.lookAt(pos.clone().add(fwd));
-  const speed = S.vel.length();
-  camera.fov = lerp(T.camFov, T.adsFov, aim.ads) + T.fovKick * clamp((speed - 3) / 9, 0, 1) * (1 - aim.ads * 0.7);
+  camera.lookAt(pivot.clone().addScaledVector(fwd, 2));
+  camera.fov = T.camFov + T.fovKick * clamp((S.vel.length() - 3) / 9, 0, 1);
   camera.updateProjectionMatrix();
-}
-function rayTerrain(o, d, maxD) {
-  let prev = 0;
-  for (let t = 0.3; t < maxD; t += 0.25) {
-    const p = o.clone().addScaledVector(d, t);
-    if (p.y < groundAt(p.x, p.z, p.y).h) {
-      let a = prev, b = t;
-      for (let i = 0; i < 8; i++) { const m = (a + b) / 2; const q = o.clone().addScaledVector(d, m); if (q.y < groundAt(q.x, q.z, q.y).h) b = m; else a = m; }
-      return b;
-    }
-    prev = t;
-  }
-  return Infinity;
-}
-function rayBox(o, d, b) {
-  let tmin = -Infinity, tmax = Infinity;
-  for (const [i, k] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
-    if (Math.abs(d[k]) < 1e-9) { if (o[k] < b.min[i] || o[k] > b.max[i]) return Infinity; continue; }
-    let t1 = (b.min[i] - o[k]) / d[k], t2 = (b.max[i] - o[k]) / d[k]; if (t1 > t2) [t1, t2] = [t2, t1];
-    tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
-  }
-  return tmax >= Math.max(tmin, 0) && tmin > 0 ? tmin : Infinity;
-}
-function raySphere(o, d, c, r) {
-  const oc = o.clone().sub(c); const b = oc.dot(d); const cc = oc.lengthSq() - r * r; const h = b * b - cc;
-  if (h < 0) return Infinity; const t = -b - Math.sqrt(h); return t > 0 ? t : Infinity;
-}
-function shoot() {
-  const o = camera.position.clone(); const d = V(); camera.getWorldDirection(d);
-  const spread = (S.grounded ? 0.004 : 0.008) * (1 - aim.ads * 0.7) + Math.min(S.vel.length(), 12) * 0.0005;
-  d.x += (Math.random() - 0.5) * spread; d.y += (Math.random() - 0.5) * spread; d.normalize();
-  let tHit = rayTerrain(o, d, 120), hitT = null, head = false;
-  for (const b of BOXES) tHit = Math.min(tHit, rayBox(o, d, b));
-  for (const t of TARGETS) {
-    if (t.dead > 0) continue;
-    const hh = raySphere(o, d, t.pos.clone().add(V(0, 1.6, 0)), 0.22);
-    const b1 = raySphere(o, d, t.pos.clone().add(V(0, 0.75, 0)), 0.32);
-    const b2 = raySphere(o, d, t.pos.clone().add(V(0, 1.15, 0)), 0.32);
-    const tb = Math.min(b1, b2);
-    if (hh < tHit && hh <= tb) { tHit = hh; hitT = t; head = true; }
-    else if (tb < tHit) { tHit = tb; hitT = t; head = false; }
-  }
-  const end = o.clone().addScaledVector(d, Math.min(tHit, 150));
-  const from = V(); muzzle.getWorldPosition(from);
-  const tr = tracers[tracerIdx++ % tracers.length];
-  tr.line.geometry.attributes.position.setXYZ(0, from.x, from.y, from.z);
-  tr.line.geometry.attributes.position.setXYZ(1, end.x, end.y, end.z);
-  tr.line.geometry.attributes.position.needsUpdate = true; tr.life = 0.07;
-  if (tHit < 150) { impactMesh.position.copy(end); impactMesh.visible = true; impactMesh.userData.life = 0.08; }
-  flash.visible = true; flash.userData.life = 0.035;
-  stats.shots++;
-  aim.pitch += 0.006 * (1 - aim.ads * 0.5); aim.yaw += (Math.random() - 0.5) * 0.004;
-  sfx.shot();
-  if (hitT) {
-    stats.hits++; hitT.hp -= head ? 2 : 1; hitT.flash = 0.1;
-    if (hitT.hp <= 0) {
-      hitT.dead = 2.5; stats.kills++;
-      const bonus = S.grounded ? 100 : 250, styled = combo.parts.length ? 2 : 1;
-      stats.score += bonus * styled;
-      showHit(true); sfx.kill();
-      if (!S.grounded || S.rail) showCombo(`${S.rail ? 'Grind' : 'Air'} kill  +${bonus * styled}`, 'landed');
-    } else { showHit(false); sfx.hit(); }
-  }
-}
-function updateGun(dt) {
-  stats.fireCool -= dt;
-  if (!T.trickReload && stats.ammo <= 0) {
-    stats.reloadT += dt; if (stats.reloadT > 1.2) { stats.ammo = T.clipSize; stats.reloadT = 0; }
-  }
-  if (stats.ammo > T.clipSize) stats.ammo = T.clipSize;
-  let fire = IN.fire;
-  if (!fire && device === 'touch' && T.autoFire && stats.ammo > 0) {
-    const camFwd = V(); camera.getWorldDirection(camFwd);
-    const tgt = aimAssistTarget(camera.position, camFwd, T.autoFireCone * (1 + aim.ads));
-    if (tgt) {
-      const o = camera.position.clone(), d = tgt.clone().sub(o), dist = d.length(); d.normalize();
-      let blocked = rayTerrain(o, d, dist) < dist - 0.4;
-      for (const b of BOXES) if (rayBox(o, d, b) < dist - 0.4) blocked = true;
-      fire = !blocked;
-    }
-  }
-  if (fire && S.bail <= 0 && stats.fireCool <= 0) {
-    if (stats.ammo > 0) { shoot(); stats.ammo--; stats.fireCool = 1 / T.fireRate; }
-    else if (stats.fireCool < -0.25) { sfx.click(); stats.fireCool = 0.25; }
-  }
 }
 
 /* ============================================================
-   Visual update of skater and targets
+   Visual update of the skater
    ============================================================ */
 const qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), mBasis = new THREE.Matrix4();
 function updateVisuals(dt, time) {
@@ -1159,7 +927,7 @@ function updateVisuals(dt, time) {
     boardFlip.position.y = Math.sin(p * Math.PI) * 0.25;
   } else if (S.grabT > 0) boardFlip.position.y = 0.28;
   if (S.bail > 0) { boardFlip.rotation.z = (1.2 - S.bail) * 9; boardFlip.position.y = 0.05; }
-  // body follows travel direction, upper body twists to aim
+  // body faces the direction of travel
   const tyaw = travelYaw();
   S.steerVis = damp(S.steerVis, S.grounded ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
   const tilt = UP.clone().lerp(bu, 0.6).normalize();
@@ -1170,26 +938,6 @@ function updateVisuals(dt, time) {
   body.position.copy(bu).multiplyScalar(0.11);
   legs.scale.y = 1 - crouchAmt; torso.position.y = 0.8 - crouchAmt * 0.55;
   if (S.bail > 0) { body.rotateX(-clamp((1.2 - S.bail) * 3, 0, 1.45)); }
-  const twist = clamp(wrap(aim.yaw - tyaw), -1.9, 1.9);
-  torso.rotation.set(0, twist, 0);
-  gunPivot.rotation.set(aim.pitch, 0, 0);
-  // targets
-  for (const t of TARGETS) {
-    if (t.path) {
-      const o = Math.sin(time * t.path.speed / t.path.span * 2 + t.phase) * t.path.span / 2;
-      t.pos.set(t.home.x + (t.path.axis === 'x' ? o : 0), 0, t.home.z + (t.path.axis === 'z' ? o : 0));
-    } else t.pos.set(t.home.x, 0, t.home.z);
-    t.pos.y = terrainH(t.pos.x, t.pos.z);
-    t.g.position.copy(t.pos);
-    if (t.dead > 0) {
-      t.dead -= dt; t.g.rotation.x = -Math.min(1, (2.5 - t.dead) * 4) * 1.5;
-      if (t.dead <= 0) { t.hp = 3; t.g.rotation.x = 0; }
-    }
-    t.flash -= dt; t.mat.emissive.setHex(t.flash > 0 ? 0xff2200 : 0x000000);
-  }
-  for (const tr of tracers) { tr.life -= dt; tr.line.material.opacity = tr.life > 0 ? 0.9 : 0; }
-  if (flash.visible && (flash.userData.life -= dt) <= 0) flash.visible = false;
-  if (impactMesh.visible && (impactMesh.userData.life -= dt) <= 0) impactMesh.visible = false;
   // shadow camera follows the skater
   sun.position.copy(S.pos).add(V(12, 25, 8)); sun.target.position.copy(S.pos);
   // sound beds
@@ -1206,7 +954,7 @@ function updateVisuals(dt, time) {
    HUD and tuning panel
    ============================================================ */
 const $ = id => document.getElementById(id);
-const comboEl = $('combo'), hitEl = $('hitmarker');
+const comboEl = $('combo');
 let comboTimer = 0;
 function showCombo(sub, cls) {
   comboEl.className = cls || '';
@@ -1214,28 +962,14 @@ function showCombo(sub, cls) {
   comboEl.querySelector('.pts').textContent = cls === 'bail' ? 'combo lost' : sub || (combo.parts.length > 1 ? `${combo.pts} × ${combo.parts.length}` : `${combo.pts}`);
   comboEl.style.opacity = 1; comboTimer = cls ? 1.4 : 99;
 }
-let hitTimer = 0;
-function showHit(kill) { hitEl.className = kill ? 'kill' : ''; hitEl.style.opacity = 1; hitTimer = kill ? 0.25 : 0.12; }
-let ammoShown = -1, clipShown = -1;
 function updateHud(dt) {
   $('speed').textContent = Math.round(S.vel.length() * 3.6);
   $('state').textContent = S.bail > 0 ? 'bailed' : S.rail ? `grinding · ${S.rail.kind.toLowerCase()}` : S.grounded ? (fakie() ? 'rolling fakie' : 'rolling') : 'airborne';
   $('score').textContent = stats.score;
-  $('hits').textContent = `hits ${stats.hits} · kills ${stats.kills} · acc ${stats.shots ? Math.round(100 * stats.hits / stats.shots) + '%' : '–'}`;
-  if (ammoShown !== stats.ammo || clipShown !== T.clipSize) {
-    ammoShown = stats.ammo; clipShown = T.clipSize;
-    const el = $('ammo'); el.innerHTML = '';
-    for (let i = 0; i < T.clipSize; i++) { const p = document.createElement('i'); if (i >= stats.ammo) p.className = 'spent'; el.appendChild(p); }
-    $('ammo-count').textContent = stats.ammo;
-  }
-  $('ammo-hint').textContent = stats.ammo === 0 ? (T.trickReload ? 'Land tricks to reload' : 'Reloading') : stats.ammo <= 3 && T.trickReload ? 'Low: land a trick' : '';
+  $('best').textContent = `best combo ${stats.best || '–'}`;
   if ((comboTimer -= dt) <= 0) comboEl.style.opacity = Math.max(0, +comboEl.style.opacity - dt * 3);
-  if ((hitTimer -= dt) <= 0) hitEl.style.opacity = 0;
-  const spread = 7 + Math.min(S.vel.length(), 12) * 0.8 * (1 - aim.ads * 0.7) + (S.grounded ? 0 : 6);
-  const ret = $('reticle').children;
-  ret[1].style.top = `${-spread - 7}px`; ret[2].style.top = `${spread}px`; ret[3].style.left = `${-spread - 7}px`; ret[4].style.left = `${spread}px`;
 }
-function setDevice(d) { if (device !== d) { device = d; $('device').textContent = d === 'pad' ? 'controller' : d === 'touch' ? 'touch' : 'mouse + keyboard'; } }
+function setDevice(d) { if (device !== d) { device = d; $('device').textContent = d === 'pad' ? 'controller' : d === 'touch' ? 'touch' : 'keyboard'; } }
 
 function buildPanel() {
   const root = $('panel-groups'); root.innerHTML = '';
@@ -1261,10 +995,7 @@ function buildPanel() {
   }
 }
 buildPanel();
-function togglePanel() {
-  const p = $('panel'); p.hidden = !p.hidden;
-  if (!p.hidden && pointerLocked) document.exitPointerLock();
-}
+function togglePanel() { const p = $('panel'); p.hidden = !p.hidden; }
 $('btn-reset').addEventListener('click', () => { Object.assign(T, DEFAULTS); saveTuning(); buildPanel(); $('copy-status').textContent = 'Defaults restored'; });
 $('btn-respawn').addEventListener('click', () => respawn());
 $('btn-close').addEventListener('click', () => togglePanel());
@@ -1280,101 +1011,13 @@ $('btn-copy').addEventListener('click', () => {
 let introVisible = true;
 function hideIntro() { introVisible = false; $('intro').hidden = true; startAudio(); }
 function toggleIntro() { introVisible = !introVisible; $('intro').hidden = !introVisible; }
-$('intro').addEventListener('click', () => { hideIntro(); if (!lockFailed && !touch.active) requestLock(); });
+$('intro').addEventListener('click', () => hideIntro());
 
 /* ============================================================
-   Touch controls: floating stick on the left, drag-to-aim on the
-   right, big buttons for ollie / grab / fire.
-   ============================================================ */
-const stickBase = $('stick-base'), stickKnob = $('stick-knob');
-function placeIdleStick() {
-  stickBase.classList.add('idle'); stickKnob.hidden = true;
-  stickBase.style.left = `calc(${Math.max(90, innerWidth * 0.13)}px + env(safe-area-inset-left, 0px))`;
-  stickBase.style.top = `${innerHeight - 100}px`;
-}
-function enableTouch() {
-  touch.lastTime = performance.now();
-  if (!touch.active) {
-    touch.active = true; document.body.classList.add('touch'); $('touch-ui').hidden = false;
-    mouseBtn.fill(false); placeIdleStick(); updateRotateHint();
-  }
-  setDevice('touch'); startAudio();
-}
-function updateRotateHint() { $('rotate-hint').hidden = !(touch.active && innerHeight > innerWidth); }
-addEventListener('resize', () => { if (touch.active) { updateRotateHint(); if (touch.stickId === null) placeIdleStick(); } });
-addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('#panel, #intro')) e.preventDefault(); }, { passive: false });
-addEventListener('gesturestart', e => e.preventDefault());
-
-canvas.addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'touch') return;
-  e.preventDefault(); enableTouch();
-  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-  if (e.clientX < innerWidth * 0.45 && touch.stickId === null) {
-    touch.stickId = e.pointerId; touch.ox = e.clientX; touch.oy = e.clientY; touch.sx = touch.sy = 0;
-    recStart(e);
-    stickBase.classList.remove('idle'); stickKnob.hidden = false;
-    stickBase.style.left = stickKnob.style.left = `${e.clientX}px`; stickBase.style.top = stickKnob.style.top = `${e.clientY}px`;
-  } else if (touch.lookId === null) {
-    touch.lookId = e.pointerId; touch.lx = e.clientX; touch.ly = e.clientY;
-  }
-});
-canvas.addEventListener('pointermove', e => {
-  if (e.pointerType !== 'touch') return;
-  touch.lastTime = performance.now();
-  if (e.pointerId === touch.stickId) {
-    const now = performance.now();
-    if (now < ts.settleUntil) { anchorStick(e.clientX, e.clientY); return; } // let a flick's follow-through die out
-    const R = T.stickRadius;
-    let dx = e.clientX - touch.ox, dy = e.clientY - touch.oy; const d = Math.hypot(dx, dy);
-    if (d > R) { // the stick follows your thumb so it never runs out of travel
-      touch.ox += dx * (1 - R / d); touch.oy += dy * (1 - R / d); dx = e.clientX - touch.ox; dy = e.clientY - touch.oy;
-      stickBase.style.left = `${touch.ox}px`; stickBase.style.top = `${touch.oy}px`;
-    }
-    touch.sx = dx / R; touch.sy = dy / R;
-    const dz = 0.12, mag = Math.hypot(touch.sx, touch.sy);
-    if (mag < dz) touch.sx = touch.sy = 0;
-    stickKnob.style.left = `${e.clientX}px`; stickKnob.style.top = `${e.clientY}px`;
-    recMove(e.clientX, e.clientY, dx / R, dy / R, now);
-  } else if (e.pointerId === touch.lookId) {
-    touch.dx += e.clientX - touch.lx; touch.dy += e.clientY - touch.ly; touch.lx = e.clientX; touch.ly = e.clientY;
-    lastAimDevice = 'touch';
-  }
-});
-function endCanvasPointer(e) {
-  if (e.pointerId === touch.stickId) { recEnd(e); touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick(); }
-  if (e.pointerId === touch.lookId) touch.lookId = null;
-}
-canvas.addEventListener('pointerup', endCanvasPointer);
-canvas.addEventListener('pointercancel', endCanvasPointer);
-
-for (const el of document.querySelectorAll('.tbtn')) {
-  const act = el.dataset.act; let id = null, lx = 0, ly = 0;
-  el.addEventListener('pointerdown', e => {
-    e.preventDefault(); e.stopPropagation(); enableTouch();
-    if (introVisible) hideIntro();
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    id = e.pointerId; lx = e.clientX; ly = e.clientY;
-    if (act === 'fire') touch.fire = true;
-    else if (act === 'ads') touch.ads = !touch.ads;
-    el.classList.toggle('on', act === 'ads' ? touch.ads : true);
-  });
-  el.addEventListener('pointermove', e => {
-    if (e.pointerId !== id) return;
-    touch.lastTime = performance.now();
-    if (act === 'fire') { touch.dx += e.clientX - lx; touch.dy += e.clientY - ly; lastAimDevice = 'touch'; }
-    lx = e.clientX; ly = e.clientY;
-  });
-  const end = e => {
-    if (e.pointerId !== id) return; id = null;
-    if (act === 'fire') touch.fire = false;
-    if (act !== 'ads') el.classList.remove('on');
-  };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
-}
-/* Flick-it trick stick (right thumb), following Skate's right-stick motions, regular stance.
-   The stick's path is read as a list of the 8 directions it reaches near its rim:
+   Flick-it: Skate's right-stick trick motions, regular stance.
+   The stick's path is read as the 8 directions it reaches near its rim:
      Ollie            down, up                Nollie tricks: the same paths upside down
-     Kickflip         down, up-right          (pull up first, flick down)
+     Kickflip         down, up-right          (push up first, flick down)
      Heelflip         down, up-left
      FS / BS Shuvit   down, left / right
      Hardflip         down, down-right, up
@@ -1386,31 +1029,25 @@ for (const el of document.querySelectorAll('.tbtn')) {
      360 Hardflip     right, down, up
      360 Inward Heel  left, down, up
      FS / BS 360 Shuv down-right … left / down-left … right (sweep round the bottom)
-   On the ground the pull loads a crouch and the flick pops; in the air the same motions are late flips.
-   Holding the stick in one direction in the air grabs. */
+   On the ground the pull loads a crouch and the flick pops; in the air the same
+   motions are late flips; holding the stick in one direction in the air grabs.
+   One recogniser per stick: the touch right stick and the controller right stick.
+   ============================================================ */
 const SECT = ['R', 'UR', 'U', 'UL', 'L', 'DL', 'D', 'DR'];
 const LOWER = new Set(['D', 'DL', 'DR']), UPPER = new Set(['U', 'UL', 'UR']);
 const MIRROR = { R: 'R', L: 'L', U: 'D', D: 'U', UR: 'DR', DR: 'UR', UL: 'DL', DL: 'UL' };
-const ts = { toks: [], t0: 0, x0: 0, y0: 0, x: 0, y: 0, moved: 0, loaded: false, loadT: 0, settleUntil: 0, holdS: null, holdT: 0, lastCenterT: 0, trail: [] };
-const stickLabel = $('stick-label');
-const trailCv = $('tstick-trail'), trailCtx = trailCv.getContext('2d');
-let labelT = 0;
+const GRAB_NAMES = { U: 'Nosegrab', D: 'Tailgrab', L: 'Melon', R: 'Indy', UL: 'Crail', UR: 'Nosegrab', DL: 'Stalefish', DR: 'Tailgrab' };
 const canPop = () => S.grounded || !!S.rail || (S.coyoteOk && S.sinceGround < T.coyoteTime);
-function say(msg, x, y) {
-  stickLabel.textContent = msg; labelT = 0.8; stickLabel.style.opacity = 1;
-  stickLabel.style.left = `${x}px`; stickLabel.style.top = `${y - 80}px`;
+function makeFlick(opts) {
+  return { toks: [], loaded: false, loadT: 0, settleUntil: 0, needCenter: false, holdS: null, holdT: 0, active: false, ...opts };
 }
-// put the stick's centre under the thumb (after a trick, so the flick's end doesn't steer)
-function anchorStick(x, y) {
-  touch.ox = x; touch.oy = y; touch.sx = touch.sy = 0; ts.toks = [];
-  stickBase.style.left = stickKnob.style.left = `${x}px`; stickBase.style.top = stickKnob.style.top = `${y}px`;
+function flickLoad(f, on) {
+  if (on && !f.loaded && canPop()) { f.loaded = true; f.loadT = performance.now(); FL.ollie = true; }
+  if (!on && f.loaded) { f.loaded = false; FL.ollie = false; }
+  f.onLoaded && f.onLoaded(f.loaded);
 }
-function setLoaded(on) {
-  if (on && !ts.loaded && canPop()) { ts.loaded = true; ts.loadT = performance.now(); touch.ollie = true; }
-  if (!on && ts.loaded) { ts.loaded = false; touch.ollie = false; }
-  stickBase.classList.toggle('loaded', ts.loaded);
-}
-function cancelCrouch() { if (ts.loaded) { touch.cancelPop = true; setLoaded(false); } }
+function flickCancel(f) { if (f.loaded) { FL.cancelPop = true; flickLoad(f, false); } }
+// Read a finished path (already flipped for nollies) into a trick name.
 function readPath(toks) {
   const F = toks[toks.length - 1];
   let iL = -1; for (let i = toks.length - 2; i >= 0; i--) if (LOWER.has(toks[i].s)) { iL = i; break; }
@@ -1425,96 +1062,196 @@ function readPath(toks) {
     if (toks[i + 1].t - toks[i].t > 300) break;
     pre = toks[i].s; k = si;
   }
-  if (toks[iD].s !== 'D' && !pre) pre = toks[iD].s; // started at down-left / down-right without reaching down
-  const f = F.s;
-  if (f === 'U') return pre === 'L' ? '360 Inward Heelflip' : pre === 'R' ? '360 Hardflip' : mid === 'DR' ? 'Hardflip' : mid === 'DL' ? 'Inward Heelflip' : 'Ollie';
-  if (f === 'UR') return pre === 'L' ? '360 Flip' : pre === 'DL' ? 'Varial Kickflip' : 'Kickflip';
-  if (f === 'UL') return pre === 'R' ? 'Laserflip' : pre === 'DR' ? 'Varial Heelflip' : 'Heelflip';
-  if (f === 'L') return pre === 'DR' || pre === 'R' ? 'FS 360 Pop Shuvit' : 'FS Pop Shuvit';
-  if (f === 'R') return pre === 'DL' || pre === 'L' ? 'BS 360 Pop Shuvit' : 'BS Pop Shuvit';
+  if (toks[iD].s !== 'D' && !pre) pre = toks[iD].s;
+  const fs = F.s;
+  if (fs === 'U') return pre === 'L' ? '360 Inward Heelflip' : pre === 'R' ? '360 Hardflip' : mid === 'DR' ? 'Hardflip' : mid === 'DL' ? 'Inward Heelflip' : 'Ollie';
+  if (fs === 'UR') return pre === 'L' ? '360 Flip' : pre === 'DL' ? 'Varial Kickflip' : 'Kickflip';
+  if (fs === 'UL') return pre === 'R' ? 'Laserflip' : pre === 'DR' ? 'Varial Heelflip' : 'Heelflip';
+  if (fs === 'L') return pre === 'DR' || pre === 'R' ? 'FS 360 Pop Shuvit' : 'FS Pop Shuvit';
+  if (fs === 'R') return pre === 'DL' || pre === 'L' ? 'BS 360 Pop Shuvit' : 'BS Pop Shuvit';
   return null;
 }
-function tryTrick(now, final) {
-  const toks = ts.toks; if (toks.length < 2) return false;
+function flickTry(f, now, final) {
+  const toks = f.toks; if (toks.length < 2) return false;
   const F = toks[toks.length - 1];
-  // which family: whichever half the stick visited first
   const first = toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
   if (!first) return false;
   const nollie = UPPER.has(first.s);
   const path = nollie ? toks.map(t => ({ s: MIRROR[t.s], t: t.t })) : toks;
   const fs = path[path.length - 1].s;
   if (!(UPPER.has(fs) || fs === 'L' || fs === 'R')) return false;
-  // sideways finishes wait a moment in case the swing carries on (e.g. round to up for a hardflip)
+  // sideways finishes wait a moment in case the swing carries on (e.g. round to up)
   if ((fs === 'L' || fs === 'R') && !final && now - F.t < 70) return false;
   let iL = -1; for (let i = path.length - 2; i >= 0; i--) if (LOWER.has(path[i].s)) { iL = i; break; }
   if (iL < 0 || F.t - path[iL].t > T.flickTime * 1000) return false;
   const name = readPath(path);
   if (!name) return false;
-  fireTrick(nollie ? (name === 'Ollie' ? 'Nollie' : 'Nollie ' + name) : name, now, F.t - path[iL].t);
+  flickFire(f, nollie ? (name === 'Ollie' ? 'Nollie' : 'Nollie ' + name) : name, now, F.t - path[iL].t);
   return true;
 }
-function fireTrick(name, now, flickMs) {
-  const ground = canPop();
-  if (ground) {
+function flickFire(f, name, now, flickMs) {
+  if (canPop()) {
     const speed = clamp(1 - (flickMs - 40) / (T.flickTime * 1000), 0, 1); // faster flick, higher pop
     S.crouch = Math.max(S.crouch, 0.45 + 0.55 * speed);
-    ts.loaded = false; touch.ollie = false; touch.popNow = true;
-  } else if (S.trick || name === 'Ollie' || name === 'Nollie') { ts.toks = []; return; } // late flips only, one at a time
-  if (TRICKS[name]) { touch.flipName = name; EDGE_IN.flip = true; }
-  touch.grab = false; touch.grabName = null;
-  say(name, ts.x, ts.y);
-  ts.settleUntil = now + T.flickSettle * 1000;
-  ts.loaded = false; stickBase.classList.remove('loaded');
-  anchorStick(ts.x, ts.y);
+    f.loaded = false; FL.ollie = false; FL.popNow = true;
+  } else if (S.trick || name === 'Ollie' || name === 'Nollie') { f.toks = []; return; } // late flips only, one at a time
+  if (TRICKS[name]) { FL.flipName = name; EDGE_IN.flip = true; }
+  FL.grab = false;
+  f.onTrick && f.onTrick(name);
+  f.toks = []; f.settleUntil = now + T.flickSettle * 1000; f.needCenter = true;
+  f.onLoaded && f.onLoaded(false);
 }
-function recStart(e) {
-  const now = performance.now();
-  Object.assign(ts, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now, moved: 0, holdS: null, toks: [], lastCenterT: now });
-  ts.trail = [[e.clientX, e.clientY, now]];
-}
-function recMove(x, y, nx, ny, now) {
-  ts.x = x; ts.y = y; ts.moved = Math.max(ts.moved, Math.hypot(x - ts.x0, y - ts.y0));
-  ts.trail.push([x, y, now]);
+// Feed the stick position (x right, y down, magnitude 0..1).
+function flickFeed(f, nx, ny, now) {
   const m = Math.min(1, Math.hypot(nx, ny));
-  if (m < 0.35) ts.lastCenterT = now;
-  if (m < T.flickRim) { ts.holdS = null; return; }
+  f.active = m > 0.05;
+  if (f.needCenter) { if (m < 0.35 || f.reanchors) f.needCenter = false; else { f.holdS = null; return; } }
+  if (now < f.settleUntil) { f.holdS = null; return; }
+  if (m < T.flickRim) { f.holdS = null; return; }
   const sct = SECT[((Math.round(Math.atan2(-ny, nx) / (Math.PI / 4)) % 8) + 8) % 8];
-  const last = ts.toks[ts.toks.length - 1];
-  if (last && last.s === sct) { last.t = now; } // still there: a flick is timed from when you leave it
-  else {
-    ts.toks.push({ s: sct, t: now }); while (ts.toks.length > 10) ts.toks.shift();
-    // only a quick snap down (or up, for nollies) loads the crouch; a slow pull is just braking
-    if ((LOWER.has(sct) || UPPER.has(sct)) && now - ts.lastCenterT <= T.snapTime * 1000) {
-      const first = ts.toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
-      if (first === ts.toks[ts.toks.length - 1]) setLoaded(true);
+  const last = f.toks[f.toks.length - 1];
+  if (!last || last.s !== sct) {
+    f.toks.push({ s: sct, t: now }); while (f.toks.length > 10) f.toks.shift();
+    if (LOWER.has(sct) || UPPER.has(sct)) {
+      const first = f.toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
+      if (first === f.toks[f.toks.length - 1]) flickLoad(f, true); // the pull (or nollie push) loads the crouch
     }
-    if (tryTrick(now, false)) return;
+    if (flickTry(f, now, false)) return;
   }
-  if (ts.holdS !== sct) { ts.holdS = sct; ts.holdT = now; }
+  if (f.holdS !== sct) { f.holdS = sct; f.holdT = now; }
 }
-function recEnd(e) {
-  const now = performance.now();
-  if (e.type === 'pointerup' && now >= ts.settleUntil) {
-    const R = T.stickRadius;
-    recMove(e.clientX, e.clientY, (e.clientX - touch.ox) / R, (e.clientY - touch.oy) / R, now);
-    tryTrick(now, true);
+function flickRelease(f, now) {
+  if (f.toks.length >= 2) flickTry(f, now, true);
+  if (f.loaded) { if (T.holdReleasePops) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f); }
+  f.toks = []; f.holdS = null; f.active = false; f.onLoaded && f.onLoaded(false);
+}
+function flickTick(f, now) {
+  if (f.toks.length >= 2 && now >= f.settleUntil) flickTry(f, now, false); // sideways finishes that settled
+  if (f.loaded && (now - f.loadT > T.popWindow * 1000 || !canPop())) {
+    if (T.holdReleasePops && canPop()) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f);
+    f.onLoaded && f.onLoaded(false);
   }
-  const tap = now - ts.t0 < 200 && ts.moved < 12;
-  if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); touch.popNow = true; say('Ollie', ts.x, ts.y); }
-  else if (ts.loaded) { if (T.holdReleasePops) { touch.popNow = true; ts.loaded = false; touch.ollie = false; say('Ollie', ts.x, ts.y); } else cancelCrouch(); }
-  touch.grab = false; ts.toks = []; ts.holdS = null; stickBase.classList.remove('loaded');
-}
-function trickTick(dt) {
-  const now = performance.now();
-  if (touch.stickId !== null && ts.toks.length >= 2 && now >= ts.settleUntil) tryTrick(now, false); // sideways finishes that settled
-  // crouch held too long without a flick: let it go
-  if (ts.loaded && now - ts.loadT > T.popWindow * 1000) { if (T.holdReleasePops) { touch.popNow = true; ts.loaded = false; touch.ollie = false; } else cancelCrouch(); stickBase.classList.remove('loaded'); }
-  if (ts.loaded && !canPop()) { cancelCrouch(); stickBase.classList.remove('loaded'); }
   // hold a direction in the air to grab
   const air = !S.grounded && !S.rail;
-  const grab = air && touch.stickId !== null && (ts.holdS === 'D' || ts.holdS === 'U') && now - ts.holdT > T.grabHold * 1000 && now > ts.settleUntil && !S.trick;
-  if (grab && !touch.grab) { touch.grabName = ts.holdS === 'D' ? 'Tailgrab' : 'Nosegrab'; say(touch.grabName, ts.x, ts.y); }
-  touch.grab = !!grab;
+  const g = air && f.active && f.holdS && now - f.holdT > T.grabHold * 1000 && now > f.settleUntil && !S.trick;
+  if (g && !f.grabbing) { FL.grabName = GRAB_NAMES[f.holdS]; f.onTrick && f.onTrick(FL.grabName); }
+  if (g || f.grabbing) FL.grab = !!g;
+  f.grabbing = !!g;
+}
+padFlick = makeFlick({ onTrick: name => { if (device === 'pad') showTrickName(name); } });
+// controller: if the right stick goes idle, treat it like letting go
+let padWasActive = false;
+function padTick(now) {
+  if (padWasActive && !padFlick.active) flickRelease(padFlick, now);
+  padWasActive = padFlick.active;
+  flickTick(padFlick, now);
+}
+
+/* ============================================================
+   Touch: a floating steering stick on the left and a floating
+   flick-it stick on the right, each wherever that thumb lands.
+   ============================================================ */
+const stickBase = $('stick-base'), stickKnob = $('stick-knob');
+const tBase = $('tstick-base'), tKnob = $('tstick-knob'), stickLabel = $('stick-label');
+const trailCv = $('tstick-trail'), trailCtx = trailCv.getContext('2d');
+const ts = { id: null, ox: 0, oy: 0, x: 0, y: 0, t0: 0, moved: 0, trail: [] };
+let labelT = 0;
+function sayAt(msg, x, y) {
+  stickLabel.textContent = msg; labelT = 0.8; stickLabel.style.opacity = 1;
+  stickLabel.style.left = `${x}px`; stickLabel.style.top = `${y - 80}px`;
+}
+function showTrickName(name) { sayAt(name, innerWidth / 2, innerHeight * 0.32); }
+const touchFlick = makeFlick({
+  reanchors: true,
+  onTrick: name => { sayAt(name, ts.x, ts.y); tsAnchor(ts.x, ts.y); },
+  onLoaded: on => tBase.classList.toggle('loaded', on),
+});
+function placeIdleStick() {
+  stickBase.classList.add('idle'); stickKnob.hidden = true;
+  stickBase.style.left = `calc(${Math.max(90, innerWidth * 0.13)}px + env(safe-area-inset-left, 0px))`;
+  stickBase.style.top = `${innerHeight - 100}px`;
+}
+function placeIdleTrickStick() {
+  tBase.classList.add('idle'); tBase.classList.remove('loaded'); tKnob.hidden = true;
+  tBase.style.left = `${innerWidth - Math.max(110, innerWidth * 0.15)}px`; tBase.style.top = `${innerHeight - 100}px`;
+}
+function tsAnchor(x, y) {
+  ts.ox = x; ts.oy = y;
+  tBase.style.left = tKnob.style.left = `${x}px`; tBase.style.top = tKnob.style.top = `${y}px`;
+}
+function enableTouch() {
+  touch.lastTime = performance.now();
+  if (!touch.active) {
+    touch.active = true; document.body.classList.add('touch'); $('touch-ui').hidden = false;
+    placeIdleStick(); placeIdleTrickStick(); updateRotateHint();
+  }
+  setDevice('touch'); startAudio();
+}
+function updateRotateHint() { $('rotate-hint').hidden = !(touch.active && innerHeight > innerWidth); }
+addEventListener('resize', () => { if (touch.active) { updateRotateHint(); if (touch.stickId === null) placeIdleStick(); if (ts.id === null) placeIdleTrickStick(); } });
+addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('#panel, #intro')) e.preventDefault(); }, { passive: false });
+addEventListener('gesturestart', e => e.preventDefault());
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  e.preventDefault(); enableTouch();
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  const now = performance.now();
+  if (e.clientX < innerWidth * 0.5 && touch.stickId === null) {
+    touch.stickId = e.pointerId; touch.ox = e.clientX; touch.oy = e.clientY; touch.sx = touch.sy = 0;
+    stickBase.classList.remove('idle'); stickKnob.hidden = false;
+    stickBase.style.left = stickKnob.style.left = `${e.clientX}px`; stickBase.style.top = stickKnob.style.top = `${e.clientY}px`;
+  } else if (e.clientX >= innerWidth * 0.5 && ts.id === null) {
+    Object.assign(ts, { id: e.pointerId, x: e.clientX, y: e.clientY, t0: now, moved: 0, trail: [[e.clientX, e.clientY, now]] });
+    touchFlick.toks = []; touchFlick.holdS = null;
+    tBase.classList.remove('idle'); tKnob.hidden = false; tsAnchor(e.clientX, e.clientY);
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'touch') return;
+  const now = performance.now(), R = T.stickRadius;
+  touch.lastTime = now;
+  if (e.pointerId === touch.stickId) {
+    let dx = e.clientX - touch.ox, dy = e.clientY - touch.oy; const d = Math.hypot(dx, dy);
+    if (d > R) { // the stick follows your thumb so it never runs out of travel
+      touch.ox += dx * (1 - R / d); touch.oy += dy * (1 - R / d); dx = e.clientX - touch.ox; dy = e.clientY - touch.oy;
+      stickBase.style.left = `${touch.ox}px`; stickBase.style.top = `${touch.oy}px`;
+    }
+    touch.sx = dx / R; touch.sy = dy / R;
+    if (Math.hypot(touch.sx, touch.sy) < 0.12) touch.sx = touch.sy = 0;
+    stickKnob.style.left = `${e.clientX}px`; stickKnob.style.top = `${e.clientY}px`;
+  } else if (e.pointerId === ts.id) {
+    ts.x = e.clientX; ts.y = e.clientY; ts.trail.push([ts.x, ts.y, now]);
+    if (now < touchFlick.settleUntil) { tsAnchor(ts.x, ts.y); return; } // let the flick's follow-through die out
+    let dx = ts.x - ts.ox, dy = ts.y - ts.oy; const d = Math.hypot(dx, dy);
+    ts.moved = Math.max(ts.moved, d);
+    if (d > R * 1.3) { ts.ox += dx * (1 - R * 1.3 / d); ts.oy += dy * (1 - R * 1.3 / d); dx = ts.x - ts.ox; dy = ts.y - ts.oy;
+      tBase.style.left = `${ts.ox}px`; tBase.style.top = `${ts.oy}px`; }
+    tKnob.style.left = `${ts.x}px`; tKnob.style.top = `${ts.y}px`;
+    flickFeed(touchFlick, dx / R, dy / R, now);
+  }
+});
+function endCanvasPointer(e) {
+  const now = performance.now();
+  if (e.pointerId === touch.stickId) { touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick(); }
+  if (e.pointerId === ts.id) {
+    if (e.type === 'pointerup' && now >= touchFlick.settleUntil) {
+      const R = T.stickRadius; flickFeed(touchFlick, (e.clientX - ts.ox) / R, (e.clientY - ts.oy) / R, now); // a fast flick can end on the lift
+    }
+    const tap = now - ts.t0 < 200 && ts.moved < 12;
+    if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); FL.popNow = true; sayAt('Ollie', ts.x, ts.y); touchFlick.toks = []; }
+    flickRelease(touchFlick, now);
+    ts.id = null; placeIdleTrickStick();
+  }
+}
+canvas.addEventListener('pointerup', endCanvasPointer);
+canvas.addEventListener('pointercancel', endCanvasPointer);
+$('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
+$('tb-tune').addEventListener('click', () => togglePanel());
+if (MOBILE) enableTouch();
+
+function touchTick(dt, now) {
+  flickTick(touchFlick, now);
   if (labelT > 0) { labelT -= dt; if (labelT <= 0) stickLabel.style.opacity = 0; }
   // the path you drew, fading
   const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio, 2);
@@ -1528,9 +1265,6 @@ function trickTick(dt) {
     trailCtx.beginPath(); trailCtx.moveTo(x0, y0); trailCtx.lineTo(x1, y1); trailCtx.stroke();
   }
 }
-if (MOBILE) enableTouch();
-$('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
-$('tb-tune').addEventListener('click', () => togglePanel());
 
 function resize() {
   const w = innerWidth, h = innerHeight;
@@ -1546,13 +1280,13 @@ let acc = 0, last = performance.now(), simTime = 0;
 respawn();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  if (touch.active) trickTick(dt);
+  if (touch.active) touchTick(dt, now);
   sampleInput();
+  padTick(now);
+  if (labelT > 0 && !touch.active) { labelT -= dt; if (labelT <= 0) stickLabel.style.opacity = 0; }
   if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
-  updateAim(dt);
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
-  if (!introVisible) updateGun(dt);
   updateVisuals(dt, simTime);
   updateCamera(dt);
   updateHud(dt);
@@ -1560,7 +1294,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step, camera, aimAssistTarget, TARGETS, touch, ts, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

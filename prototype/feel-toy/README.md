@@ -1,11 +1,11 @@
-# Skate Shooter Feel Toy
+# Skate Feel Toy
 
-A throwaway prototype for one question: **does skating while aiming feel good?**
+A throwaway prototype for one question: **does the skating feel good?**
 
-One grey park, target dummies, and every movement number on a live slider. No
-netcode, no art, no real weapons. Everything here is written from scratch: no
-code, data or assets from MW2, Skate 3 or Minecraft. The only dependency is
-Three.js, loaded from a CDN.
+One grey park, a camera that follows behind you, and every movement number on
+a live slider. No netcode and no art. Everything here is written from
+scratch: no code, data or assets from MW2, Skate 3 or Minecraft. The only
+dependency is Three.js, loaded from a CDN.
 
 ## Run it
 
@@ -18,20 +18,19 @@ python3 -m http.server 8000
 ```
 
 Opening `index.html` directly usually works too. Plug in a controller before
-or after loading; the page uses whichever device you touched last, and both
-work at once (controller in one hand, mouse in the other is fine).
+or after loading; the page uses whichever device you touched last.
 
 ## Controls
 
-| Action | Controller | Mouse + keyboard |
+Two sticks, laid out like Skate: the **left stick skates**, the **right stick
+does tricks** with Skate's flick-it motions.
+
+| Action | Controller | Keyboard |
 | --- | --- | --- |
 | Carve / spin in air | Left stick ← → | A / D |
-| Push / brake | Left stick ↑ ↓ | W / S |
-| Aim / look | Right stick | Mouse |
-| Aim down sights / fire | LT / RT | Right / left click |
-| Ollie (hold to crouch, release to pop) | A | Space |
-| Flip trick (+ stick direction) | X | Q (+ WASD) |
-| Grab (hold) | Y | E |
+| Push / brake | A, or left stick ↑ / ↓ | W / S |
+| Ollie and flip tricks | Right stick flick-it (below) | Space (hold, release), then Q + WASD in the air |
+| Grab | LT / RT, or hold the right stick in the air | E |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
 | Respawn | Menu | R |
 | Tuning sliders | View | Tab |
@@ -39,16 +38,18 @@ work at once (controller in one hand, mouse in the other is fine).
 
 ### On a phone
 
-The touch layout turns on by itself on phones and tablets. Landscape works best.
+The touch layout turns on by itself on phones and tablets. Landscape works
+best. Each thumb gets a floating stick that appears wherever it lands:
 
-**Left thumb: one stick for steering and tricks.** It appears wherever you
-touch the left half. Normal movement steers: carve left / right, spin left /
-right in the air. You roll on your own (auto-push); push up to go faster, ease
-down to brake.
+- **Left thumb steers.** You roll on your own (auto-push); push up to go
+  faster, pull down to brake, hold left or right in the air to spin.
+- **Right thumb is the flick-it stick**, with the same motions as a
+  controller's right stick. A quick tap is a small ollie.
 
-**Tricks are Skate's flick-it motions on that same stick, done fast**
-(regular stance). A trick is a path: where the stick starts, which way it
-swings round the bottom, and where you flick it to.
+### Flick-it tricks (right stick, regular stance)
+
+A trick is a path: where the stick starts, which way it swings round the
+bottom, and where you flick it to.
 
 | Trick | Motion |
 | --- | --- |
@@ -64,8 +65,7 @@ swings round the bottom, and where you flick it to.
 | FS / BS 360 Pop Shuvit | Down-right, sweep round the bottom to left / down-left round to right |
 | Nollie anything | The same path upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
-| Grab | In the air, hold the stick down (tailgrab) or up (nosegrab). Left / right stay spins |
-| Small ollie | Tap the left side |
+| Grab | In the air, hold the stick in one direction (up nosegrab, down tailgrab, left melon, right indy) |
 
 The motions follow the Skate flick-it chart as published in GameSpot's trick
 list for EA's current *skate.* (kickflip up-right, 360 flip left → down →
@@ -73,34 +73,21 @@ up-right, hardflip down → down-right → up, and so on). The varial paths aren
 in that list, so they're filled in by the same pattern: where you start round
 the rim sets the shuvit, where you flick sets the flip.
 
-A quick snap down loads the crouch (the ring turns yellow) and stops the stick
-braking; the flick pops, and a faster flick pops higher. A slow pull down is
-just braking, but a fast flick up out of a held brake still pops. Slow stick
-movement never fires a trick: the flick has to reach its end within the *max
-time from pull to flick* after leaving the bottom. After a trick the stick
-re-centres under your thumb for a moment so the follow-through doesn't fire
-another one. The trick name pops up above the stick and the path you drew
-fades behind your thumb.
+The pull down loads the crouch (on touch, the ring turns yellow) and the flick
+pops; a faster flick pops higher. Slow stick movement never fires a trick: the
+flick has to reach its end within the *max time from pull to flick*. After a
+trick the stick has to come back to the centre (a controller does this by
+itself; on touch the stick re-centres under your thumb), so the follow-through
+doesn't fire another one. The trick name pops up and, on touch, the path you
+drew fades behind your thumb.
 
-**Right thumb: swipe anywhere to aim.** The gun also fires on its own when
-the reticle sits on a target in clear view. Hold **Fire** to shoot (drag it to
-aim at the same time); **ADS** toggles aim-down-sights.
+## Camera
 
-Touch gets stronger aim assist and camera recentering by default. All of it
-is in the **Touch** section of the tuning panel, along with auto-push speed,
-drag sensitivity, stick size and the trick-stick timings. Phones also get a lighter render (lower
-resolution, smaller shadow map, coarser ground mesh) and vibrate on hits and
-hard landings where the browser allows it.
-
-## The loop being tested
-
-- **Tricks reload the gun.** Ammo from a combo is only paid out when you land
-  it cleanly. Bail and you lose it. Sketchy landings pay half.
-- **The board and your aim are separate.** Steering is relative to the board;
-  the camera follows your aim. On a controller the camera recenters behind you
-  when you stop aiming (toggle per device in the Camera section).
-- **Aiming far behind you costs speed** (Aiming → twist settings).
-- **Air and grind kills score double** when you're mid-combo.
+The camera sits low and behind you and swings round to follow your direction
+of travel, so riding fakie or coming back down a ramp turns it around. In the
+air it mostly holds still so spins don't spin the view. Distance, height, how
+far it looks down, field of view and how quickly it swings behind you (on the
+ground and in the air) are in the **Camera** tuning section.
 
 ## Things to try
 
@@ -109,9 +96,9 @@ hard landings where the browser allows it.
 2. Hit the north quarter pipe straight on, then at an angle. Straight on sends
    you up and back in; at an angle you catch the coping. (*Vert assist*,
    *Rail magnet radius*)
-3. Ollie onto the flat rail and the ledge while tracking a moving target.
-4. Launch off the kicker toward the east bank and kickflip while shooting.
-5. Drop into the bowl and pick off the dummy at the bottom.
+3. Ollie onto the flat rail and the ledge, then the down rail off the platform.
+4. Launch off the kicker toward the east bank and try a 360 flip.
+5. Drop into the bowl and link grinds and airs into one combo.
 
 ## Sharing a setup
 
@@ -130,4 +117,6 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   *Clean landing* is clean, past *Bail beyond* is a bail, anything between is
   sketchy. You always roll away in whichever direction the board was closest
   to (regular or fakie).
+- Tricks score into a combo that's multiplied by the number of tricks in it and
+  paid out when you land cleanly. A bail loses it.
 - Sounds are synthesized with WebAudio; nothing is loaded.
