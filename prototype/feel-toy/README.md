@@ -37,6 +37,27 @@ work at once (controller in one hand, mouse in the other is fine).
 | Tuning sliders | View | Tab |
 | Help | | H |
 
+### On a phone
+
+The touch layout turns on by itself on phones and tablets. Landscape works best.
+
+| Action | Touch |
+| --- | --- |
+| Carve / spin in air | Left thumb: a stick appears wherever you touch the left side |
+| Push / brake | You roll on your own (auto-push). Stick up goes faster, down brakes |
+| Aim | Right thumb: drag anywhere |
+| Ollie | Hold **Ollie** to crouch, let go to pop |
+| Flip trick | In the air, tap **Ollie** for a kickflip, or swipe across it ↑ ↓ ← → |
+| Grab | Hold **Grab** |
+| Fire | Fires on its own when the reticle is on a target. Hold **Fire** and drag it to aim yourself |
+| Aim down sights | Tap **ADS** to toggle |
+
+Touch gets stronger aim assist and camera recentering by default. All of it
+is in the **Touch** section of the tuning panel, along with auto-push speed,
+drag sensitivity and stick size. Phones also get a lighter render (lower
+resolution, smaller shadow map, coarser ground mesh) and vibrate on hits and
+hard landings where the browser allows it.
+
 ## The loop being tested
 
 - **Tricks reload the gun.** Ammo from a combo is only paid out when you land

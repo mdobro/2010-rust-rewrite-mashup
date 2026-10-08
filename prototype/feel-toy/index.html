@@ -92,6 +92,43 @@
   .btns button:focus-visible, #panel input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   #copy-status { color: var(--good); font-size: 11px; min-height: 1.2em; }
   #json-out { width: 100%; height: 90px; font: 10px var(--font-mono); background: rgba(0,0,0,.35); color: var(--ink); border: 1px solid var(--panel-line); box-sizing: border-box; }
+  /* Touch controls */
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #panel { touch-action: pan-y; -webkit-user-select: text; user-select: text; }
+  #touch-ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #intro { z-index: 20; }
+  #panel { z-index: 30; }
+  .tbtn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; display: grid; place-items: center;
+    font: 11px/1 var(--font-display); letter-spacing: .05em; color: var(--ink); text-transform: uppercase;
+    background: rgba(16, 20, 26, .38); border: 2px solid rgba(243, 241, 234, .38); box-sizing: border-box; }
+  .tbtn.on { background: rgba(255, 181, 71, .42); border-color: var(--accent); }
+  .tbtn small { display: block; font: 9px/1 var(--font-mono); letter-spacing: 0; text-transform: none; color: var(--ink-dim); margin-top: 3px; text-align: center; }
+  #tb-ollie { width: 96px; height: 96px; right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  #tb-grab { width: 62px; height: 62px; right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+  #tb-fire { width: 76px; height: 76px; right: calc(130px + env(safe-area-inset-right, 0px)); bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
+  #tb-ads { width: 50px; height: 50px; right: calc(112px + env(safe-area-inset-right, 0px)); bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
+  .tbar { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); pointer-events: auto; display: flex; gap: 6px; left: 50%; transform: translateX(-50%); }
+  .tbar button { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(16,20,26,.5); border: 1px solid var(--panel-line); border-radius: 4px; padding: 7px 10px; touch-action: manipulation; }
+  #stick-base, #stick-knob { position: absolute; border-radius: 50%; pointer-events: none; }
+  #stick-base { width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 2px solid rgba(243,241,234,.32); background: rgba(16,20,26,.22); }
+  #stick-knob { width: 54px; height: 54px; margin: -27px 0 0 -27px; background: rgba(243,241,234,.38); border: 2px solid rgba(243,241,234,.6); }
+  #stick-base.idle { opacity: .45; }
+  #rotate-hint { position: absolute; left: 16px; right: 16px; top: calc(150px + env(safe-area-inset-top, 0px)); text-align: center; color: var(--accent); font: 12px var(--font-display); letter-spacing: .04em; }
+  .touch-only { display: none; }
+  body.touch .touch-only { display: block; }
+  body.touch .desk-only, body.touch #hud-bl { display: none; }
+  body.touch #hud-br { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(6px + env(safe-area-inset-bottom, 0px)); text-align: center; }
+  body.touch #ammo { justify-content: center; }
+  body.touch #ammo i { width: 4px; height: 10px; }
+  body.touch #combo { top: 24%; }
+  body.touch #hud-tl .speed { font-size: 28px; }
+  body.touch #panel { width: 100%; }
+  .touch-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 12px; }
+  .touch-list b { color: var(--accent); font-weight: 600; }
+  #panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #btn-close { font: 600 12px var(--font-mono); color: var(--ink); background: rgba(255,181,71,.25); border: 1px solid var(--accent); border-radius: 4px; padding: 6px 12px; }
+  @media (max-height: 460px) { #intro .card { padding: 14px 16px; } #intro h1 { font-size: 22px; } #intro p { margin-bottom: 8px; } }
+  #intro { overflow-y: auto; touch-action: pan-y; }
   #error { position: fixed; left: 16px; right: 16px; top: 40%; text-align: center; color: var(--hit); font: 14px var(--font-mono); }
 </style>
 </head>
@@ -122,7 +159,14 @@
   <div class="card">
     <h1>Skate Shooter Feel Toy</h1>
     <p>One grey park, a few targets, and every movement number on a slider. The only question: does skating while aiming feel good? Tricks reload your gun, but only when you land them.</p>
-    <div class="table-wrap">
+    <ul class="touch-list touch-only">
+      <li><b>Left thumb</b>: touch anywhere on the left to get a stick. Steer to carve and spin. You roll on your own; push up to go faster, pull down to brake.</li>
+      <li><b>Right thumb</b>: drag anywhere to aim. Hold <b>Ollie</b> to crouch, let go to pop.</li>
+      <li><b>In the air</b>: tap Ollie for a kickflip, or swipe across it ↑ ↓ ← → for other flips. Hold <b>Grab</b>.</li>
+      <li><b>Shooting</b> fires on its own when the reticle is on a target. Hold <b>Fire</b> and drag it to aim yourself.</li>
+      <li>Landing tricks reloads your gun. Turn the phone sideways for more room.</li>
+    </ul>
+    <div class="table-wrap desk-only">
     <table class="controls">
       <tr><th>Action</th><th>Controller</th><th>Mouse + keyboard</th></tr>
       <tr><td>Carve / spin in air</td><td>Left stick ← →</td><td><kbd>A</kbd> <kbd>D</kbd></td></tr>
@@ -137,12 +181,12 @@
       <tr><td>Tuning sliders</td><td>View</td><td><kbd>Tab</kbd></td></tr>
     </table>
     </div>
-    <div class="start">Click or press A to skate</div>
+    <div class="start"><span class="desk-only">Click or press A to skate</span><span class="touch-only">Tap to skate</span></div>
   </div>
 </div>
 
 <aside id="panel" hidden>
-  <h2>Tuning</h2>
+  <div id="panel-head"><h2>Tuning</h2><button id="btn-close" type="button">Done</button></div>
   <p class="sub">Changes apply live and are saved in this browser. Copy the values to share a setup.</p>
   <div id="panel-groups"></div>
   <fieldset>
@@ -156,6 +200,15 @@
     <textarea id="json-out" readonly hidden aria-label="Tuning values as JSON"></textarea>
   </fieldset>
 </aside>
+<div id="touch-ui" hidden>
+  <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div>
+  <div class="tbtn" id="tb-ollie" data-act="ollie">Ollie<small>swipe: flip</small></div>
+  <div class="tbtn" id="tb-grab" data-act="grab">Grab</div>
+  <div class="tbtn" id="tb-fire" data-act="fire">Fire<small>drag</small></div>
+  <div class="tbtn" id="tb-ads" data-act="ads">ADS</div>
+  <div class="tbar"><button type="button" id="tb-respawn">Respawn</button><button type="button" id="tb-tune">Tuning</button></div>
+  <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
+</div>
 <div id="error" hidden></div>
 
 <script type="module">
@@ -174,6 +227,7 @@ const DEFAULTS = {
   recenterPad: true, recenterMouse: false, adsDist: 1.7, adsFov: 52, shoulder: 0.55,
   padSens: 3.0, padCurve: 1.8, mouseSens: 2.2, invertY: false, assist: 0.5,
   trickReload: true, clipSize: 15, fireRate: 9, twistLimit: 120, twistDrag: 2.0,
+  autoPush: true, autoPushSpeed: 6.5, touchSens: 4.5, touchAssist: 0.8, recenterTouch: true, autoFire: true, autoFireCone: 2.5, stickRadius: 55,
 };
 const SPEC = [
   ['Skating', [
@@ -206,6 +260,12 @@ const SPEC = [
     ['mouseSens', 'Mouse sensitivity', 0.3, 8, 0.05], ['invertY', 'Invert look', 'bool'],
     ['assist', 'Aim assist (controller)', 0, 1, 0.01],
     ['twistLimit', 'Free twist before drag (°)', 45, 180, 1], ['twistDrag', 'Drag when aiming behind', 0, 8, 0.1],
+  ]],
+  ['Touch', [
+    ['autoPush', 'Auto-push', 'bool'], ['autoPushSpeed', 'Auto-push cruise speed', 2, 12, 0.25],
+    ['touchSens', 'Drag-to-aim sensitivity', 1, 12, 0.1], ['touchAssist', 'Aim assist (touch)', 0, 1, 0.01],
+    ['recenterTouch', 'Auto-recenter (touch)', 'bool'], ['autoFire', 'Auto-fire on target', 'bool'],
+    ['autoFireCone', 'Auto-fire cone (°)', 0.5, 8, 0.1], ['stickRadius', 'Stick size (px)', 30, 100, 1],
   ]],
   ['Gun', [
     ['trickReload', 'Only tricks reload', 'bool'], ['clipSize', 'Clip size', 4, 40, 1], ['fireRate', 'Fire rate (shots/s)', 2, 20, 0.5],
@@ -316,6 +376,9 @@ const keys = new Set();
 const mouseBtn = [false, false, false];
 let mouseDX = 0, mouseDY = 0, pointerLocked = false, lockFailed = false;
 let device = 'kbm', lastAimDevice = 'kbm';
+const MOBILE = matchMedia('(pointer: coarse)').matches;
+const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lookId: null, lx: 0, ly: 0, dx: 0, dy: 0,
+  ollie: false, grab: false, fire: false, ads: false, flipDir: null, lastTime: -1e9 };
 const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, flip: false, grab: false, grind: false,
   fire: false, ads: false, padAimX: 0, padAimY: 0 };
 const EDGE_IN = { ollieDown: false, ollieUp: false, flip: false, reset: false, panel: false };
@@ -336,12 +399,15 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => { keys.clear(); mouseBtn.fill(false); });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+const fromTouch = () => performance.now() - touch.lastTime < 1000;
 canvas.addEventListener('mousedown', e => {
+  if (fromTouch()) return;
   mouseBtn[e.button] = true; setDevice('kbm'); lastAimDevice = 'kbm'; startAudio();
   if (!pointerLocked && !lockFailed) requestLock();
 });
-addEventListener('mouseup', e => { mouseBtn[e.button] = false; });
+addEventListener('mouseup', e => { if (!fromTouch()) mouseBtn[e.button] = false; });
 addEventListener('mousemove', e => {
+  if (fromTouch()) return;
   if (!pointerLocked && !lockFailed) return;
   if (lockFailed && e.target !== canvas) return;
   mouseDX += e.movementX || 0; mouseDY += e.movementY || 0;
@@ -386,21 +452,21 @@ function sampleInput() {
   }
   const kx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
   const ky = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
-  IN.steer = clamp(lx + kx, -1, 1);
-  IN.stickY = clamp(ly + ky, -1, 1);
+  IN.steer = clamp(lx + kx + touch.sx, -1, 1);
+  IN.stickY = clamp(ly + ky + touch.sy, -1, 1);
   IN.push = IN.stickY < -0.5;
   IN.brake = IN.stickY > 0.6;
-  const ollie = keys.has('Space') || pb(0);
+  const ollie = keys.has('Space') || pb(0) || touch.ollie;
   if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
   if (!ollie && IN.ollie) EDGE_IN.ollieUp = true;
   IN.ollie = ollie;
   const flip = keys.has('KeyQ');
   if (flip && !IN.flipKey) EDGE_IN.flip = true;
   IN.flipKey = flip;
-  IN.grab = keys.has('KeyE') || pb(3);
+  IN.grab = keys.has('KeyE') || pb(3) || touch.grab;
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
-  IN.fire = mouseBtn[0] || pb(7);
-  IN.ads = mouseBtn[2] || pb(6);
+  IN.fire = mouseBtn[0] || pb(7) || touch.fire;
+  IN.ads = mouseBtn[2] || pb(6) || touch.ads;
   IN.padAimX = rx; IN.padAimY = ry;
   if (introVisible) { IN.fire = false; IN.ads = false; }
 }
@@ -446,14 +512,15 @@ function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, t
     o.connect(og); og.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
   }
 }
+function buzz(ms) { if (device !== 'touch') return; try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} }
 const sfx = {
   pop: () => burst({ dur: 0.05, freq: 3000, type: 'highpass', vol: 0.35, tone: 180, toneEnd: 90, toneVol: 0.3 }),
-  land: s => burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 }),
+  land: s => (s > 0.35 && buzz(Math.round(12 + 30 * s)), burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 })),
   push: () => burst({ dur: 0.14, freq: 900, q: 0.7, vol: 0.08 }),
   shot: () => burst({ dur: 0.09, freq: 1400, q: 0.6, vol: 0.32, tone: 220, toneEnd: 60, toneVol: 0.18 }),
-  hit: () => burst({ dur: 0.04, freq: 4000, q: 8, vol: 0.2, tone: 1900, toneVol: 0.12 }),
+  hit: () => (buzz(8), burst({ dur: 0.04, freq: 4000, q: 8, vol: 0.2, tone: 1900, toneVol: 0.12 })),
   kill: () => burst({ dur: 0.12, freq: 2500, q: 4, vol: 0.25, tone: 1300, toneEnd: 2600, toneVol: 0.15 }),
-  bail: () => burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 }),
+  bail: () => (buzz(70), burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 })),
   click: () => burst({ dur: 0.03, freq: 5000, type: 'highpass', vol: 0.08 }),
 };
 
@@ -461,7 +528,7 @@ const sfx = {
    Rendering: scene, park meshes, skater, targets
    ============================================================ */
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -470,7 +537,7 @@ scene.fog = new THREE.Fog(0x9fc4dc, 45, 110);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 400);
 scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a5550, 1.1));
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
-sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+sun.castShadow = true; sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 80 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
@@ -487,7 +554,7 @@ function gridTexture(base, line) {
   return t;
 }
 { // ground mesh straight from terrainH
-  const size = 2 * WORLD + 4, seg = 330;
+  const size = 2 * WORLD + 4, seg = MOBILE ? 200 : 330;
   const geo = new THREE.PlaneGeometry(size, size, seg, seg); geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, colors = [];
   const flat = new THREE.Color(0xb9b6ae), ramp = new THREE.Color(0x9fb1bf), deck = new THREE.Color(0xa69e90), bowl = new THREE.Color(0x8fa6b2);
@@ -593,7 +660,7 @@ const SPAWN = { pos: V(0, 0, 8), yaw: 0 };
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
-  trick: null, flipBuf: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
+  trick: null, flipBuf: 0, flipDir: null, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
 };
 const aim = { yaw: 0, pitch: -0.12, ads: 0, idle: 9 };
 const stats = { score: 0, shots: 0, hits: 0, kills: 0, ammo: T.clipSize, fireCool: 0, reloadT: 0 };
@@ -683,7 +750,8 @@ function stepGround(dt) {
   const dir = Math.abs(vf) > 0.3 ? Math.sign(vf) : 1;
   S.pushT -= dt;
   if (S.bail <= 0) {
-    if (IN.push && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
+    const autoPush = device === 'touch' && T.autoPush && !IN.brake && Math.abs(vf) < T.autoPushSpeed;
+    if ((IN.push || autoPush) && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
       vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push();
     }
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
@@ -745,7 +813,7 @@ function moveAir(dt) {
     if (S.flipBuf > 0) {
       if (!S.trick) {
         S.flipBuf = 0;
-        const dir = trickDir();
+        const dir = S.flipDir || trickDir(); S.flipDir = null;
         const names = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Impossible' };
         S.trick = { dir, t: 0, name: names[dir] };
       }
@@ -865,7 +933,7 @@ function stepRail(dt) {
 function step(dt) {
   if (EDGE_IN.reset) { EDGE_IN.reset = false; respawn(); }
   if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
-  if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; }
+  if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipDir = touch.flipDir; touch.flipDir = null; }
   S.flipBuf -= dt;
   S.railCool -= dt;
   if (S.bail > 0) {
@@ -884,8 +952,8 @@ function step(dt) {
    ============================================================ */
 const camState = { pivot: S.pos.clone(), dip: 0 };
 const ray = new THREE.Ray();
-function aimAssistTarget(origin, dir) {
-  let best = null, bestA = 6 * DEG;
+function aimAssistTarget(origin, dir, cone = 6) {
+  let best = null, bestA = cone * DEG;
   for (const t of TARGETS) {
     if (t.dead > 0) continue;
     const c = t.pos.clone().add(V(0, 1.1, 0));
@@ -899,12 +967,20 @@ function updateAim(dt) {
   const sens = T.mouseSens * 0.001;
   let dyaw = -mouseDX * sens, dpitch = -mouseDY * sens * (T.invertY ? -1 : 1);
   mouseDX = mouseDY = 0;
+  const assist = lastAimDevice === 'pad' ? T.assist : lastAimDevice === 'touch' ? T.touchAssist : 0;
+  if (touch.dx || touch.dy) {
+    const ts = T.touchSens * 0.001 * (aim.ads > 0.5 ? 0.6 : 1);
+    const camFwd = V(); camera.getWorldDirection(camFwd);
+    const slow = assist > 0 && aimAssistTarget(camera.position, camFwd) ? 1 - 0.5 * assist : 1;
+    dyaw += -touch.dx * ts * slow; dpitch += -touch.dy * ts * 0.8 * slow * (T.invertY ? -1 : 1);
+    touch.dx = touch.dy = 0;
+  }
   const m = Math.hypot(IN.padAimX, IN.padAimY);
   if (m > 0) {
     const k = Math.pow(m, T.padCurve) / m;
     let ps = T.padSens * (aim.ads > 0.5 ? 0.6 : 1);
     const camFwd = V(); camera.getWorldDirection(camFwd);
-    if (lastAimDevice === 'pad' && T.assist > 0 && aimAssistTarget(camera.position, camFwd)) ps *= 1 - 0.5 * T.assist;
+    if (assist > 0 && aimAssistTarget(camera.position, camFwd)) ps *= 1 - 0.5 * assist;
     dyaw += -IN.padAimX * k * ps * dt;
     dpitch += -IN.padAimY * k * ps * 0.75 * dt * (T.invertY ? -1 : 1);
   }
@@ -912,19 +988,19 @@ function updateAim(dt) {
   aim.yaw = wrap(aim.yaw + dyaw);
   aim.pitch = clamp(aim.pitch + dpitch, -1.25, 1.0);
   // Controller pull toward a target while you're moving or aiming
-  if (lastAimDevice === 'pad' && T.assist > 0 && (m > 0.1 || Math.abs(IN.steer) > 0.1 || S.vel.length() > 2)) {
+  if (assist > 0 && (m > 0.1 || dyaw || dpitch || Math.abs(IN.steer) > 0.1 || S.vel.length() > 2)) {
     const camFwd = V(); camera.getWorldDirection(camFwd);
     const tgt = aimAssistTarget(camera.position, camFwd);
     if (tgt) {
       const to = tgt.sub(camera.position).normalize();
       const ty = yawOf(V(to.x, 0, to.z)), tp = Math.asin(clamp(to.y, -1, 1));
-      const pull = T.assist * 2.2 * dt;
+      const pull = assist * 2.2 * dt;
       aim.yaw = wrap(aim.yaw + wrap(ty - aim.yaw) * pull);
       aim.pitch += (tp - aim.pitch) * pull * 0.6;
     }
   }
   aim.ads = damp(aim.ads, IN.ads && S.bail <= 0 ? 1 : 0, 12, dt);
-  const recenter = lastAimDevice === 'pad' ? T.recenterPad : T.recenterMouse;
+  const recenter = lastAimDevice === 'pad' ? T.recenterPad : lastAimDevice === 'touch' ? T.recenterTouch : T.recenterMouse;
   const moving = Math.hypot(S.vel.x, S.vel.z) > 1.2;
   if (recenter && aim.ads < 0.2 && aim.idle > T.recenterDelay && (S.grounded || S.rail) && moving && S.bail <= 0) {
     const sp = clamp(S.vel.length() / 6, 0.3, 1.2);
@@ -1021,7 +1097,18 @@ function updateGun(dt) {
     stats.reloadT += dt; if (stats.reloadT > 1.2) { stats.ammo = T.clipSize; stats.reloadT = 0; }
   }
   if (stats.ammo > T.clipSize) stats.ammo = T.clipSize;
-  if (IN.fire && S.bail <= 0 && stats.fireCool <= 0) {
+  let fire = IN.fire;
+  if (!fire && device === 'touch' && T.autoFire && stats.ammo > 0) {
+    const camFwd = V(); camera.getWorldDirection(camFwd);
+    const tgt = aimAssistTarget(camera.position, camFwd, T.autoFireCone * (1 + aim.ads));
+    if (tgt) {
+      const o = camera.position.clone(), d = tgt.clone().sub(o), dist = d.length(); d.normalize();
+      let blocked = rayTerrain(o, d, dist) < dist - 0.4;
+      for (const b of BOXES) if (rayBox(o, d, b) < dist - 0.4) blocked = true;
+      fire = !blocked;
+    }
+  }
+  if (fire && S.bail <= 0 && stats.fireCool <= 0) {
     if (stats.ammo > 0) { shoot(); stats.ammo--; stats.fireCool = 1 / T.fireRate; }
     else if (stats.fireCool < -0.25) { sfx.click(); stats.fireCool = 0.25; }
   }
@@ -1127,7 +1214,7 @@ function updateHud(dt) {
   const ret = $('reticle').children;
   ret[1].style.top = `${-spread - 7}px`; ret[2].style.top = `${spread}px`; ret[3].style.left = `${-spread - 7}px`; ret[4].style.left = `${spread}px`;
 }
-function setDevice(d) { if (device !== d) { device = d; $('device').textContent = d === 'pad' ? 'controller' : 'mouse + keyboard'; } }
+function setDevice(d) { if (device !== d) { device = d; $('device').textContent = d === 'pad' ? 'controller' : d === 'touch' ? 'touch' : 'mouse + keyboard'; } }
 
 function buildPanel() {
   const root = $('panel-groups'); root.innerHTML = '';
@@ -1159,6 +1246,7 @@ function togglePanel() {
 }
 $('btn-reset').addEventListener('click', () => { Object.assign(T, DEFAULTS); saveTuning(); buildPanel(); $('copy-status').textContent = 'Defaults restored'; });
 $('btn-respawn').addEventListener('click', () => respawn());
+$('btn-close').addEventListener('click', () => togglePanel());
 $('btn-copy').addEventListener('click', () => {
   const changed = {}; for (const k in T) if (T[k] !== DEFAULTS[k]) changed[k] = T[k];
   const text = JSON.stringify(Object.keys(changed).length ? changed : T, null, 1);
@@ -1171,7 +1259,113 @@ $('btn-copy').addEventListener('click', () => {
 let introVisible = true;
 function hideIntro() { introVisible = false; $('intro').hidden = true; startAudio(); }
 function toggleIntro() { introVisible = !introVisible; $('intro').hidden = !introVisible; }
-$('intro').addEventListener('click', () => { hideIntro(); if (!lockFailed) requestLock(); });
+$('intro').addEventListener('click', () => { hideIntro(); if (!lockFailed && !touch.active) requestLock(); });
+
+/* ============================================================
+   Touch controls: floating stick on the left, drag-to-aim on the
+   right, big buttons for ollie / grab / fire.
+   ============================================================ */
+const stickBase = $('stick-base'), stickKnob = $('stick-knob');
+function placeIdleStick() {
+  stickBase.classList.add('idle'); stickKnob.hidden = true;
+  stickBase.style.left = `calc(${Math.max(90, innerWidth * 0.13)}px + env(safe-area-inset-left, 0px))`;
+  stickBase.style.top = `${innerHeight - 100}px`;
+}
+function enableTouch() {
+  touch.lastTime = performance.now();
+  if (!touch.active) {
+    touch.active = true; document.body.classList.add('touch'); $('touch-ui').hidden = false;
+    mouseBtn.fill(false); placeIdleStick(); updateRotateHint();
+  }
+  setDevice('touch'); startAudio();
+}
+function updateRotateHint() { $('rotate-hint').hidden = !(touch.active && innerHeight > innerWidth); }
+addEventListener('resize', () => { if (touch.active) { updateRotateHint(); if (touch.stickId === null) placeIdleStick(); } });
+if (MOBILE) enableTouch();
+addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('#panel, #intro')) e.preventDefault(); }, { passive: false });
+addEventListener('gesturestart', e => e.preventDefault());
+
+canvas.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch') return;
+  e.preventDefault(); enableTouch();
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  if (e.clientX < innerWidth * 0.45 && touch.stickId === null) {
+    touch.stickId = e.pointerId; touch.ox = e.clientX; touch.oy = e.clientY; touch.sx = touch.sy = 0;
+    stickBase.classList.remove('idle'); stickKnob.hidden = false;
+    stickBase.style.left = stickKnob.style.left = `${e.clientX}px`; stickBase.style.top = stickKnob.style.top = `${e.clientY}px`;
+  } else if (touch.lookId === null) {
+    touch.lookId = e.pointerId; touch.lx = e.clientX; touch.ly = e.clientY;
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'touch') return;
+  touch.lastTime = performance.now();
+  if (e.pointerId === touch.stickId) {
+    const R = T.stickRadius;
+    let dx = e.clientX - touch.ox, dy = e.clientY - touch.oy; const d = Math.hypot(dx, dy);
+    if (d > R) { // the stick follows your thumb so it never runs out of travel
+      touch.ox += dx * (1 - R / d); touch.oy += dy * (1 - R / d); dx = e.clientX - touch.ox; dy = e.clientY - touch.oy;
+      stickBase.style.left = `${touch.ox}px`; stickBase.style.top = `${touch.oy}px`;
+    }
+    touch.sx = dx / R; touch.sy = dy / R;
+    const dz = 0.12, mag = Math.hypot(touch.sx, touch.sy);
+    if (mag < dz) touch.sx = touch.sy = 0;
+    stickKnob.style.left = `${e.clientX}px`; stickKnob.style.top = `${e.clientY}px`;
+  } else if (e.pointerId === touch.lookId) {
+    touch.dx += e.clientX - touch.lx; touch.dy += e.clientY - touch.ly; touch.lx = e.clientX; touch.ly = e.clientY;
+    lastAimDevice = 'touch';
+  }
+});
+function endCanvasPointer(e) {
+  if (e.pointerId === touch.stickId) { touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick(); }
+  if (e.pointerId === touch.lookId) touch.lookId = null;
+}
+canvas.addEventListener('pointerup', endCanvasPointer);
+canvas.addEventListener('pointercancel', endCanvasPointer);
+
+for (const el of document.querySelectorAll('.tbtn')) {
+  const act = el.dataset.act; let id = null, sx = 0, sy = 0, lx = 0, ly = 0, mode = null, flipped = false;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation(); enableTouch();
+    if (introVisible) hideIntro();
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; flipped = false;
+    if (act === 'ollie') {
+      const canPop = S.grounded || S.rail || (S.coyoteOk && S.sinceGround < T.coyoteTime);
+      mode = canPop ? 'ollie' : 'flip';
+      if (mode === 'ollie') touch.ollie = true;
+    } else if (act === 'grab') touch.grab = true;
+    else if (act === 'fire') touch.fire = true;
+    else if (act === 'ads') touch.ads = !touch.ads;
+    el.classList.toggle('on', act === 'ads' ? touch.ads : true);
+  });
+  el.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    touch.lastTime = performance.now();
+    if (act === 'fire') { touch.dx += e.clientX - lx; touch.dy += e.clientY - ly; lastAimDevice = 'touch'; }
+    lx = e.clientX; ly = e.clientY;
+    if (act === 'ollie' && mode === 'flip' && !flipped) {
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.hypot(dx, dy) > 22) {
+        flipped = true;
+        touch.flipDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy < 0 ? 'up' : 'down');
+        EDGE_IN.flip = true;
+      }
+    }
+  });
+  const end = e => {
+    if (e.pointerId !== id) return; id = null;
+    if (act === 'ollie') {
+      if (mode === 'ollie') touch.ollie = false;
+      else if (!flipped) { touch.flipDir = 'left'; EDGE_IN.flip = true; } // a tap in the air is a kickflip
+    } else if (act === 'grab') touch.grab = false;
+    else if (act === 'fire') touch.fire = false;
+    if (act !== 'ads') el.classList.remove('on');
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+$('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
+$('tb-tune').addEventListener('click', () => togglePanel());
 
 function resize() {
   const w = innerWidth, h = innerHeight;
@@ -1200,7 +1394,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step };
+window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step, camera, aimAssistTarget, TARGETS, touch, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
