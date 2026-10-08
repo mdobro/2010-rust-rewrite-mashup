@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Skate Shooter Feel Toy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: full-bleed 3D view, HUD pinned to the corners, tuning drawer on the right. Single dark look. */
+  :root {
+    --ink: #f3f1ea;
+    --ink-dim: #a9b0b8;
+    --panel: rgba(16, 20, 26, 0.88);
+    --panel-line: rgba(243, 241, 234, 0.14);
+    --accent: #ffb547;      /* grip-tape warning yellow */
+    --hit: #ff4d3d;
+    --good: #7be08f;
+    --sky: #9fc4dc;
+    --font-display: "Archivo Black", "Arial Black", Impact, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #0e1116; color: var(--ink); font: 13px/1.4 var(--font-mono); overflow: hidden; }
+  canvas#view { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+  .hud { position: fixed; pointer-events: none; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+  #hud-tl { top: calc(12px + env(safe-area-inset-top, 0px)); left: 16px; }
+  #hud-tr { top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px; text-align: right; }
+  #hud-br { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); right: 16px; text-align: right; }
+  #hud-bl { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 16px; color: var(--ink-dim); }
+  .speed { font: 40px/1 var(--font-display); letter-spacing: 0.02em; }
+  .unit { font-size: 12px; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+  .label { color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
+
+  #ammo { display: flex; gap: 3px; justify-content: flex-end; margin-top: 6px; }
+  #ammo i { width: 5px; height: 16px; background: var(--accent); border-radius: 1px; }
+  #ammo i.spent { background: rgba(243,241,234,.18); }
+  #ammo-hint { font: 12px var(--font-display); letter-spacing: .06em; color: var(--accent); min-height: 1.2em; }
+
+  #reticle { position: fixed; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+  #reticle i { position: absolute; background: var(--ink); box-shadow: 0 0 2px rgba(0,0,0,.8); }
+  #reticle .dot { width: 3px; height: 3px; left: -1.5px; top: -1.5px; border-radius: 50%; }
+  #reticle .t { width: 2px; height: 7px; left: -1px; }
+  #reticle .b { width: 2px; height: 7px; left: -1px; }
+  #reticle .l { width: 7px; height: 2px; top: -1px; }
+  #reticle .r { width: 7px; height: 2px; top: -1px; }
+  #hitmarker { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; opacity: 0; }
+  #hitmarker::before, #hitmarker::after { content: ""; position: absolute; left: 10px; top: -2px; width: 2px; height: 26px; background: var(--ink);
+    transform: rotate(45deg); box-shadow: 0 0 2px rgba(0,0,0,.8); }
+  #hitmarker::after { transform: rotate(-45deg); }
+  #hitmarker.kill::before, #hitmarker.kill::after { background: var(--hit); }
+
+  #combo { position: fixed; left: 0; right: 0; top: 62%; text-align: center; pointer-events: none; }
+  #combo .name { font: 22px/1.1 var(--font-display); letter-spacing: .02em; color: var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.55); }
+  #combo .pts { font: 13px var(--font-mono); color: var(--accent); margin-top: 4px; }
+  #combo.bail .name { color: var(--hit); }
+  #combo.landed .name { color: var(--good); }
+
+  #intro { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(10, 13, 17, .72); padding: 16px; cursor: pointer; }
+  #intro .card { max-width: 640px; width: 100%; background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 22px 24px; }
+  #intro h1 { font: 30px/1.05 var(--font-display); margin: 0 0 6px; text-wrap: balance; }
+  #intro p { margin: 0 0 14px; color: var(--ink-dim); max-width: 60ch; }
+  .controls { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .controls th { text-align: left; color: var(--ink-dim); font-weight: 400; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; padding: 0 8px 6px 0; }
+  .controls td { padding: 4px 8px 4px 0; border-top: 1px solid var(--panel-line); vertical-align: top; }
+  .controls td:first-child { color: var(--ink); }
+  kbd { font: 600 11px var(--font-mono); background: rgba(243,241,234,.1); border: 1px solid var(--panel-line); border-radius: 3px; padding: 0 4px; }
+  .start { margin-top: 16px; font: 15px var(--font-display); color: var(--accent); letter-spacing: .04em; }
+  .table-wrap { overflow-x: auto; }
+
+  #panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 100%); background: var(--panel); border-left: 1px solid var(--panel-line);
+    overflow-y: auto; padding: calc(12px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+  #panel h2 { font: 16px var(--font-display); margin: 0 0 2px; }
+  #panel .sub { color: var(--ink-dim); font-size: 11px; margin: 0 0 10px; }
+  #panel fieldset { border: 0; border-top: 1px solid var(--panel-line); margin: 10px 0 0; padding: 8px 0 0; }
+  #panel legend { font: 12px var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 0 6px 0 0; }
+  .row { display: grid; grid-template-columns: 1fr 64px; gap: 2px 8px; align-items: center; margin: 6px 0; }
+  .row label { font-size: 11px; color: var(--ink); grid-column: 1 / -1; display: flex; justify-content: space-between; }
+  .row label output { color: var(--ink-dim); }
+  .row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+  .row.bool { grid-template-columns: 1fr auto; }
+  .row.bool label { grid-column: 1; }
+  .row.bool input { accent-color: var(--accent); }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .btns button { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line);
+    border-radius: 4px; padding: 6px 9px; cursor: pointer; }
+  .btns button:hover { background: rgba(243,241,234,.16); }
+  .btns button:focus-visible, #panel input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #copy-status { color: var(--good); font-size: 11px; min-height: 1.2em; }
+  #json-out { width: 100%; height: 90px; font: 10px var(--font-mono); background: rgba(0,0,0,.35); color: var(--ink); border: 1px solid var(--panel-line); box-sizing: border-box; }
+  #error { position: fixed; left: 16px; right: 16px; top: 40%; text-align: center; color: var(--hit); font: 14px var(--font-mono); }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div class="hud" id="hud-tl">
+  <div><span class="speed" id="speed">0</span> <span class="unit">km/h</span></div>
+  <div class="label" id="state">rolling</div>
+</div>
+<div class="hud" id="hud-tr">
+  <div class="label">Score</div>
+  <div class="speed" id="score" style="font-size:26px">0</div>
+  <div class="label" id="hits">hits 0 · kills 0 · acc –</div>
+</div>
+<div class="hud" id="hud-br">
+  <div id="ammo-hint"></div>
+  <div class="label"><span id="ammo-count">15</span> rounds</div>
+  <div id="ammo"></div>
+</div>
+<div class="hud" id="hud-bl"><span id="device">mouse + keyboard</span> · <kbd>Tab</kbd> / <kbd>View</kbd> tuning · <kbd>H</kbd> help</div>
+
+<div id="reticle"><i class="dot"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+<div id="hitmarker"></div>
+<div id="combo"><div class="name"></div><div class="pts"></div></div>
+
+<div id="intro">
+  <div class="card">
+    <h1>Skate Shooter Feel Toy</h1>
+    <p>One grey park, a few targets, and every movement number on a slider. The only question: does skating while aiming feel good? Tricks reload your gun, but only when you land them.</p>
+    <div class="table-wrap">
+    <table class="controls">
+      <tr><th>Action</th><th>Controller</th><th>Mouse + keyboard</th></tr>
+      <tr><td>Carve / spin in air</td><td>Left stick ← →</td><td><kbd>A</kbd> <kbd>D</kbd></td></tr>
+      <tr><td>Push / brake</td><td>Left stick ↑ ↓</td><td><kbd>W</kbd> <kbd>S</kbd></td></tr>
+      <tr><td>Aim / look</td><td>Right stick</td><td>Mouse</td></tr>
+      <tr><td>Aim down sights / fire</td><td>LT / RT</td><td>Right / left click</td></tr>
+      <tr><td>Ollie (hold to crouch, release to pop)</td><td>A</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>Flip trick (+ stick direction)</td><td>X</td><td><kbd>Q</kbd> (+ WASD)</td></tr>
+      <tr><td>Grab (hold)</td><td>Y</td><td><kbd>E</kbd></td></tr>
+      <tr><td>Grind (auto near rails; or hold)</td><td>LB</td><td><kbd>Shift</kbd></td></tr>
+      <tr><td>Respawn</td><td>Menu</td><td><kbd>R</kbd></td></tr>
+      <tr><td>Tuning sliders</td><td>View</td><td><kbd>Tab</kbd></td></tr>
+    </table>
+    </div>
+    <div class="start">Click or press A to skate</div>
+  </div>
+</div>
+
+<aside id="panel" hidden>
+  <h2>Tuning</h2>
+  <p class="sub">Changes apply live and are saved in this browser. Copy the values to share a setup.</p>
+  <div id="panel-groups"></div>
+  <fieldset>
+    <legend>Setup</legend>
+    <div class="btns">
+      <button id="btn-copy" type="button">Copy values</button>
+      <button id="btn-reset" type="button">Reset to defaults</button>
+      <button id="btn-respawn" type="button">Respawn</button>
+    </div>
+    <div id="copy-status"></div>
+    <textarea id="json-out" readonly hidden aria-label="Tuning values as JSON"></textarea>
+  </fieldset>
+</aside>
+<div id="error" hidden></div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+/* ============================================================
+   Tuning: every feel number lives here and on a slider.
+   ============================================================ */
+const DEFAULTS = {
+  gravity: 14, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
+  popSpeed: 5.6, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
+  landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
+  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
+  camDist: 3.4, camHeight: 1.55, camSide: 0.5, camFov: 72, fovKick: 14, camLag: 12, recenterDelay: 0.7, recenterRate: 2.5,
+  recenterPad: true, recenterMouse: false, adsDist: 1.7, adsFov: 52, shoulder: 0.55,
+  padSens: 3.0, padCurve: 1.8, mouseSens: 2.2, invertY: false, assist: 0.5,
+  trickReload: true, clipSize: 15, fireRate: 9, twistLimit: 120, twistDrag: 2.0,
+};
+const SPEC = [
+  ['Skating', [
+    ['gravity', 'Gravity', 6, 30, 0.5], ['pushImpulse', 'Push strength', 0.3, 4, 0.05],
+    ['pushInterval', 'Push interval (s)', 0.15, 1, 0.01], ['pushMax', 'Push top speed (m/s)', 3, 16, 0.25],
+    ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength', 1, 20, 0.5],
+    ['turnRate', 'Turn rate, slow', 0.5, 6, 0.05], ['turnRateFast', 'Turn rate, fast', 0.3, 5, 0.05],
+    ['grip', 'Grip (less side slip)', 1, 30, 0.5], ['carveKeep', 'Speed kept when carving', 0, 1, 0.01],
+  ]],
+  ['Pop and air', [
+    ['popSpeed', 'Pop strength', 2, 10, 0.1], ['crouchTime', 'Crouch to full pop (s)', 0.05, 0.6, 0.01],
+    ['coyoteTime', 'Late ollie grace (s)', 0, 0.3, 0.01], ['airSpin', 'Air spin speed', 2, 14, 0.25],
+    ['vertAssist', 'Vert assist (airs land back in ramp)', 'bool'], ['vertAngle', 'Vert assist above slope (°)', 30, 85, 1],
+    ['landClean', 'Clean landing within (°)', 5, 60, 1], ['landSketchy', 'Bail beyond (°)', 20, 89, 1],
+    ['flipTime', 'Flip duration (s)', 0.2, 0.9, 0.01], ['flipForgive', 'Flip done enough to land', 0.4, 1, 0.01],
+  ]],
+  ['Grinding', [
+    ['autoGrind', 'Auto grind (off: hold LB / Shift)', 'bool'], ['railMagnet', 'Rail magnet radius (m)', 0.1, 1.6, 0.05],
+    ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1],
+  ]],
+  ['Camera', [
+    ['camDist', 'Distance', 1.5, 7, 0.05], ['camHeight', 'Height', 0.5, 3, 0.05], ['camSide', 'Side offset', -1.2, 1.2, 0.05], ['camFov', 'Field of view', 50, 100, 1],
+    ['fovKick', 'FOV boost at speed', 0, 30, 1], ['camLag', 'Follow stiffness', 2, 40, 0.5],
+    ['recenterPad', 'Auto-recenter (controller)', 'bool'], ['recenterMouse', 'Auto-recenter (mouse)', 'bool'],
+    ['recenterDelay', 'Recenter delay (s)', 0, 3, 0.05], ['recenterRate', 'Recenter speed', 0.2, 10, 0.1],
+    ['adsDist', 'ADS distance', 0.6, 4, 0.05], ['adsFov', 'ADS field of view', 30, 80, 1], ['shoulder', 'ADS shoulder offset', 0, 1.2, 0.05],
+  ]],
+  ['Aiming', [
+    ['padSens', 'Stick sensitivity', 0.5, 8, 0.1], ['padCurve', 'Stick response curve', 1, 3, 0.05],
+    ['mouseSens', 'Mouse sensitivity', 0.3, 8, 0.05], ['invertY', 'Invert look', 'bool'],
+    ['assist', 'Aim assist (controller)', 0, 1, 0.01],
+    ['twistLimit', 'Free twist before drag (°)', 45, 180, 1], ['twistDrag', 'Drag when aiming behind', 0, 8, 0.1],
+  ]],
+  ['Gun', [
+    ['trickReload', 'Only tricks reload', 'bool'], ['clipSize', 'Clip size', 4, 40, 1], ['fireRate', 'Fire rate (shots/s)', 2, 20, 0.5],
+  ]],
+];
+const STORE_KEY = 'skate-feel-toy-v1';
+const T = { ...DEFAULTS };
+try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
+function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
+
+/* ============================================================
+   Small math helpers
+   ============================================================ */
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt));
+const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+const dampAngle = (a, b, rate, dt) => a + wrap(b - a) * (1 - Math.exp(-rate * dt));
+const fwdOf = yaw => V(-Math.sin(yaw), 0, -Math.cos(yaw));
+const yawOf = d => Math.atan2(-d.x, -d.z);
+const DEG = Math.PI / 180;
+
+/* ============================================================
+   The park. Ground is an analytic height function, so physics
+   and the rendered mesh always agree. Boxes and rails sit on top.
+   ============================================================ */
+function arc(d, R, dmax) { if (d <= 0) return 0; const dd = Math.min(d, dmax); return R - Math.sqrt(R * R - dd * dd); }
+const QP = { R: 2.8 }; QP.dmax = QP.R * 0.95; QP.H = arc(QP.dmax, QP.R, QP.dmax);
+const BOWL = { x: -9, z: -12, r0: 3.2, R: 3.0 }; BOWL.dmax = BOWL.R * 0.95; BOWL.D = arc(BOWL.dmax, BOWL.R, BOWL.dmax);
+const EDGE = 22, WORLD = 30, STEP = 0.3;
+
+function terrainH(x, z) {
+  let h = 0;
+  h = Math.max(h, arc(-EDGE - z, QP.R, QP.dmax));              // north quarter pipe
+  h = Math.max(h, arc(z - EDGE, QP.R, QP.dmax));               // south quarter pipe
+  h = Math.max(h, arc(-EDGE - x, QP.R, QP.dmax));              // west quarter pipe
+  { const d = x - EDGE; if (d > 0) h = Math.max(h, Math.min(d * Math.tan(28 * DEG), 1.7)); } // east bank
+  if (x >= -20 && x <= -16) {                                    // platform with a bank up and a bank down
+    let m = 0;
+    if (z >= -2 && z <= 3) m = 1.2;
+    else if (z > -7 && z < -2) m = 1.2 * (z + 7) / 5;
+    else if (z > 3 && z < 9) m = 1.2 * (9 - z) / 6;
+    h = Math.max(h, m);
+  }
+  if (z >= -13 && z <= -10) { const d = x - 9.5; if (d > 0 && d <= 1.6) h = Math.max(h, arc(d, 2.5, 1.6)); } // kicker
+  if (x >= 4 && x <= 8) {                                        // funbox approach ramps
+    if (z > -8.1 && z < -6) h = Math.max(h, 0.55 * Math.min(1, (z + 8.1) / 1.8));
+    if (z > 2 && z < 4.1) h = Math.max(h, 0.55 * Math.min(1, (4.1 - z) / 1.8));
+  }
+  { const dx = x + 5, dz = z - 1; h += 0.45 * Math.exp(-(dx * dx + dz * dz) / (2 * 1.6 * 1.6)); } // roller
+  { const r = Math.hypot(x - BOWL.x, z - BOWL.z);                // bowl
+    if (r < BOWL.r0 + BOWL.dmax) h += r < BOWL.r0 ? -BOWL.D : -BOWL.D + arc(r - BOWL.r0, BOWL.R, BOWL.dmax); }
+  return h;
+}
+
+const BOXES = [
+  { min: [4, 0, -6], max: [8, 0.55, 2], edges: 'z' },     // funbox
+  { min: [-8, 0, 12], max: [0, 0.42, 12.5], edges: 'x' }, // ledge
+];
+const RAILS = [
+  { a: V(4, 0.45, 14.5), b: V(14, 0.45, 14.5), kind: 'Rail', post: true },
+  { a: V(-15.6, 1.65, 3), b: V(-15.6, 0.45, 9), kind: 'Down rail', post: true },
+];
+for (const b of BOXES) {
+  const y = b.max[1];
+  if (b.edges === 'z') for (const x of [b.min[0], b.max[0]]) RAILS.push({ a: V(x, y, b.min[2]), b: V(x, y, b.max[2]), kind: 'Ledge' });
+  else for (const z of [b.min[2], b.max[2]]) RAILS.push({ a: V(b.min[0], y, z), b: V(b.max[0], y, z), kind: 'Ledge' });
+}
+{ const L = EDGE + QP.dmax, s = EDGE - 0.5, c = QP.H; // quarter pipe copings
+  RAILS.push({ a: V(-s, c, -L), b: V(s, c, -L), kind: 'Coping', minSpeed: 2 });
+  RAILS.push({ a: V(-s, c, L), b: V(s, c, L), kind: 'Coping', minSpeed: 2 });
+  RAILS.push({ a: V(-L, c, -s), b: V(-L, c, s), kind: 'Coping', minSpeed: 2 }); }
+for (const r of RAILS) { r.len = r.a.distanceTo(r.b); r.dir = r.b.clone().sub(r.a).normalize(); }
+
+function terrainNormal(x, z) {
+  const e = 0.05;
+  return V(-(terrainH(x + e, z) - terrainH(x - e, z)), 2 * e, -(terrainH(x, z + e) - terrainH(x, z - e))).normalize();
+}
+function groundAt(x, z, y) {
+  let h = terrainH(x, z), onBox = false;
+  for (const b of BOXES)
+    if (x >= b.min[0] && x <= b.max[0] && z >= b.min[2] && z <= b.max[2] && b.max[1] <= y + STEP && b.max[1] > h) { h = b.max[1]; onBox = true; }
+  return { h, n: onBox ? UP.clone() : terrainNormal(x, z) };
+}
+function collideBoxes(p, v) {
+  const r = 0.28;
+  for (const b of BOXES) {
+    if (p.y >= b.max[1] - 0.08 || p.y + 1.6 < b.min[1]) continue;
+    const x0 = b.min[0] - r, x1 = b.max[0] + r, z0 = b.min[2] - r, z1 = b.max[2] + r;
+    if (p.x <= x0 || p.x >= x1 || p.z <= z0 || p.z >= z1) continue;
+    const pens = [[p.x - x0, -1, 0], [x1 - p.x, 1, 0], [p.z - z0, 0, -1], [z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0]);
+    const [d, nx, nz] = pens[0];
+    p.x += nx * d; p.z += nz * d;
+    const vn = v.x * nx + v.z * nz;
+    if (vn < 0) { v.x -= 1.2 * vn * nx; v.z -= 1.2 * vn * nz; v.multiplyScalar(0.85); }
+    return -vn;
+  }
+  return 0;
+}
+
+/* ============================================================
+   Input: keyboard, mouse and the first connected gamepad,
+   all live at once. Edges are latched until a sim step reads them.
+   ============================================================ */
+const keys = new Set();
+const mouseBtn = [false, false, false];
+let mouseDX = 0, mouseDY = 0, pointerLocked = false, lockFailed = false;
+let device = 'kbm', lastAimDevice = 'kbm';
+const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, flip: false, grab: false, grind: false,
+  fire: false, ads: false, padAimX: 0, padAimY: 0 };
+const EDGE_IN = { ollieDown: false, ollieUp: false, flip: false, reset: false, panel: false };
+let prevBtn = {};
+const canvas = document.getElementById('view');
+
+function isTyping(e) { return e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'); }
+addEventListener('keydown', e => {
+  if (isTyping(e)) return;
+  if (['Tab', 'Space', 'ShiftLeft'].includes(e.code)) e.preventDefault();
+  if (!e.repeat) {
+    if (e.code === 'Tab') EDGE_IN.panel = true;
+    if (e.code === 'KeyR') EDGE_IN.reset = true;
+    if (e.code === 'KeyH') toggleIntro();
+  }
+  keys.add(e.code); setDevice('kbm'); lastAimDevice = 'kbm'; startAudio();
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => { keys.clear(); mouseBtn.fill(false); });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('mousedown', e => {
+  mouseBtn[e.button] = true; setDevice('kbm'); lastAimDevice = 'kbm'; startAudio();
+  if (!pointerLocked && !lockFailed) requestLock();
+});
+addEventListener('mouseup', e => { mouseBtn[e.button] = false; });
+addEventListener('mousemove', e => {
+  if (!pointerLocked && !lockFailed) return;
+  if (lockFailed && e.target !== canvas) return;
+  mouseDX += e.movementX || 0; mouseDY += e.movementY || 0;
+  if (Math.abs(e.movementX) + Math.abs(e.movementY) > 0) { lastAimDevice = 'kbm'; setDevice('kbm'); }
+});
+function requestLock() {
+  try {
+    const p = canvas.requestPointerLock();
+    if (p && p.catch) p.catch(() => { lockFailed = true; });
+  } catch (_) { lockFailed = true; }
+}
+document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === canvas; });
+document.addEventListener('pointerlockerror', () => { lockFailed = true; });
+
+function stick(x, y, dz) {
+  const m = Math.hypot(x, y);
+  if (m < dz) return [0, 0];
+  const k = Math.min(1, (m - dz) / (1 - dz)) / m;
+  return [x * k, y * k];
+}
+function readPad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const p of pads) if (p && p.connected) return p;
+  return null;
+}
+function sampleInput() {
+  const p = readPad();
+  let lx = 0, ly = 0, rx = 0, ry = 0;
+  const pb = i => !!(p && p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.3));
+  if (p) {
+    [lx, ly] = stick(p.axes[0] || 0, p.axes[1] || 0, 0.15);
+    [rx, ry] = stick(p.axes[2] || 0, p.axes[3] || 0, 0.12);
+    const anyBtn = p.buttons.some(b => b.pressed);
+    if (lx || ly || rx || ry || anyBtn) { setDevice('pad'); startAudio(); }
+    if (rx || ry) lastAimDevice = 'pad';
+    const now = {}; for (const i of [0, 2, 8, 9]) now[i] = pb(i);
+    if (now[0] && !prevBtn[0] && introVisible) hideIntro();
+    if (now[2] && !prevBtn[2]) EDGE_IN.flip = true;
+    if (now[8] && !prevBtn[8]) EDGE_IN.panel = true;
+    if (now[9] && !prevBtn[9]) EDGE_IN.reset = true;
+    prevBtn = now;
+  }
+  const kx = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+  const ky = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
+  IN.steer = clamp(lx + kx, -1, 1);
+  IN.stickY = clamp(ly + ky, -1, 1);
+  IN.push = IN.stickY < -0.5;
+  IN.brake = IN.stickY > 0.6;
+  const ollie = keys.has('Space') || pb(0);
+  if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
+  if (!ollie && IN.ollie) EDGE_IN.ollieUp = true;
+  IN.ollie = ollie;
+  const flip = keys.has('KeyQ');
+  if (flip && !IN.flipKey) EDGE_IN.flip = true;
+  IN.flipKey = flip;
+  IN.grab = keys.has('KeyE') || pb(3);
+  IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
+  IN.fire = mouseBtn[0] || pb(7);
+  IN.ads = mouseBtn[2] || pb(6);
+  IN.padAimX = rx; IN.padAimY = ry;
+  if (introVisible) { IN.fire = false; IN.ads = false; }
+}
+function trickDir() {
+  if (IN.stickY < -0.5) return 'up';
+  if (IN.stickY > 0.5) return 'down';
+  if (IN.steer > 0.5) return 'right';
+  return 'left';
+}
+
+/* ============================================================
+   Sound: everything synthesized with WebAudio, started on first input.
+   ============================================================ */
+let AC = null, noiseBuf = null, rollGain, rollFilter, grindGain, grindFilter;
+function startAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const loop = (freq, q) => {
+      const src = AC.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+      const g = AC.createGain(); g.gain.value = 0;
+      src.connect(f); f.connect(g); g.connect(AC.destination); src.start();
+      return [g, f];
+    };
+    [rollGain, rollFilter] = loop(300, 0.8);
+    [grindGain, grindFilter] = loop(2400, 4);
+  } catch (_) { AC = null; }
+}
+function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, tone = 0, toneEnd = 0, toneVol = 0.2 }) {
+  if (!AC) return;
+  const t = AC.currentTime;
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f); f.connect(g); g.connect(AC.destination); src.start(t, Math.random()); src.stop(t + dur + 0.02);
+  if (tone) {
+    const o = AC.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(tone, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(20, toneEnd || tone), t + dur);
+    const og = AC.createGain(); og.gain.setValueAtTime(toneVol, t); og.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(og); og.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+}
+const sfx = {
+  pop: () => burst({ dur: 0.05, freq: 3000, type: 'highpass', vol: 0.35, tone: 180, toneEnd: 90, toneVol: 0.3 }),
+  land: s => burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 }),
+  push: () => burst({ dur: 0.14, freq: 900, q: 0.7, vol: 0.08 }),
+  shot: () => burst({ dur: 0.09, freq: 1400, q: 0.6, vol: 0.32, tone: 220, toneEnd: 60, toneVol: 0.18 }),
+  hit: () => burst({ dur: 0.04, freq: 4000, q: 8, vol: 0.2, tone: 1900, toneVol: 0.12 }),
+  kill: () => burst({ dur: 0.12, freq: 2500, q: 4, vol: 0.25, tone: 1300, toneEnd: 2600, toneVol: 0.15 }),
+  bail: () => burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 }),
+  click: () => burst({ dur: 0.03, freq: 5000, type: 'highpass', vol: 0.08 }),
+};
+
+/* ============================================================
+   Rendering: scene, park meshes, skater, targets
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fc4dc);
+scene.fog = new THREE.Fog(0x9fc4dc, 45, 110);
+const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 400);
+scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a5550, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 80 });
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+
+function gridTexture(base, line) {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2500; i++) { const v = Math.random() * 30 - 15; g.fillStyle = `rgba(${v > 0 ? 255 : 0},${v > 0 ? 255 : 0},${v > 0 ? 255 : 0},${Math.abs(v) / 300})`; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+  g.strokeStyle = line; g.lineWidth = 3; g.strokeRect(0, 0, 256, 256);
+  g.lineWidth = 1; g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 256); g.moveTo(0, 128); g.lineTo(256, 128); g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+{ // ground mesh straight from terrainH
+  const size = 2 * WORLD + 4, seg = 330;
+  const geo = new THREE.PlaneGeometry(size, size, seg, seg); geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position, colors = [];
+  const flat = new THREE.Color(0xb9b6ae), ramp = new THREE.Color(0x9fb1bf), deck = new THREE.Color(0xa69e90), bowl = new THREE.Color(0x8fa6b2);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i), h = terrainH(x, z);
+    pos.setY(i, h);
+    const n = terrainNormal(x, z);
+    const c = h < -0.05 ? bowl.clone() : n.y < 0.985 ? ramp.clone() : h > 0.3 ? deck.clone() : flat.clone();
+    colors.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const tex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)'); tex.repeat.set(size / 2, size / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.92 }));
+  mesh.receiveShadow = true; mesh.castShadow = true;
+  scene.add(mesh);
+}
+const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, metalness: 0.85, roughness: 0.3 });
+const concrete = new THREE.MeshStandardMaterial({ map: gridTexture('#c4c0b6', 'rgba(40,46,56,0.3)'), roughness: 0.9 });
+for (const b of BOXES) {
+  const sx = b.max[0] - b.min[0], sy = b.max[1] - b.min[1], sz = b.max[2] - b.min[2];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), concrete);
+  m.position.set((b.min[0] + b.max[0]) / 2, sy / 2, (b.min[2] + b.max[2]) / 2);
+  m.castShadow = m.receiveShadow = true; scene.add(m);
+}
+function tube(a, b, r, mat) {
+  const len = a.distanceTo(b);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize());
+  m.castShadow = true; scene.add(m); return m;
+}
+for (const r of RAILS) {
+  tube(r.a.clone().add(V(0, -0.03, 0)), r.b.clone().add(V(0, -0.03, 0)), 0.035, metal);
+  if (r.post) for (const t of [0.08, 0.5, 0.92]) {
+    const p = r.a.clone().lerp(r.b, t);
+    tube(V(p.x, groundAt(p.x, p.z, p.y - 0.2).h - 0.05, p.z), V(p.x, p.y - 0.03, p.z), 0.03, metal);
+  }
+}
+{ const ring = new THREE.Mesh(new THREE.TorusGeometry(BOWL.r0 + BOWL.dmax, 0.04, 8, 96), metal);
+  ring.rotation.x = Math.PI / 2; ring.position.set(BOWL.x, 0, BOWL.z); scene.add(ring); }
+
+// Skater: capsule body that twists toward your aim, on a board that flips.
+const skater = new THREE.Group(); scene.add(skater);
+const boardOrient = new THREE.Group(); skater.add(boardOrient);
+const boardFlip = new THREE.Group(); boardOrient.add(boardFlip);
+{ const deck = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.82), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.8 }));
+  deck.position.y = 0.09; deck.castShadow = true; boardFlip.add(deck);
+  const under = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.006, 0.8), new THREE.MeshStandardMaterial({ color: 0xffb547, roughness: 0.6 }));
+  under.position.y = 0.073; boardFlip.add(under);
+  const wheelGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.035, 12); wheelGeo.rotateZ(Math.PI / 2);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0xf3f1ea, roughness: 0.5 });
+  for (const x of [-0.085, 0.085]) for (const z of [-0.27, 0.27]) { const w = new THREE.Mesh(wheelGeo, wheelMat); w.position.set(x, 0.03, z); boardFlip.add(w); } }
+const body = new THREE.Group(); skater.add(body);
+const shirt = new THREE.MeshStandardMaterial({ color: 0x3f7fbf, roughness: 0.7 });
+const pants = new THREE.MeshStandardMaterial({ color: 0x2b3440, roughness: 0.8 });
+const skin = new THREE.MeshStandardMaterial({ color: 0xd9a77f, roughness: 0.6 });
+const legs = new THREE.Group(); body.add(legs);
+for (const x of [-0.12, 0.12]) { const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.6, 4, 8), pants); l.position.set(x, 0.4, 0); l.castShadow = true; legs.add(l); }
+const torso = new THREE.Group(); body.add(torso);
+{ const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.38, 4, 10), shirt); t.position.y = 0.28; t.castShadow = true; torso.add(t);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), skin); h.position.y = 0.72; h.castShadow = true; torso.add(h); }
+const gunPivot = new THREE.Group(); gunPivot.position.set(0.2, 0.42, 0); torso.add(gunPivot);
+const gun = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.5), new THREE.MeshStandardMaterial({ color: 0x1d1f22, roughness: 0.5 }));
+gun.position.set(0, 0, -0.3); gun.castShadow = true; gunPivot.add(gun);
+const muzzle = new THREE.Object3D(); muzzle.position.set(0, 0.02, -0.57); gunPivot.add(muzzle);
+const flash = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
+flash.visible = false; muzzle.add(flash);
+
+// Targets: dummies to shoot. Some patrol back and forth.
+const TARGETS = [];
+const dummyMat = () => new THREE.MeshStandardMaterial({ color: 0xe0713f, roughness: 0.7, emissive: 0x000000 });
+function addTarget(x, z, path) {
+  const g = new THREE.Group(); const mat = dummyMat();
+  const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.6, 4, 10), mat); b.position.y = 0.9; b.castShadow = true; g.add(b);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), mat); h.position.y = 1.6; h.castShadow = true; g.add(h);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.12, 16), new THREE.MeshStandardMaterial({ color: 0x3a3f46 })); base.position.y = 0.06; g.add(base);
+  scene.add(g);
+  TARGETS.push({ g, mat, home: V(x, 0, z), path, phase: Math.random() * 6, hp: 3, dead: 0, flash: 0, pos: V(x, terrainH(x, z), z) });
+}
+addTarget(0, -26.5); addTarget(-12, -27); addTarget(10, -27);   // on the north deck
+addTarget(BOWL.x, BOWL.z);                                        // in the bowl
+addTarget(-18, 0.5);                                              // on the platform
+addTarget(27, 6);                                                 // east deck
+addTarget(0, -9, { axis: 'x', span: 9, speed: 2.2 });             // patrolling
+addTarget(-2, 18, { axis: 'x', span: 12, speed: 3.0 });
+addTarget(15, 0, { axis: 'z', span: 8, speed: 1.6 });
+
+const tracers = [];
+for (let i = 0; i < 10; i++) {
+  const geo = new THREE.BufferGeometry().setFromPoints([V(), V()]);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0 }));
+  line.frustumCulled = false; scene.add(line); tracers.push({ line, life: 0 });
+}
+let tracerIdx = 0;
+const impactMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe2a0 }));
+impactMesh.visible = false; scene.add(impactMesh);
+
+/* ============================================================
+   Skater state and the simulation step (fixed 120 Hz)
+   ============================================================ */
+const SPAWN = { pos: V(0, 0, 8), yaw: 0 };
+const S = {
+  pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
+  crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
+  trick: null, flipBuf: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
+};
+const aim = { yaw: 0, pitch: -0.12, ads: 0, idle: 9 };
+const stats = { score: 0, shots: 0, hits: 0, kills: 0, ammo: T.clipSize, fireCool: 0, reloadT: 0 };
+const combo = { parts: [], pts: 0, ammo: 0 };
+
+function respawn() {
+  Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, trick: null, bail: 0, crouch: 0, grabT: 0, spin: 0 });
+  S.pos.y = terrainH(S.pos.x, S.pos.z);
+  aim.yaw = SPAWN.yaw; aim.pitch = -0.12;
+  combo.parts = []; combo.pts = 0; combo.ammo = 0;
+  camState.pivot.copy(S.pos);
+}
+const travelYaw = () => {
+  if (S.rail) return yawOf(S.rail.dir.clone().multiplyScalar(Math.sign(S.railS) || 1));
+  const f = fwdOf(S.yaw);
+  return S.vel.x * f.x + S.vel.z * f.z < -0.3 ? wrap(S.yaw + Math.PI) : S.yaw;
+};
+const fakie = () => S.vel.dot(fwdOf(S.yaw)) < -0.3;
+function surfaceAxes(n) {
+  const fl = fwdOf(S.yaw);
+  const f = fl.clone().addScaledVector(n, -fl.dot(n));
+  if (f.lengthSq() < 1e-6) f.copy(fl); f.normalize();
+  const r = V().crossVectors(f, n).normalize();
+  return [f, r];
+}
+
+function addTrick(name, pts, ammo) { combo.parts.push(name); combo.pts += pts; combo.ammo += ammo; showCombo(); }
+function bankCombo() {
+  if (!combo.parts.length) return;
+  const mult = combo.parts.length, total = Math.round(combo.pts * mult);
+  stats.score += total;
+  if (T.trickReload) stats.ammo = Math.min(T.clipSize, stats.ammo + combo.ammo);
+  showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}${T.trickReload && combo.ammo ? `  ·  +${combo.ammo} rounds` : ''}`, 'landed');
+  combo.parts = []; combo.pts = 0; combo.ammo = 0; combo.sketchy = false;
+}
+function doBail(reason) {
+  if (S.bail > 0) return;
+  S.bail = 1.2; S.trick = null; S.grabT = 0; S.rail = null; S.crouch = 0;
+  S.bailVel.copy(S.vel); S.vel.multiplyScalar(0.45);
+  combo.parts = []; combo.pts = 0; combo.ammo = 0;
+  showCombo(reason, 'bail'); sfx.bail();
+}
+
+function pop(n, strength) {
+  const dir = n.clone().lerp(UP, 0.35).normalize();
+  S.vel.addScaledVector(dir, T.popSpeed * strength);
+  S.grounded = false; S.rail = null; S.sinceGround = 0; S.airTime = 0; S.coyoteOk = false; S.popped = true;
+  S.crouch = 0; S.spin = 0; sfx.pop();
+}
+function leaveGround(n) {
+  S.grounded = false; S.sinceGround = 0; S.airTime = 0; S.coyoteOk = true; S.spin = 0; S.popped = false;
+  // The normal right at a lip is smeared across the edge, so look a little back down the ramp too.
+  const hv = V(S.vel.x, 0, S.vel.z);
+  if (hv.lengthSq() > 1e-6) {
+    hv.normalize();
+    for (const back of [0.1, 0.2, 0.3]) {
+      const nb = terrainNormal(S.pos.x - hv.x * back, S.pos.z - hv.z * back);
+      if (nb.y < n.y) n = nb;
+    }
+  }
+  if (T.vertAssist && n.y < Math.cos(T.vertAngle * DEG)) {
+    // Arcade cheat: steep ramps send you straight up so you land back in.
+    const nh = V(n.x, 0, n.z).normalize();
+    const along = S.vel.x * nh.x + S.vel.z * nh.z;
+    if (along < 0) { S.vel.x -= nh.x * along; S.vel.z -= nh.z * along; }
+    S.vel.x += nh.x * 0.35; S.vel.z += nh.z * 0.35;
+  }
+}
+
+function stepGround(dt) {
+  const n = S.n;
+  S.vel.y -= T.gravity * dt;
+  S.vel.addScaledVector(n, -S.vel.dot(n));
+  let [f] = surfaceAxes(n);
+  const speed = S.vel.length();
+  const vfNow = S.vel.dot(f);
+  const sign = vfNow < -0.3 ? -1 : 1;
+  const rate = lerp(T.turnRate, T.turnRateFast, clamp(speed / Math.max(1, T.pushMax), 0, 1));
+  if (S.bail <= 0) S.yaw = wrap(S.yaw - IN.steer * rate * dt * sign);
+  let r; [f, r] = surfaceAxes(n);
+  let vf = S.vel.dot(f), vl = S.vel.dot(r);
+  // Grip bleeds off side slip and turns it into forward speed, minus a carving loss.
+  const newVl = vl * Math.exp(-(S.bail > 0 ? 3 : T.grip) * dt);
+  const sp0 = Math.hypot(vf, vl);
+  const sp1 = Math.max(0, sp0 - (1 - T.carveKeep) * (Math.abs(vl) - Math.abs(newVl)));
+  vf = (Math.sign(vf) || 1) * Math.sqrt(Math.max(0, sp1 * sp1 - newVl * newVl));
+  const dir = Math.abs(vf) > 0.3 ? Math.sign(vf) : 1;
+  S.pushT -= dt;
+  if (S.bail <= 0) {
+    if (IN.push && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
+      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push();
+    }
+    if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
+  } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
+  vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.rollFriction * dt);
+  const twist = Math.abs(wrap(aim.yaw - travelYaw())) / DEG;
+  if (twist > T.twistLimit && Math.abs(vf) > 1) vf -= Math.sign(vf) * T.twistDrag * dt;
+  S.vel.copy(f).multiplyScalar(vf).addScaledVector(r, newVl);
+
+  if (S.bail <= 0) {
+    if (IN.ollie) S.crouch = Math.min(1, S.crouch + dt / T.crouchTime);
+    if (EDGE_IN.ollieUp) { EDGE_IN.ollieUp = false; pop(n, 0.55 + 0.45 * S.crouch); }
+    if (!S.grounded) return moveAir(dt);
+  }
+
+  const prev = S.pos.clone();
+  S.pos.addScaledVector(S.vel, dt);
+  const hitBox = collideBoxes(S.pos, S.vel);
+  if (hitBox > 2.5) sfx.land(0.3);
+  if (Math.abs(S.pos.x) > WORLD || Math.abs(S.pos.z) > WORLD) { S.pos.x = clamp(S.pos.x, -WORLD, WORLD); S.pos.z = clamp(S.pos.z, -WORLD, WORLD); S.vel.multiplyScalar(-0.3); }
+  const g = groundAt(S.pos.x, S.pos.z, S.pos.y);
+  if (g.h - S.pos.y > STEP) { wallBounce(prev); return; }
+  const gap = (S.pos.y - g.h) * g.n.y;
+  // Leave the ground when it falls away under you (lips, box edges, hump crests at speed).
+  const convexTurn = g.n.dot(S.vel) > 0.2 && g.n.dot(n) < Math.cos(20 * DEG);
+  if (gap > 0.06 || convexTurn) { leaveGround(n); return; }
+  S.pos.y = g.h;
+  if (g.n.dot(n) < 0.99999) {
+    const sp = S.vel.length();
+    S.vel.addScaledVector(g.n, -S.vel.dot(g.n));
+    if (S.vel.lengthSq() > 1e-8) S.vel.setLength(sp);
+  }
+  S.n.copy(g.n);
+}
+function wallBounce(prev) {
+  const e = 0.1, x = S.pos.x, z = S.pos.z;
+  const gx = terrainH(x + e, z) - terrainH(x - e, z), gz = terrainH(x, z + e) - terrainH(x, z - e);
+  const nw = V(-gx, 0, -gz); if (nw.lengthSq() < 1e-8) nw.set(-S.vel.x, 0, -S.vel.z); nw.normalize();
+  S.pos.copy(prev);
+  const vn = S.vel.dot(nw);
+  if (vn < 0) S.vel.addScaledVector(nw, -1.25 * vn);
+  S.vel.multiplyScalar(0.8);
+  if (-vn > 2.5) sfx.land(0.4);
+}
+
+function stepAir(dt) {
+  S.vel.y -= T.gravity * dt;
+  return moveAir(dt);
+}
+function moveAir(dt) {
+  S.sinceGround += dt; S.airTime += dt;
+  if (S.bail <= 0) {
+    // late ollie grace after rolling off a lip
+    if (EDGE_IN.ollieUp) { EDGE_IN.ollieUp = false; if (S.coyoteOk && S.sinceGround < T.coyoteTime) pop(S.n, 0.55 + 0.45 * S.crouch); }
+    if (IN.ollie) S.crouch = Math.min(1, S.crouch + dt / T.crouchTime); else if (S.popped || S.sinceGround > T.coyoteTime) S.crouch = 0;
+    const spin = -IN.steer * T.airSpin * dt;
+    S.yaw = wrap(S.yaw + spin); S.spin += spin;
+    if (S.trick) S.trick.t += dt;
+    if (S.flipBuf > 0) {
+      if (!S.trick) {
+        S.flipBuf = 0;
+        const dir = trickDir();
+        const names = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Impossible' };
+        S.trick = { dir, t: 0, name: names[dir] };
+      }
+    }
+    if (S.trick && S.trick.t >= T.flipTime) { addTrick(S.trick.name, 150, 3); S.trick = null; }
+    if (IN.grab && !S.trick) S.grabT += dt;
+    else if (S.grabT > 0) { endGrab(); }
+    if (S.railCool <= 0 && (T.autoGrind || IN.grind)) tryRail();
+    if (S.rail) return;
+  }
+  const prev = S.pos.clone();
+  S.pos.addScaledVector(S.vel, dt);
+  collideBoxes(S.pos, S.vel);
+  if (Math.abs(S.pos.x) > WORLD || Math.abs(S.pos.z) > WORLD) { S.pos.x = clamp(S.pos.x, -WORLD, WORLD); S.pos.z = clamp(S.pos.z, -WORLD, WORLD); S.vel.x *= -0.3; S.vel.z *= -0.3; }
+  const g = groundAt(S.pos.x, S.pos.z, S.pos.y);
+  if (S.pos.y <= g.h) {
+    if (g.h - prev.y > STEP) { const vy = S.vel.y; wallBounce(prev); S.vel.y = vy; return; }
+    land(g);
+  }
+}
+function endGrab() {
+  if (S.grabT > 0.12) addTrick(S.grabT > 0.6 ? 'Long Grab' : 'Grab', Math.round(120 * S.grabT + 40), 1 + Math.floor(S.grabT / 0.3));
+  S.grabT = 0;
+}
+
+function land(g) {
+  S.pos.y = g.h;
+  const n = g.n;
+  const impact = Math.max(0, -S.vel.dot(n));
+  const vt = S.vel.clone().addScaledVector(n, -S.vel.dot(n));
+  S.grounded = true; S.n.copy(n); S.railCool = 0;
+  if (S.bail > 0) { S.vel.copy(vt); return; }
+  if (S.trick) {
+    if (S.trick.t < T.flipTime * T.flipForgive) { S.vel.copy(vt); doBail('Under-flipped'); return; }
+    addTrick(S.trick.name, 150, 3); S.trick = null;
+  }
+  const grabbing = S.grabT > 0;
+  if (grabbing) endGrab();
+  let sketchy = grabbing;
+  const [f] = surfaceAxes(n);
+  if (vt.length() > 1.5) {
+    const a = Math.acos(clamp(Math.abs(f.dot(vt.clone().normalize())), 0, 1)) / DEG;
+    if (a > T.landSketchy) { S.vel.copy(vt); doBail('Sideways landing'); return; }
+    if (a > T.landClean) sketchy = true;
+    const hv = V(vt.x, 0, vt.z);
+    if (hv.lengthSq() > 0.04) S.yaw = f.dot(vt) >= 0 ? yawOf(hv) : wrap(yawOf(hv) + Math.PI);
+  }
+  if (sketchy) vt.multiplyScalar(0.72);
+  S.vel.copy(vt);
+  const halfTurns = Math.round(Math.abs(S.spin) / Math.PI);
+  if (halfTurns > 0) addTrick(`${halfTurns * 180} Spin`, 100 * halfTurns, halfTurns);
+  if (!combo.parts.length && S.airTime > 0.35) addTrick(S.popped ? 'Ollie' : 'Air', 30, 1);
+  if (sketchy && combo.parts.length) { combo.pts *= 0.5; combo.ammo = Math.floor(combo.ammo / 2); combo.sketchy = true; }
+  S.spin = 0; S.popped = false;
+  S.landDip = Math.min(0.35, impact * 0.04);
+  sfx.land(clamp(impact / 8, 0, 1));
+  bankCombo();
+}
+
+function tryRail() {
+  let best = null, bestD = Infinity;
+  const hv = Math.hypot(S.vel.x, S.vel.z);
+  for (const r of RAILS) {
+    if (S.vel.y > 1.0) continue;
+    if (r.minSpeed && hv < r.minSpeed) continue;
+    const ap = S.pos.clone().sub(r.a);
+    const t = clamp(ap.dot(r.dir) / r.len, 0, 1);
+    if (t <= 0.001 || t >= 0.999) continue;
+    const c = r.a.clone().addScaledVector(r.dir, t * r.len);
+    const dh = Math.hypot(S.pos.x - c.x, S.pos.z - c.z);
+    const dy = S.pos.y - c.y;
+    if (dh > T.railMagnet || dy < -0.3 || dy > 0.3) continue;
+    const rh = Math.hypot(r.dir.x, r.dir.z);
+    if (hv > 0.5 && rh > 0.1) {
+      const cos = Math.abs((S.vel.x * r.dir.x + S.vel.z * r.dir.z) / (hv * rh));
+      if (cos < Math.cos(T.railAngle * DEG)) continue;
+    }
+    if (dh + Math.abs(dy) * 0.5 < bestD) { bestD = dh + Math.abs(dy) * 0.5; best = { r, t }; }
+  }
+  if (!best) return;
+  const { r, t } = best;
+  let s = S.vel.dot(r.dir);
+  const minS = 0.8 * S.vel.length();
+  if (Math.abs(s) < minS) s = (Math.sign(s) || 1) * minS;
+  if (S.trick) { addTrick(S.trick.name, 150, 3); S.trick = null; }
+  if (S.grabT > 0) endGrab();
+  S.rail = r; S.railT = t; S.railS = s; S.railTime = 0; S.grounded = false;
+  const dir = r.dir.clone().multiplyScalar(Math.sign(s));
+  const keepFakie = Math.cos(wrap(yawOf(V(dir.x, 0, dir.z)) - S.yaw)) < 0;
+  S.yaw = keepFakie ? wrap(yawOf(V(dir.x, 0, dir.z)) + Math.PI) : yawOf(V(dir.x, 0, dir.z));
+  const halfTurns = Math.round(Math.abs(S.spin) / Math.PI); if (halfTurns) addTrick(`${halfTurns * 180} Spin`, 100 * halfTurns, halfTurns);
+  S.spin = 0; sfx.land(0.25);
+}
+function stepRail(dt) {
+  const r = S.rail;
+  S.railS += -T.gravity * r.dir.y * dt;
+  S.railS -= Math.sign(S.railS) * Math.min(Math.abs(S.railS), T.railFriction * dt);
+  S.railT += S.railS * dt / r.len;
+  S.railTime += dt;
+  S.pos.copy(r.a).addScaledVector(r.dir, clamp(S.railT, 0, 1) * r.len); S.pos.y += 0.035;
+  S.vel.copy(r.dir).multiplyScalar(S.railS);
+  const exitRail = () => {
+    addTrick(r.kind === 'Ledge' ? 'Ledge Grind' : r.kind === 'Coping' ? 'Coping Grind' : r.kind === 'Down rail' ? 'Down Rail' : '50-50 Grind',
+      Math.round(60 + 180 * S.railTime), 1 + Math.floor(S.railTime / 0.4));
+    S.rail = null; S.railCool = 0.3; S.grounded = false; S.sinceGround = 0; S.airTime = 0; S.coyoteOk = false; S.popped = false; S.spin = 0;
+  };
+  if (S.railT <= 0 || S.railT >= 1 || Math.abs(S.railS) < 0.4) { exitRail(); S.vel.y += 0.6; return; }
+  if (IN.ollie) S.crouch = Math.min(1, S.crouch + dt / T.crouchTime);
+  if (EDGE_IN.ollieUp || (!T.autoGrind && !IN.grind)) {
+    const popping = EDGE_IN.ollieUp; EDGE_IN.ollieUp = false;
+    const [, rgt] = surfaceAxes(UP);
+    exitRail();
+    if (popping) { S.vel.addScaledVector(UP, T.popSpeed * (0.6 + 0.3 * S.crouch)).addScaledVector(rgt, IN.steer * 2); S.popped = true; S.crouch = 0; sfx.pop(); }
+  }
+}
+
+function step(dt) {
+  if (EDGE_IN.reset) { EDGE_IN.reset = false; respawn(); }
+  if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
+  if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; }
+  S.flipBuf -= dt;
+  S.railCool -= dt;
+  if (S.bail > 0) {
+    S.bail -= dt;
+    if (S.bail <= 0) { S.crouch = 0; const hv = V(S.vel.x, 0, S.vel.z); if (hv.lengthSq() > 0.25) S.yaw = yawOf(hv); }
+  }
+  if (S.rail) stepRail(dt);
+  else if (S.grounded) stepGround(dt);
+  else stepAir(dt);
+  EDGE_IN.ollieUp = false; EDGE_IN.flip = false;
+  if (S.grounded && S.trick) S.trick = null;
+}
+
+/* ============================================================
+   Aim, camera and shooting
+   ============================================================ */
+const camState = { pivot: S.pos.clone(), dip: 0 };
+const ray = new THREE.Ray();
+function aimAssistTarget(origin, dir) {
+  let best = null, bestA = 6 * DEG;
+  for (const t of TARGETS) {
+    if (t.dead > 0) continue;
+    const c = t.pos.clone().add(V(0, 1.1, 0));
+    const to = c.clone().sub(origin); const dist = to.length(); if (dist > 45) continue;
+    const a = to.normalize().angleTo(dir);
+    if (a < bestA) { bestA = a; best = c; }
+  }
+  return best;
+}
+function updateAim(dt) {
+  const sens = T.mouseSens * 0.001;
+  let dyaw = -mouseDX * sens, dpitch = -mouseDY * sens * (T.invertY ? -1 : 1);
+  mouseDX = mouseDY = 0;
+  const m = Math.hypot(IN.padAimX, IN.padAimY);
+  if (m > 0) {
+    const k = Math.pow(m, T.padCurve) / m;
+    let ps = T.padSens * (aim.ads > 0.5 ? 0.6 : 1);
+    const camFwd = V(); camera.getWorldDirection(camFwd);
+    if (lastAimDevice === 'pad' && T.assist > 0 && aimAssistTarget(camera.position, camFwd)) ps *= 1 - 0.5 * T.assist;
+    dyaw += -IN.padAimX * k * ps * dt;
+    dpitch += -IN.padAimY * k * ps * 0.75 * dt * (T.invertY ? -1 : 1);
+  }
+  if (dyaw || dpitch) aim.idle = 0; else aim.idle += dt;
+  aim.yaw = wrap(aim.yaw + dyaw);
+  aim.pitch = clamp(aim.pitch + dpitch, -1.25, 1.0);
+  // Controller pull toward a target while you're moving or aiming
+  if (lastAimDevice === 'pad' && T.assist > 0 && (m > 0.1 || Math.abs(IN.steer) > 0.1 || S.vel.length() > 2)) {
+    const camFwd = V(); camera.getWorldDirection(camFwd);
+    const tgt = aimAssistTarget(camera.position, camFwd);
+    if (tgt) {
+      const to = tgt.sub(camera.position).normalize();
+      const ty = yawOf(V(to.x, 0, to.z)), tp = Math.asin(clamp(to.y, -1, 1));
+      const pull = T.assist * 2.2 * dt;
+      aim.yaw = wrap(aim.yaw + wrap(ty - aim.yaw) * pull);
+      aim.pitch += (tp - aim.pitch) * pull * 0.6;
+    }
+  }
+  aim.ads = damp(aim.ads, IN.ads && S.bail <= 0 ? 1 : 0, 12, dt);
+  const recenter = lastAimDevice === 'pad' ? T.recenterPad : T.recenterMouse;
+  const moving = Math.hypot(S.vel.x, S.vel.z) > 1.2;
+  if (recenter && aim.ads < 0.2 && aim.idle > T.recenterDelay && (S.grounded || S.rail) && moving && S.bail <= 0) {
+    const sp = clamp(S.vel.length() / 6, 0.3, 1.2);
+    aim.yaw = dampAngle(aim.yaw, travelYaw(), T.recenterRate * sp, dt);
+    aim.pitch = damp(aim.pitch, -0.12, T.recenterRate * 0.5, dt);
+  }
+}
+function updateCamera(dt) {
+  const target = S.pos.clone();
+  camState.pivot.x = damp(camState.pivot.x, target.x, T.camLag * 1.6, dt);
+  camState.pivot.z = damp(camState.pivot.z, target.z, T.camLag * 1.6, dt);
+  camState.pivot.y = damp(camState.pivot.y, target.y, T.camLag * 0.7, dt);
+  S.landDip = damp(S.landDip, 0, 6, dt);
+  const fwd = V(-Math.sin(aim.yaw) * Math.cos(aim.pitch), Math.sin(aim.pitch), -Math.cos(aim.yaw) * Math.cos(aim.pitch));
+  const right = V(Math.cos(aim.yaw), 0, -Math.sin(aim.yaw));
+  const dist = lerp(T.camDist, T.adsDist, aim.ads);
+  const shoulder = lerp(T.camSide, T.shoulder, aim.ads);
+  const pivot = camState.pivot.clone().add(V(0, T.camHeight - S.landDip - 0.25 * S.crouch, 0));
+  const pos = pivot.clone().addScaledVector(fwd, -dist).addScaledVector(right, shoulder);
+  const floor = groundAt(pos.x, pos.z, pos.y + 1).h + 0.25;
+  if (pos.y < floor) pos.y = floor;
+  camera.position.copy(pos);
+  camera.lookAt(pos.clone().add(fwd));
+  const speed = S.vel.length();
+  camera.fov = lerp(T.camFov, T.adsFov, aim.ads) + T.fovKick * clamp((speed - 3) / 9, 0, 1) * (1 - aim.ads * 0.7);
+  camera.updateProjectionMatrix();
+}
+function rayTerrain(o, d, maxD) {
+  let prev = 0;
+  for (let t = 0.3; t < maxD; t += 0.25) {
+    const p = o.clone().addScaledVector(d, t);
+    if (p.y < groundAt(p.x, p.z, p.y).h) {
+      let a = prev, b = t;
+      for (let i = 0; i < 8; i++) { const m = (a + b) / 2; const q = o.clone().addScaledVector(d, m); if (q.y < groundAt(q.x, q.z, q.y).h) b = m; else a = m; }
+      return b;
+    }
+    prev = t;
+  }
+  return Infinity;
+}
+function rayBox(o, d, b) {
+  let tmin = -Infinity, tmax = Infinity;
+  for (const [i, k] of [[0, 'x'], [1, 'y'], [2, 'z']]) {
+    if (Math.abs(d[k]) < 1e-9) { if (o[k] < b.min[i] || o[k] > b.max[i]) return Infinity; continue; }
+    let t1 = (b.min[i] - o[k]) / d[k], t2 = (b.max[i] - o[k]) / d[k]; if (t1 > t2) [t1, t2] = [t2, t1];
+    tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+  }
+  return tmax >= Math.max(tmin, 0) && tmin > 0 ? tmin : Infinity;
+}
+function raySphere(o, d, c, r) {
+  const oc = o.clone().sub(c); const b = oc.dot(d); const cc = oc.lengthSq() - r * r; const h = b * b - cc;
+  if (h < 0) return Infinity; const t = -b - Math.sqrt(h); return t > 0 ? t : Infinity;
+}
+function shoot() {
+  const o = camera.position.clone(); const d = V(); camera.getWorldDirection(d);
+  const spread = (S.grounded ? 0.004 : 0.008) * (1 - aim.ads * 0.7) + Math.min(S.vel.length(), 12) * 0.0005;
+  d.x += (Math.random() - 0.5) * spread; d.y += (Math.random() - 0.5) * spread; d.normalize();
+  let tHit = rayTerrain(o, d, 120), hitT = null, head = false;
+  for (const b of BOXES) tHit = Math.min(tHit, rayBox(o, d, b));
+  for (const t of TARGETS) {
+    if (t.dead > 0) continue;
+    const hh = raySphere(o, d, t.pos.clone().add(V(0, 1.6, 0)), 0.22);
+    const b1 = raySphere(o, d, t.pos.clone().add(V(0, 0.75, 0)), 0.32);
+    const b2 = raySphere(o, d, t.pos.clone().add(V(0, 1.15, 0)), 0.32);
+    const tb = Math.min(b1, b2);
+    if (hh < tHit && hh <= tb) { tHit = hh; hitT = t; head = true; }
+    else if (tb < tHit) { tHit = tb; hitT = t; head = false; }
+  }
+  const end = o.clone().addScaledVector(d, Math.min(tHit, 150));
+  const from = V(); muzzle.getWorldPosition(from);
+  const tr = tracers[tracerIdx++ % tracers.length];
+  tr.line.geometry.attributes.position.setXYZ(0, from.x, from.y, from.z);
+  tr.line.geometry.attributes.position.setXYZ(1, end.x, end.y, end.z);
+  tr.line.geometry.attributes.position.needsUpdate = true; tr.life = 0.07;
+  if (tHit < 150) { impactMesh.position.copy(end); impactMesh.visible = true; impactMesh.userData.life = 0.08; }
+  flash.visible = true; flash.userData.life = 0.035;
+  stats.shots++;
+  aim.pitch += 0.006 * (1 - aim.ads * 0.5); aim.yaw += (Math.random() - 0.5) * 0.004;
+  sfx.shot();
+  if (hitT) {
+    stats.hits++; hitT.hp -= head ? 2 : 1; hitT.flash = 0.1;
+    if (hitT.hp <= 0) {
+      hitT.dead = 2.5; stats.kills++;
+      const bonus = S.grounded ? 100 : 250, styled = combo.parts.length ? 2 : 1;
+      stats.score += bonus * styled;
+      showHit(true); sfx.kill();
+      if (!S.grounded || S.rail) showCombo(`${S.rail ? 'Grind' : 'Air'} kill  +${bonus * styled}`, 'landed');
+    } else { showHit(false); sfx.hit(); }
+  }
+}
+function updateGun(dt) {
+  stats.fireCool -= dt;
+  if (!T.trickReload && stats.ammo <= 0) {
+    stats.reloadT += dt; if (stats.reloadT > 1.2) { stats.ammo = T.clipSize; stats.reloadT = 0; }
+  }
+  if (stats.ammo > T.clipSize) stats.ammo = T.clipSize;
+  if (IN.fire && S.bail <= 0 && stats.fireCool <= 0) {
+    if (stats.ammo > 0) { shoot(); stats.ammo--; stats.fireCool = 1 / T.fireRate; }
+    else if (stats.fireCool < -0.25) { sfx.click(); stats.fireCool = 0.25; }
+  }
+}
+
+/* ============================================================
+   Visual update of skater and targets
+   ============================================================ */
+const qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), mBasis = new THREE.Matrix4();
+function updateVisuals(dt, time) {
+  skater.position.copy(S.pos);
+  const upTarget = S.rail ? UP : S.grounded ? S.n : UP;
+  S.boardUp.lerp(upTarget, 1 - Math.exp(-(S.grounded ? 25 : 3) * dt)).normalize();
+  const bu = S.boardUp;
+  const fl = fwdOf(S.yaw); const f = fl.addScaledVector(bu, -fl.dot(bu)).normalize();
+  const r = V().crossVectors(f, bu).normalize();
+  mBasis.makeBasis(r, bu, f.clone().negate());
+  boardOrient.quaternion.setFromRotationMatrix(mBasis);
+  // flips and grabs
+  boardFlip.rotation.set(0, 0, 0); boardFlip.position.set(0, 0, 0);
+  if (S.trick) {
+    const p = clamp(S.trick.t / T.flipTime, 0, 1), a = p * Math.PI * 2;
+    if (S.trick.dir === 'left') boardFlip.rotation.z = a;
+    else if (S.trick.dir === 'right') boardFlip.rotation.z = -a;
+    else if (S.trick.dir === 'up') boardFlip.rotation.x = a;
+    else { boardFlip.rotation.z = a; boardFlip.rotation.y = a; }
+    boardFlip.position.y = Math.sin(p * Math.PI) * 0.25;
+  } else if (S.grabT > 0) boardFlip.position.y = 0.28;
+  if (S.bail > 0) { boardFlip.rotation.z = (1.2 - S.bail) * 9; boardFlip.position.y = 0.05; }
+  // body follows travel direction, upper body twists to aim
+  const tyaw = travelYaw();
+  S.steerVis = damp(S.steerVis, S.grounded ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
+  const tilt = UP.clone().lerp(bu, 0.6).normalize();
+  qA.setFromUnitVectors(UP, tilt); qB.setFromAxisAngle(UP, tyaw);
+  body.quaternion.copy(qA).multiply(qB);
+  body.rotateZ(-S.steerVis * 0.28);
+  const crouchAmt = Math.max(S.crouch * 0.35, S.grabT > 0 ? 0.45 : 0, S.rail ? 0.12 : 0);
+  body.position.copy(bu).multiplyScalar(0.11);
+  legs.scale.y = 1 - crouchAmt; torso.position.y = 0.8 - crouchAmt * 0.55;
+  if (S.bail > 0) { body.rotateX(-clamp((1.2 - S.bail) * 3, 0, 1.45)); }
+  const twist = clamp(wrap(aim.yaw - tyaw), -1.9, 1.9);
+  torso.rotation.set(0, twist, 0);
+  gunPivot.rotation.set(aim.pitch, 0, 0);
+  // targets
+  for (const t of TARGETS) {
+    if (t.path) {
+      const o = Math.sin(time * t.path.speed / t.path.span * 2 + t.phase) * t.path.span / 2;
+      t.pos.set(t.home.x + (t.path.axis === 'x' ? o : 0), 0, t.home.z + (t.path.axis === 'z' ? o : 0));
+    } else t.pos.set(t.home.x, 0, t.home.z);
+    t.pos.y = terrainH(t.pos.x, t.pos.z);
+    t.g.position.copy(t.pos);
+    if (t.dead > 0) {
+      t.dead -= dt; t.g.rotation.x = -Math.min(1, (2.5 - t.dead) * 4) * 1.5;
+      if (t.dead <= 0) { t.hp = 3; t.g.rotation.x = 0; }
+    }
+    t.flash -= dt; t.mat.emissive.setHex(t.flash > 0 ? 0xff2200 : 0x000000);
+  }
+  for (const tr of tracers) { tr.life -= dt; tr.line.material.opacity = tr.life > 0 ? 0.9 : 0; }
+  if (flash.visible && (flash.userData.life -= dt) <= 0) flash.visible = false;
+  if (impactMesh.visible && (impactMesh.userData.life -= dt) <= 0) impactMesh.visible = false;
+  // shadow camera follows the skater
+  sun.position.copy(S.pos).add(V(12, 25, 8)); sun.target.position.copy(S.pos);
+  // sound beds
+  if (AC) {
+    const sp = S.vel.length(), t = AC.currentTime;
+    rollGain.gain.setTargetAtTime(S.grounded && !S.rail && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
+    rollFilter.frequency.setTargetAtTime(200 + sp * 70, t, 0.05);
+    grindGain.gain.setTargetAtTime(S.rail ? 0.07 : 0, t, 0.02);
+    grindFilter.frequency.setTargetAtTime(1800 + Math.abs(S.railS) * 120, t, 0.05);
+  }
+}
+
+/* ============================================================
+   HUD and tuning panel
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const comboEl = $('combo'), hitEl = $('hitmarker');
+let comboTimer = 0;
+function showCombo(sub, cls) {
+  comboEl.className = cls || '';
+  comboEl.querySelector('.name').textContent = cls === 'bail' ? sub : combo.parts.join(' + ');
+  comboEl.querySelector('.pts').textContent = cls === 'bail' ? 'combo lost' : sub || (combo.parts.length > 1 ? `${combo.pts} × ${combo.parts.length}` : `${combo.pts}`);
+  comboEl.style.opacity = 1; comboTimer = cls ? 1.4 : 99;
+}
+let hitTimer = 0;
+function showHit(kill) { hitEl.className = kill ? 'kill' : ''; hitEl.style.opacity = 1; hitTimer = kill ? 0.25 : 0.12; }
+let ammoShown = -1, clipShown = -1;
+function updateHud(dt) {
+  $('speed').textContent = Math.round(S.vel.length() * 3.6);
+  $('state').textContent = S.bail > 0 ? 'bailed' : S.rail ? `grinding · ${S.rail.kind.toLowerCase()}` : S.grounded ? (fakie() ? 'rolling fakie' : 'rolling') : 'airborne';
+  $('score').textContent = stats.score;
+  $('hits').textContent = `hits ${stats.hits} · kills ${stats.kills} · acc ${stats.shots ? Math.round(100 * stats.hits / stats.shots) + '%' : '–'}`;
+  if (ammoShown !== stats.ammo || clipShown !== T.clipSize) {
+    ammoShown = stats.ammo; clipShown = T.clipSize;
+    const el = $('ammo'); el.innerHTML = '';
+    for (let i = 0; i < T.clipSize; i++) { const p = document.createElement('i'); if (i >= stats.ammo) p.className = 'spent'; el.appendChild(p); }
+    $('ammo-count').textContent = stats.ammo;
+  }
+  $('ammo-hint').textContent = stats.ammo === 0 ? (T.trickReload ? 'Land tricks to reload' : 'Reloading') : stats.ammo <= 3 && T.trickReload ? 'Low: land a trick' : '';
+  if ((comboTimer -= dt) <= 0) comboEl.style.opacity = Math.max(0, +comboEl.style.opacity - dt * 3);
+  if ((hitTimer -= dt) <= 0) hitEl.style.opacity = 0;
+  const spread = 7 + Math.min(S.vel.length(), 12) * 0.8 * (1 - aim.ads * 0.7) + (S.grounded ? 0 : 6);
+  const ret = $('reticle').children;
+  ret[1].style.top = `${-spread - 7}px`; ret[2].style.top = `${spread}px`; ret[3].style.left = `${-spread - 7}px`; ret[4].style.left = `${spread}px`;
+}
+function setDevice(d) { if (device !== d) { device = d; $('device').textContent = d === 'pad' ? 'controller' : 'mouse + keyboard'; } }
+
+function buildPanel() {
+  const root = $('panel-groups'); root.innerHTML = '';
+  for (const [group, items] of SPEC) {
+    const fs = document.createElement('fieldset');
+    const lg = document.createElement('legend'); lg.textContent = group; fs.appendChild(lg);
+    for (const [key, label, min, max, step] of items) {
+      const row = document.createElement('div'); const id = `t-${key}`;
+      if (min === 'bool') {
+        row.className = 'row bool';
+        row.innerHTML = `<label for="${id}">${label}</label><input type="checkbox" id="${id}">`;
+        const inp = row.querySelector('input'); inp.checked = !!T[key];
+        inp.addEventListener('change', () => { T[key] = inp.checked; saveTuning(); });
+      } else {
+        row.className = 'row';
+        row.innerHTML = `<label for="${id}">${label}<output>${T[key]}</output></label><input type="range" id="${id}" min="${min}" max="${max}" step="${step}">`;
+        const inp = row.querySelector('input'), out = row.querySelector('output'); inp.value = T[key];
+        inp.addEventListener('input', () => { T[key] = +inp.value; out.textContent = inp.value; saveTuning(); });
+      }
+      fs.appendChild(row);
+    }
+    root.appendChild(fs);
+  }
+}
+buildPanel();
+function togglePanel() {
+  const p = $('panel'); p.hidden = !p.hidden;
+  if (!p.hidden && pointerLocked) document.exitPointerLock();
+}
+$('btn-reset').addEventListener('click', () => { Object.assign(T, DEFAULTS); saveTuning(); buildPanel(); $('copy-status').textContent = 'Defaults restored'; });
+$('btn-respawn').addEventListener('click', () => respawn());
+$('btn-copy').addEventListener('click', () => {
+  const changed = {}; for (const k in T) if (T[k] !== DEFAULTS[k]) changed[k] = T[k];
+  const text = JSON.stringify(Object.keys(changed).length ? changed : T, null, 1);
+  const out = $('json-out'); out.value = text;
+  navigator.clipboard?.writeText(text).then(() => { $('copy-status').textContent = 'Copied changed values to the clipboard'; out.hidden = true; })
+    .catch(() => { out.hidden = false; out.select(); $('copy-status').textContent = 'Select and copy the values below'; });
+  if (!navigator.clipboard) { out.hidden = false; out.select(); $('copy-status').textContent = 'Select and copy the values below'; }
+});
+
+let introVisible = true;
+function hideIntro() { introVisible = false; $('intro').hidden = true; startAudio(); }
+function toggleIntro() { introVisible = !introVisible; $('intro').hidden = !introVisible; }
+$('intro').addEventListener('click', () => { hideIntro(); if (!lockFailed) requestLock(); });
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+/* ============================================================
+   Main loop: input once per frame, physics at a fixed 120 Hz
+   ============================================================ */
+const DT = 1 / 120;
+let acc = 0, last = performance.now(), simTime = 0;
+respawn();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  sampleInput();
+  if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
+  updateAim(dt);
+  acc += dt;
+  while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
+  if (!introVisible) updateGun(dt);
+  updateVisuals(dt, simTime);
+  updateCamera(dt);
+  updateHud(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step };
+</script>
+<script>
+  // Shown only if the 3D module fails to load (for example, offline without the CDN).
+  setTimeout(() => { if (!window.__toy) { const e = document.getElementById('error'); e.hidden = false; e.textContent = 'The 3D engine did not load. Check your connection and reload.'; } }, 6000);
+</script>
+</body>
+</html>
