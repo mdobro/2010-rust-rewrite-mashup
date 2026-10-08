@@ -215,7 +215,7 @@ const DEFAULTS = {
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   autoPush: true, autoPushSpeed: 6.5, stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, popWindow: 0.6, grabHold: 0.25, tapOllie: true, holdReleasePops: false,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, crouchSettle: 0.2, swingTime: 0.16, grabHold: 0.25, tapOllie: true, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -245,7 +245,8 @@ const SPEC = [
   ['Trick stick', [
     ['flickRim', 'How far counts as a direction', 0.3, 0.95, 0.01],
     ['flickTime', 'Max time from pull to flick (s)', 0.08, 0.6, 0.01],
-    ['popWindow', 'Crouch held before it cancels (s)', 0.15, 1.5, 0.01],
+    ['crouchSettle', 'Held this long, the crouch counts as plain down (s)', 0.05, 0.6, 0.01],
+    ['swingTime', 'Down-diagonal-up counts as a swing within (s)', 0.06, 0.4, 0.01],
     ['flickSettle', 'Ignore stick after a trick (s)', 0, 0.5, 0.01],
     ['grabHold', 'Hold a direction in the air to grab (s)', 0.05, 0.8, 0.01],
     ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
@@ -1053,7 +1054,10 @@ function readPath(toks) {
   let iL = -1; for (let i = toks.length - 2; i >= 0; i--) if (LOWER.has(toks[i].s)) { iL = i; break; }
   if (iL < 0) return null;
   let iD = iL; for (let i = iL; i >= 0; i--) if (toks[i].s === 'D') { iD = i; break; }
-  let mid = null; for (let i = iD + 1; i < toks.length - 1; i++) if (toks[i].s === 'DR' || toks[i].s === 'DL') mid = toks[i].s;
+  // a diagonal only counts as part of the swing when the whole swing out of the crouch is quick;
+  // drifting onto it while crouched and then flicking is just an ollie
+  const quickSwing = (F.t0 ?? F.t) - toks[iD].t < T.swingTime * 1000;
+  let mid = null; if (quickSwing) for (let i = iD + 1; i < toks.length - 1; i++) if (toks[i].s === 'DR' || toks[i].s === 'DL') mid = toks[i].s;
   // walk back round the rim from the pull to find where the swing started
   let pre = null, k = SECT.indexOf(toks[iD].s);
   for (let i = iD - 1; i >= 0; i--) {
@@ -1062,7 +1066,7 @@ function readPath(toks) {
     if (toks[i + 1].t - toks[i].t > 300) break;
     pre = toks[i].s; k = si;
   }
-  if (toks[iD].s !== 'D' && !pre) pre = toks[iD].s;
+  if (toks[iD].s !== 'D' && !pre && (F.t0 ?? F.t) - (toks[iD].t0 ?? toks[iD].t) < T.swingTime * 1500) pre = toks[iD].s;
   const fs = F.s;
   if (fs === 'U') return pre === 'L' ? '360 Inward Heelflip' : pre === 'R' ? '360 Hardflip' : mid === 'DR' ? 'Hardflip' : mid === 'DL' ? 'Inward Heelflip' : 'Ollie';
   if (fs === 'UR') return pre === 'L' ? '360 Flip' : pre === 'DL' ? 'Varial Kickflip' : 'Kickflip';
@@ -1077,7 +1081,7 @@ function flickTry(f, now, final) {
   const first = toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
   if (!first) return false;
   const nollie = UPPER.has(first.s);
-  const path = nollie ? toks.map(t => ({ s: MIRROR[t.s], t: t.t })) : toks;
+  const path = nollie ? toks.map(t => ({ s: MIRROR[t.s], t: t.t, t0: t.t0 })) : toks;
   const fs = path[path.length - 1].s;
   if (!(UPPER.has(fs) || fs === 'L' || fs === 'R')) return false;
   // sideways finishes wait a moment in case the swing carries on (e.g. round to up)
@@ -1110,8 +1114,12 @@ function flickFeed(f, nx, ny, now) {
   if (m < T.flickRim) { f.holdS = null; return; }
   const sct = SECT[((Math.round(Math.atan2(-ny, nx) / (Math.PI / 4)) % 8) + 8) % 8];
   const last = f.toks[f.toks.length - 1];
-  if (!last || last.s !== sct) {
-    f.toks.push({ s: sct, t: now }); while (f.toks.length > 10) f.toks.shift();
+  if (last && last.s === sct) {
+    last.t = now; // still there: a flick is timed from when you leave it
+    // resting in a crouch: forget the wobble that got you there, it's a plain crouch now
+    if (LOWER.has(sct) && f.loaded && now - last.t0 > T.crouchSettle * 1000 && (f.toks.length > 1 || sct !== 'D')) f.toks = [{ s: 'D', t: now, t0: last.t0 }];
+  } else {
+    f.toks.push({ s: sct, t: now, t0: now }); while (f.toks.length > 10) f.toks.shift();
     if (LOWER.has(sct) || UPPER.has(sct)) {
       const first = f.toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
       if (first === f.toks[f.toks.length - 1]) flickLoad(f, true); // the pull (or nollie push) loads the crouch
@@ -1127,10 +1135,7 @@ function flickRelease(f, now) {
 }
 function flickTick(f, now) {
   if (f.toks.length >= 2 && now >= f.settleUntil) flickTry(f, now, false); // sideways finishes that settled
-  if (f.loaded && (now - f.loadT > T.popWindow * 1000 || !canPop())) {
-    if (T.holdReleasePops && canPop()) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f);
-    f.onLoaded && f.onLoaded(false);
-  }
+  if (f.loaded && !canPop()) { flickCancel(f); f.onLoaded && f.onLoaded(false); } // rolled off something mid-crouch
   // hold a direction in the air to grab
   const air = !S.grounded && !S.rail;
   const g = air && f.active && f.holdS && now - f.holdT > T.grabHold * 1000 && now > f.settleUntil && !S.trick;

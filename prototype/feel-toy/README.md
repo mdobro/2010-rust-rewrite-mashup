@@ -73,13 +73,19 @@ up-right, hardflip down → down-right → up, and so on). The varial paths aren
 in that list, so they're filled in by the same pattern: where you start round
 the rim sets the shuvit, where you flick sets the flip.
 
-The pull down loads the crouch (on touch, the ring turns yellow) and the flick
-pops; a faster flick pops higher. Slow stick movement never fires a trick: the
-flick has to reach its end within the *max time from pull to flick*. After a
-trick the stick has to come back to the centre (a controller does this by
-itself; on touch the stick re-centres under your thumb), so the follow-through
-doesn't fire another one. The trick name pops up and, on touch, the path you
-drew fades behind your thumb.
+Pulling down crouches (on touch, the ring turns yellow), and you can hold the
+crouch as long as you like: flick straight up whenever you're ready and it's
+an ollie, up-right a kickflip, and so on. A faster flick pops higher. Letting
+go without flicking just stands you back up. While you're holding the crouch,
+drifting onto a diagonal doesn't count; a diagonal only changes the trick
+(hardflip, inward heelflip) when the whole swing out of the crouch is quick.
+
+Slow stick movement never fires a trick: the flick has to land within the *max
+time from pull to flick* after it leaves the crouch. After a trick the stick has
+to come back to the centre (a controller does this by itself; on touch the
+stick re-centres under your thumb), so the follow-through doesn't fire another
+one. The trick name pops up and, on touch, the path you drew fades behind your
+thumb.
 
 ## Camera
 
