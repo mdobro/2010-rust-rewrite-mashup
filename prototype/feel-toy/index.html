@@ -103,10 +103,17 @@
     background: rgba(16, 20, 26, .38); border: 2px solid rgba(243, 241, 234, .38); box-sizing: border-box; }
   .tbtn.on { background: rgba(255, 181, 71, .42); border-color: var(--accent); }
   .tbtn small { display: block; font: 9px/1 var(--font-mono); letter-spacing: 0; text-transform: none; color: var(--ink-dim); margin-top: 3px; text-align: center; }
-  #tb-ollie { width: 96px; height: 96px; right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
-  #tb-grab { width: 62px; height: 62px; right: calc(34px + env(safe-area-inset-right, 0px)); bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
-  #tb-fire { width: 76px; height: 76px; right: calc(130px + env(safe-area-inset-right, 0px)); bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
-  #tb-ads { width: 50px; height: 50px; right: calc(112px + env(safe-area-inset-right, 0px)); bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
+  #tb-pad { position: absolute; pointer-events: auto; touch-action: none; width: 172px; height: 172px; border-radius: 50%;
+    right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: radial-gradient(circle, rgba(16,20,26,.18) 0 45%, rgba(16,20,26,.38) 46% 100%); border: 2px solid rgba(243,241,234,.32); box-sizing: border-box; }
+  #tb-pad.on { border-color: var(--accent); }
+  #pad-trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .pad-label { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; pointer-events: none;
+    font: 13px/1.1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+  .pad-label small { display: block; font: 9px/1.3 var(--font-mono); text-transform: none; letter-spacing: 0; color: var(--ink-dim); margin-top: 4px; }
+  #tb-fire { width: 72px; height: 72px; right: calc(200px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  #tb-ads { width: 48px; height: 48px; right: calc(196px + env(safe-area-inset-right, 0px)); bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+  @media (max-width: 500px) { #tb-pad { width: 150px; height: 150px; } #tb-fire { right: calc(176px + env(safe-area-inset-right, 0px)); } #tb-ads { right: calc(172px + env(safe-area-inset-right, 0px)); } }
   .tbar { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); pointer-events: auto; display: flex; gap: 6px; left: 50%; transform: translateX(-50%); }
   .tbar button { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(16,20,26,.5); border: 1px solid var(--panel-line); border-radius: 4px; padding: 7px 10px; touch-action: manipulation; }
   #stick-base, #stick-knob { position: absolute; border-radius: 50%; pointer-events: none; }
@@ -161,8 +168,9 @@
     <p>One grey park, a few targets, and every movement number on a slider. The only question: does skating while aiming feel good? Tricks reload your gun, but only when you land them.</p>
     <ul class="touch-list touch-only">
       <li><b>Left thumb</b>: touch anywhere on the left to get a stick. Steer to carve and spin. You roll on your own; push up to go faster, pull down to brake.</li>
-      <li><b>Right thumb</b>: drag anywhere to aim. Hold <b>Ollie</b> to crouch, let go to pop.</li>
-      <li><b>In the air</b>: tap Ollie for a kickflip, or swipe across it ↑ ↓ ← → for other flips. Hold <b>Grab</b>.</li>
+      <li><b>Right thumb</b>: drag anywhere to aim. The <b>trick pad</b> in the corner is for swipes.</li>
+      <li><b>Ollie</b>: on the pad, pull down then flick up. Flick up-left for a kickflip, up-right for a heelflip. A tap is a small ollie.</li>
+      <li><b>In the air</b>: swipe the pad ← → ↑ ↓ for flips. Hold your thumb still to grab.</li>
       <li><b>Shooting</b> fires on its own when the reticle is on a target. Hold <b>Fire</b> and drag it to aim yourself.</li>
       <li>Landing tricks reloads your gun. Turn the phone sideways for more room.</li>
     </ul>
@@ -202,8 +210,7 @@
 </aside>
 <div id="touch-ui" hidden>
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div>
-  <div class="tbtn" id="tb-ollie" data-act="ollie">Ollie<small>swipe: flip</small></div>
-  <div class="tbtn" id="tb-grab" data-act="grab">Grab</div>
+  <div id="tb-pad"><canvas id="pad-trail"></canvas><div class="pad-label" id="pad-label">Tricks<small>pull down, flick up</small></div></div>
   <div class="tbtn" id="tb-fire" data-act="fire">Fire<small>drag</small></div>
   <div class="tbtn" id="tb-ads" data-act="ads">ADS</div>
   <div class="tbar"><button type="button" id="tb-respawn">Respawn</button><button type="button" id="tb-tune">Tuning</button></div>
@@ -228,6 +235,7 @@ const DEFAULTS = {
   padSens: 3.0, padCurve: 1.8, mouseSens: 2.2, invertY: false, assist: 0.5,
   trickReload: true, clipSize: 15, fireRate: 9, twistLimit: 120, twistDrag: 2.0,
   autoPush: true, autoPushSpeed: 6.5, touchSens: 4.5, touchAssist: 0.8, recenterTouch: true, autoFire: true, autoFireCone: 2.5, stickRadius: 55,
+  flickDist: 26, grabHold: 0.16, tapOllie: true, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -266,6 +274,8 @@ const SPEC = [
     ['touchSens', 'Drag-to-aim sensitivity', 1, 12, 0.1], ['touchAssist', 'Aim assist (touch)', 0, 1, 0.01],
     ['recenterTouch', 'Auto-recenter (touch)', 'bool'], ['autoFire', 'Auto-fire on target', 'bool'],
     ['autoFireCone', 'Auto-fire cone (°)', 0.5, 8, 0.1], ['stickRadius', 'Stick size (px)', 30, 100, 1],
+    ['flickDist', 'Swipe distance (px)', 10, 70, 1], ['grabHold', 'Hold still to grab (s)', 0.05, 0.5, 0.01],
+    ['tapOllie', 'Tap pad to ollie', 'bool'], ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
   ]],
   ['Gun', [
     ['trickReload', 'Only tricks reload', 'bool'], ['clipSize', 'Clip size', 4, 40, 1], ['fireRate', 'Fire rate (shots/s)', 2, 20, 0.5],
@@ -458,7 +468,9 @@ function sampleInput() {
   IN.brake = IN.stickY > 0.6;
   const ollie = keys.has('Space') || pb(0) || touch.ollie;
   if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
-  if (!ollie && IN.ollie) EDGE_IN.ollieUp = true;
+  if (!ollie && IN.ollie) { if (touch.cancelPop) S.crouch = 0; else EDGE_IN.ollieUp = true; }
+  touch.cancelPop = false;
+  if (touch.popNow) { touch.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
   IN.ollie = ollie;
   const flip = keys.has('KeyQ');
   if (flip && !IN.flipKey) EDGE_IN.flip = true;
@@ -1324,18 +1336,13 @@ canvas.addEventListener('pointerup', endCanvasPointer);
 canvas.addEventListener('pointercancel', endCanvasPointer);
 
 for (const el of document.querySelectorAll('.tbtn')) {
-  const act = el.dataset.act; let id = null, sx = 0, sy = 0, lx = 0, ly = 0, mode = null, flipped = false;
+  const act = el.dataset.act; let id = null, lx = 0, ly = 0;
   el.addEventListener('pointerdown', e => {
     e.preventDefault(); e.stopPropagation(); enableTouch();
     if (introVisible) hideIntro();
     try { el.setPointerCapture(e.pointerId); } catch (_) {}
-    id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; flipped = false;
-    if (act === 'ollie') {
-      const canPop = S.grounded || S.rail || (S.coyoteOk && S.sinceGround < T.coyoteTime);
-      mode = canPop ? 'ollie' : 'flip';
-      if (mode === 'ollie') touch.ollie = true;
-    } else if (act === 'grab') touch.grab = true;
-    else if (act === 'fire') touch.fire = true;
+    id = e.pointerId; lx = e.clientX; ly = e.clientY;
+    if (act === 'fire') touch.fire = true;
     else if (act === 'ads') touch.ads = !touch.ads;
     el.classList.toggle('on', act === 'ads' ? touch.ads : true);
   });
@@ -1344,25 +1351,107 @@ for (const el of document.querySelectorAll('.tbtn')) {
     touch.lastTime = performance.now();
     if (act === 'fire') { touch.dx += e.clientX - lx; touch.dy += e.clientY - ly; lastAimDevice = 'touch'; }
     lx = e.clientX; ly = e.clientY;
-    if (act === 'ollie' && mode === 'flip' && !flipped) {
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.hypot(dx, dy) > 22) {
-        flipped = true;
-        touch.flipDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy < 0 ? 'up' : 'down');
-        EDGE_IN.flip = true;
-      }
-    }
   });
   const end = e => {
     if (e.pointerId !== id) return; id = null;
-    if (act === 'ollie') {
-      if (mode === 'ollie') touch.ollie = false;
-      else if (!flipped) { touch.flipDir = 'left'; EDGE_IN.flip = true; } // a tap in the air is a kickflip
-    } else if (act === 'grab') touch.grab = false;
-    else if (act === 'fire') touch.fire = false;
+    if (act === 'fire') touch.fire = false;
     if (act !== 'ads') el.classList.remove('on');
   };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+/* Trick pad: Skate-style flicks.
+   On the ground or a rail: pull down to crouch, flick up to pop. Keep going sideways
+   (or flick diagonally) to flip on the way up. In the air: swipe to flip, hold still to grab. */
+const pad = $('tb-pad'), padCv = $('pad-trail'), padCtx = padCv.getContext('2d'), padLabel = $('pad-label');
+const FLIP_NAMES = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Impossible' };
+let pg = null, padMsg = '', padMsgT = 0, padTrail = [];
+const canPop = () => S.grounded || !!S.rail || (S.coyoteOk && S.sinceGround < T.coyoteTime);
+function padSay(msg) { padMsg = msg; padMsgT = 0.7; }
+function padFlip(dir) {
+  if (!pg || pg.flipped) return;
+  pg.flipped = true; touch.grab = false; touch.flipDir = dir; EDGE_IN.flip = true; padSay(FLIP_NAMES[dir]);
+}
+function padPop(now) {
+  // flick speed over the last ~100 ms sets pop height, on top of how long you crouched
+  const recent = pg.pts.filter(p => now - p[2] < 110);
+  const a = recent[0] || pg.pts[0], b = pg.pts[pg.pts.length - 1];
+  const speed = Math.max(0, (a[1] - b[1]) / Math.max(16, b[2] - a[2])); // px per ms, upward
+  S.crouch = Math.max(S.crouch, clamp(0.35 + 0.3 * speed, 0.4, 1));
+  touch.ollie = false; touch.popNow = true; pg.popped = true; pg.popX = b[0]; pg.popY = b[1]; pg.stillX = b[0]; pg.stillY = b[1]; pg.stillT = now;
+  padSay('Ollie');
+}
+pad.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation(); enableTouch();
+  if (introVisible) hideIntro();
+  try { pad.setPointerCapture(e.pointerId); } catch (_) {}
+  if (pg) return; // one thumb on the pad at a time
+  const now = performance.now();
+  pg = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lowX: e.clientX, lowY: e.clientY, t0: now, pts: [[e.clientX, e.clientY, now]],
+    mode: canPop() ? 'ground' : 'air', popped: false, flipped: false, stillX: e.clientX, stillY: e.clientY, stillT: now };
+  if (pg.mode === 'ground') touch.ollie = true;
+  padTrail = [[e.clientX, e.clientY, now]];
+  pad.classList.add('on');
+});
+function padMove(e) {
+  if (!pg || e.pointerId !== pg.id) return;
+  const now = performance.now(), x = e.clientX, y = e.clientY, D = T.flickDist;
+  touch.lastTime = now;
+  pg.pts.push([x, y, now]); if (pg.pts.length > 24) pg.pts.shift();
+  padTrail.push([x, y, now]);
+  if (Math.hypot(x - pg.stillX, y - pg.stillY) > 8) { pg.stillX = x; pg.stillY = y; pg.stillT = now; touch.grab = false; }
+  if (pg.mode === 'ground' && !pg.popped) {
+    if (y > pg.lowY) { pg.lowY = y; pg.lowX = x; }
+    const up = pg.lowY - y, side = x - pg.lowX;
+    if (up >= D) {
+      padPop(now);
+      if (Math.abs(side) > up * 0.7) padFlip(side > 0 ? 'right' : 'left'); // diagonal flick: ollie into a flip
+    }
+  } else if (pg.mode === 'ground' && pg.popped) {
+    const side = x - pg.popX;
+    if (Math.abs(side) >= D) padFlip(side > 0 ? 'right' : 'left');
+  } else if (pg.mode === 'air') {
+    const dx = x - pg.x0, dy = y - pg.y0;
+    if (Math.hypot(dx, dy) >= D) padFlip(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy < 0 ? 'up' : 'down'));
+  }
+}
+pad.addEventListener('pointermove', padMove);
+function padEnd(e) {
+  if (!pg || e.pointerId !== pg.id) return;
+  if (e.type === 'pointerup') padMove(e); // a fast flick can end on the lift itself
+  const now = performance.now(), moved = Math.hypot(e.clientX - pg.x0, e.clientY - pg.y0), quick = now - pg.t0 < 230;
+  if (pg.mode === 'ground' && !pg.popped) {
+    if (quick && moved < 14 && T.tapOllie) { S.crouch = Math.min(S.crouch, 0.35); touch.ollie = false; touch.popNow = true; padSay('Ollie'); }
+    else if (T.holdReleasePops) { touch.ollie = false; touch.popNow = true; padSay('Ollie'); }
+    else { touch.cancelPop = true; touch.ollie = false; }
+  } else if (pg.mode === 'air' && !pg.flipped && quick && moved < 14) {
+    padFlip('left'); // a tap in the air is a kickflip
+  }
+  touch.grab = false; pg = null; pad.classList.remove('on');
+}
+pad.addEventListener('pointerup', padEnd); pad.addEventListener('pointercancel', padEnd);
+function padTick(dt) {
+  const now = performance.now();
+  // hold still in the air to grab (also works straight after a flick-up ollie)
+  if (pg && !pg.flipped && !S.grounded && !S.rail && (pg.mode === 'air' || pg.popped) && now - pg.stillT > T.grabHold * 1000) {
+    if (!touch.grab) padSay('Grab');
+    touch.grab = true;
+  }
+  if (padMsgT > 0) padMsgT -= dt;
+  padLabel.innerHTML = padMsgT > 0 ? padMsg : pg ? (pg.mode === 'air' ? 'Swipe<small>or hold to grab</small>' : pg.popped ? '' : 'Flick up') : 'Tricks<small>pull down, flick up</small>';
+  // gesture trail
+  const r = pad.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2);
+  if (padCv.width !== Math.round(r.width * dpr)) { padCv.width = Math.round(r.width * dpr); padCv.height = Math.round(r.height * dpr); }
+  padCtx.setTransform(dpr, 0, 0, dpr, 0, 0); padCtx.clearRect(0, 0, r.width, r.height);
+  padTrail = padTrail.filter(p => now - p[2] < 450);
+  if (padTrail.length > 1) {
+    padCtx.lineCap = 'round'; padCtx.lineJoin = 'round';
+    for (let i = 1; i < padTrail.length; i++) {
+      const [x0, y0] = padTrail[i - 1], [x1, y1, t] = padTrail[i];
+      padCtx.strokeStyle = `rgba(255,181,71,${Math.max(0, 1 - (now - t) / 450) * 0.9})`;
+      padCtx.lineWidth = 6;
+      padCtx.beginPath(); padCtx.moveTo(x0 - r.left, y0 - r.top); padCtx.lineTo(x1 - r.left, y1 - r.top); padCtx.stroke();
+    }
+  }
 }
 $('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
 $('tb-tune').addEventListener('click', () => togglePanel());
@@ -1381,6 +1470,7 @@ let acc = 0, last = performance.now(), simTime = 0;
 respawn();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (touch.active) padTick(dt);
   sampleInput();
   if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
   updateAim(dt);
@@ -1394,7 +1484,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step, camera, aimAssistTarget, TARGETS, touch, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, stats, aim, respawn, terrainH, step, camera, aimAssistTarget, TARGETS, touch, get pg() { return pg; }, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
