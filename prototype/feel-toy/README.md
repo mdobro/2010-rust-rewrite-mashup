@@ -150,8 +150,8 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   the deck through ramps. Legs and arms are solved with two-bone IK each frame:
   knees bend out over the toes, the hips drop as you crouch, the upper body
   leans into carves and stays partly upright on steep ramps, the knees tuck
-  when the board rises in a flip or grab, the back hand reaches the toe edge
-  on a grab, and the head looks where you're going. Each push is a stride:
+  when the board rises in a flip, the board lines up for a grind in the air,
+  and the head looks where you're going. Each push is a stride:
   the hips square up to the nose, the back foot reaches forward with the knee
   up, plants beside the front foot, drives back along the ground, then lifts
   and returns to the tail while the arms swing like walking. Poses blend smoothly and landings compress the knees.
