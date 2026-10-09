@@ -44,13 +44,16 @@ does tricks** with Skate's flick-it motions.
 The touch layout turns on by itself on phones and tablets. Landscape works
 best. Two fixed sticks sit in the bottom corners and never move. The steering
 stick reads from wherever your left thumb lands, so a tap never starts a turn.
-The trick stick reads from its own centre, like a real stick.
+The trick stick also reads from where your right thumb lands (the knob is
+drawn on the fixed stick), so a touch that lands off-centre is still a clean
+ollie.
 
 - **Left thumb: tap to push**, one kick per tap (two quick taps queue two).
   Hold and move from where you touched to steer; holding never pushes. Pull
   down to powerslide to a stop, hold left or right in the air to spin.
 - **Manuals:** tip the right stick about halfway down (manual) or halfway up
-  (nose manual). All the way down is still the ollie crouch.
+  (nose manual). All the way down is still the ollie crouch. A balance meter
+  shows while you manual (see below).
 - **Walk / Skate** gets off the board and back on. Walking goes wherever the
   left stick points (relative to the camera), runs at full tilt and climbs
   stairs; the board is carried under your arm.
@@ -126,18 +129,46 @@ can ollie or flip out of a manual into the next trick. Push all the way down
 and it's the ollie crouch instead. *Manual: trick stick tip from* sets where
 halfway starts.
 
+Manuals have to be balanced. The meter above the rider drifts towards the
+nose or the tail and keeps speeding up (*Manual: how fast balance tips away*). Tip the stick
+further into the halfway band to lean back, or less far to lean forward
+(*Manual: how much the stick corrects it*). Let it reach the end and you drop to the tail or the
+nose and the manual ends. Uncorrected, a manual lasts about a second and a
+half. With the keyboard (M / N) the balance looks after itself.
+
 ## Walking
 
 Walk / Skate (touch), Y (controller) or F (keyboard) steps off the board.
-Walking follows the left stick relative to the camera, runs when the stick is
-all the way over, steps up stairs and stops at taller walls. Step back on and
+Walking follows the left stick relative to the camera (the direction is
+locked while you hold the stick, so the camera swinging round doesn't curve
+your path), runs when the stick is all the way over, steps up stairs and stops at taller walls. Step back on and
 you roll off in the direction you were walking.
 
 ## Braking
 
 Pulling the stick back powerslides: the board swings sideways (*Powerslide board
 angle*), the rider leans back on the heels and the speed scrubs off
-(*Powerslide stopping power*).
+(*Powerslide stopping power*). From full speed a powerslide takes about a
+second and a half and seven metres.
+
+## Bails and solid things
+
+Walls, buildings, benches and ledges are solid, and so are freestanding rails
+and their posts: you can't ride through a rail, only ollie onto it. Hit a wall
+faster than *Bail when hitting a wall* and you slam. Curbs, ledges and the
+manual pad don't roll you up: catch one faster than *Bail when catching a
+curb* and you bail, so ollie onto them. Below that speed you just stop against
+them.
+
+## Scoring
+
+- An **Ollie** scores only when you pop. Rolling off an edge isn't a trick.
+- Flip tricks, spins (per half turn), grinds and manuals all score, and the
+  combo is multiplied by its number of tricks.
+- Tricks started riding fakie are named **Fakie** and are worth a bit more.
+- Dropping 0.6 m or more during a combo adds a **Drop** bonus for the height.
+- Carving as you pop doesn't spin you. A spin only starts once you hold
+  left or right after the pop (or let go and press again).
 
 ## Camera
 
@@ -145,7 +176,13 @@ The camera sits low and behind you and swings round to follow your direction
 of travel, so riding fakie or coming back down a ramp turns it around. In the
 air it mostly holds still so spins don't spin the view. Distance, height, how
 far it looks down, field of view and how quickly it swings behind you (on the
-ground and in the air) are in the **Camera** tuning section.
+ground and in the air) are in the **Camera** tuning section. If a wall or the
+plaza lip gets between the camera and you, it pulls in so you can always see
+the board.
+
+Safety yellow paint marks the plaza lip and the nosing of each step so the
+edges read from a distance, and the sides of ledges and boxes are darker than
+their tops.
 
 ## The street
 
@@ -167,7 +204,8 @@ A block of street spots inside a ring of buildings:
    (*Turn rate*, *Grip*, *Speed kept when carving*)
 2. Roll off the plaza and kickflip down the stairs.
 3. Ollie onto the handrail or the hubba from the top of the stairs, holding a
-   direction on the trick stick to pick the grind.
+   direction on the trick stick to pick the grind. On the handrail, pop about
+   two to four metres before the top of the rail.
 4. Set a spot at the top of a line, then use Return to retry it.
 5. Pull back to powerslide before the buildings.
 
