@@ -2,7 +2,7 @@
 
 A throwaway prototype for one question: **does the skating feel good?**
 
-One grey park, a camera that follows behind you, and every movement number on
+A street block, a camera that follows behind you, and every movement number on
 a live slider. No netcode and no art. Everything here is written from
 scratch: no code, data or assets from MW2, Skate 3 or Minecraft. The only
 dependency is Three.js, loaded from a CDN.
@@ -33,7 +33,7 @@ does tricks** with Skate's flick-it motions.
 | Set the board up for a grind | Hold the right stick in the air | Arrow keys |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
 | Pick the grind (hold while landing on a rail) | Right stick direction | Arrow keys |
-| Respawn | Menu | R |
+| Set a spot / return to it | D-pad ↑ / Menu | P / R |
 | Tuning sliders | View | Tab |
 | Help | | H |
 
@@ -44,8 +44,11 @@ best. Two fixed sticks sit in the bottom corners and never move. The steering
 stick reads from wherever your left thumb lands, so a tap never starts a turn.
 The trick stick reads from its own centre, like a real stick.
 
-- **Left thumb steers.** You roll on your own (auto-push); push up to go
-  faster, pull down to brake, hold left or right in the air to spin.
+- **Left thumb steers.** While your thumb is down you push along
+  (auto-push); let go to coast. Push up to go faster, pull down to powerslide
+  to a stop, hold left or right in the air to spin.
+- **Set spot / Return** buttons save where you are, which way you're facing
+  and how fast you're going, and put you back there to try the line again.
 - **Right thumb is the flick-it stick**, with the same motions as a
   controller's right stick. A quick tap is a small ollie.
 
@@ -63,7 +66,7 @@ exact boxes:
 | Hardflip / Inward Heelflip | Pull down, nudge right / left (about 20°), flick up |
 | Varial Kickflip / Varial Heelflip | Swing in from the left / right (about 25°) to the bottom, flick up-right / up-left |
 | 360 Flip / Laserflip | Swing in from the left / right (about 70°), flick up-right / up-left |
-| 360 Inward Heelflip / 360 Hardflip | Swing in from the left / right (about 70°), flick up |
+| 360 Inward Heelflip / 360 Hardflip | Swing in from the left / right (about 40°), flick up |
 | FS / BS 360 Pop Shuvit | Sweep round the bottom (about 120°) onto the left / right |
 | Nollie anything | The same, upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
@@ -107,6 +110,12 @@ up pops you off, as on the ground.
 Steering is the same riding regular or fakie: stick right always turns the
 board the same way.
 
+## Braking
+
+Pulling the stick back powerslides: the board swings sideways (*Powerslide board
+angle*), the rider leans back on the heels and the speed scrubs off
+(*Powerslide stopping power*).
+
 ## Camera
 
 The camera sits low and behind you and swings round to follow your direction
@@ -115,16 +124,29 @@ air it mostly holds still so spins don't spin the view. Distance, height, how
 far it looks down, field of view and how quickly it swings behind you (on the
 ground and in the air) are in the **Camera** tuning section.
 
+## The street
+
+A block of street spots inside a ring of buildings:
+
+- **The plaza**: a raised plaza to the north with a three-step stair set down
+  its front. A handrail runs down the right of the stairs and a hubba ledge
+  down the left; the plaza lip either side of the stairs grinds. On top: a
+  bench and a flat rail. Ride up the bank on its east side to get back on.
+- **Ledges**: a long street ledge and a bench to the west, and a low manual
+  pad.
+- **Rails**: a long flat rail and a low flatbar to the east.
+- **The road**: a long red curb you can grind, the road, and a street bank
+  against the south buildings.
+
 ## Things to try
 
 1. Push to full speed and carve S-turns. Does turning feel weighty or twitchy?
    (*Turn rate*, *Grip*, *Speed kept when carving*)
-2. Hit the north quarter pipe straight on, then at an angle. Straight on sends
-   you up and back in; at an angle you catch the coping. (*Vert assist*,
-   *Rail magnet radius*)
-3. Ollie onto the flat rail and the ledge, then the down rail off the platform.
-4. Launch off the kicker toward the east bank and try a 360 flip.
-5. Drop into the bowl and link grinds and airs into one combo.
+2. Roll off the plaza and kickflip down the stairs.
+3. Ollie onto the handrail or the hubba from the top of the stairs, holding a
+   direction on the trick stick to pick the grind.
+4. Set a spot at the top of a line, then use Return to retry it.
+5. Pull back to powerslide before the buildings.
 
 ## Sharing a setup
 

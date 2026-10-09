@@ -156,10 +156,11 @@
 <div id="intro">
   <div class="card">
     <h1>Skate Feel Toy</h1>
-    <p>One grey park and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
+    <p>A street block with a stair set, rails, ledges and banks, and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
     <ul class="touch-list touch-only">
-      <li><b>Left thumb steers.</b> A stick appears wherever you touch the left side. You roll on your own; push up to go faster, pull down to brake, hold left or right in the air to spin.</li>
+      <li><b>Left thumb steers.</b> Touch anywhere on the left and move from there. While your thumb is down you push along; let go to coast. Push up to go faster, pull down to powerslide to a stop, hold left or right in the air to spin.</li>
       <li><b>Right thumb does tricks</b>, also wherever you touch. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
+      <li><b>Set spot</b> saves where you are and how fast you're going; <b>Return</b> puts you back there to try the line again.</li>
       <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail. Tap the right side for a quick ollie.</li>
     </ul>
     <div class="table-wrap desk-only">
@@ -170,7 +171,7 @@
       <tr><td>Ollie and flip tricks</td><td>Right stick: down, flick up (Skate's flick-it)</td><td><kbd>Space</kbd> (hold, release), then <kbd>Q</kbd> + WASD in the air</td></tr>
       <tr><td>Set the board up for a grind</td><td>Hold the right stick in the air</td><td>Arrow keys</td></tr>
       <tr><td>Grind (auto near rails; or hold)</td><td>LB</td><td><kbd>Shift</kbd></td></tr>
-      <tr><td>Respawn</td><td>Menu</td><td><kbd>R</kbd></td></tr>
+      <tr><td>Set a spot / return to it</td><td>D-pad ↑ / Menu</td><td><kbd>P</kbd> / <kbd>R</kbd></td></tr>
       <tr><td>Tuning sliders</td><td>View</td><td><kbd>Tab</kbd></td></tr>
     </table>
     </div>
@@ -196,7 +197,7 @@
 <div id="touch-ui" hidden>
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div><div id="stick-label"></div>
   <canvas id="tstick-trail"></canvas><div id="tstick-base" class="idle"></div><div id="tstick-knob" hidden></div>
-  <div class="tbar"><button type="button" id="tb-respawn">Respawn</button><button type="button" id="tb-tune">Tuning</button></div>
+  <div class="tbar"><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
   <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
 </div>
 <div id="error" hidden></div>
@@ -208,20 +209,21 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 11, slideAngle: 80, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.6, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   autoPush: true, autoPushSpeed: 6.5, stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, shuv360: 120, tapOllie: true, holdReleasePops: false,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, sweepUp360: 40, shuv360: 120, tapOllie: true, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
     ['gravity', 'Gravity', 6, 30, 0.5], ['pushImpulse', 'Push strength', 0.3, 4, 0.05],
     ['pushInterval', 'Push interval (s)', 0.15, 1, 0.01], ['pushMax', 'Push top speed (m/s)', 3, 16, 0.25],
-    ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength', 1, 20, 0.5],
+    ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength (slow)', 1, 20, 0.5],
+    ['slideDecel', 'Powerslide stopping power', 2, 30, 0.5], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
     ['turnRate', 'Turn rate, slow', 0.5, 6, 0.05], ['turnRateFast', 'Turn rate, fast', 0.3, 5, 0.05],
     ['grip', 'Grip (less side slip)', 1, 30, 0.5], ['carveKeep', 'Speed kept when carving', 0, 1, 0.01],
   ]],
@@ -248,7 +250,8 @@ const SPEC = [
     ['nudge', 'Hardflip / inward heel: sideways nudge (°)', 5, 60, 1],
     ['swingTime', 'Nudge counts if the flick follows within (s)', 0.06, 0.5, 0.01],
     ['sweepVarial', 'Varials: swing in from the side (°)', 10, 60, 1],
-    ['sweep360', '360 flips: swing in from the side (°)', 40, 120, 1],
+    ['sweep360', '360 flip / laserflip: swing in from the side (°)', 40, 120, 1],
+    ['sweepUp360', '360 hardflip / 360 inward heel: swing in (°)', 20, 100, 1],
     ['shuv360', '360 shuvits: sweep round the bottom (°)', 80, 200, 1],
     ['flickSettle', 'Ignore stick after a trick (s)', 0, 0.5, 0.01],
     ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
@@ -258,7 +261,7 @@ const SPEC = [
     ['stickRadius', 'Stick size (px)', 30, 100, 1], ['tapOllie', 'Tap the right side to ollie', 'bool'],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v3';
+const STORE_KEY = 'skate-feel-toy-v4';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -282,51 +285,53 @@ const DEG = Math.PI / 180;
    and the rendered mesh always agree. Boxes and rails sit on top.
    ============================================================ */
 function arc(d, R, dmax) { if (d <= 0) return 0; const dd = Math.min(d, dmax); return R - Math.sqrt(R * R - dd * dd); }
-const QP = { R: 2.8 }; QP.dmax = QP.R * 0.95; QP.H = arc(QP.dmax, QP.R, QP.dmax);
-const BOWL = { x: -9, z: -12, r0: 3.2, R: 3.0 }; BOWL.dmax = BOWL.R * 0.95; BOWL.D = arc(BOWL.dmax, BOWL.R, BOWL.dmax);
-const EDGE = 22, WORLD = 30, STEP = 0.3;
+const WORLD = 30, STEP = 0.3, PLAZA_H = 1.28;
 
+// A street block: flat ground, a raised plaza with a stair set, banks, ledges, rails, a curb,
+// all inside a ring of buildings. Smooth slopes live in terrainH; everything square is a box.
 function terrainH(x, z) {
   let h = 0;
-  h = Math.max(h, arc(-EDGE - z, QP.R, QP.dmax));              // north quarter pipe
-  h = Math.max(h, arc(z - EDGE, QP.R, QP.dmax));               // south quarter pipe
-  h = Math.max(h, arc(-EDGE - x, QP.R, QP.dmax));              // west quarter pipe
-  { const d = x - EDGE; if (d > 0) h = Math.max(h, Math.min(d * Math.tan(28 * DEG), 1.7)); } // east bank
-  if (x >= -20 && x <= -16) {                                    // platform with a bank up and a bank down
-    let m = 0;
-    if (z >= -2 && z <= 3) m = 1.2;
-    else if (z > -7 && z < -2) m = 1.2 * (z + 7) / 5;
-    else if (z > 3 && z < 9) m = 1.2 * (9 - z) / 6;
-    h = Math.max(h, m);
-  }
-  if (z >= -13 && z <= -10) { const d = x - 9.5; if (d > 0 && d <= 1.6) h = Math.max(h, arc(d, 2.5, 1.6)); } // kicker
-  if (x >= 4 && x <= 8) {                                        // funbox approach ramps
-    if (z > -8.1 && z < -6) h = Math.max(h, 0.55 * Math.min(1, (z + 8.1) / 1.8));
-    if (z > 2 && z < 4.1) h = Math.max(h, 0.55 * Math.min(1, (4.1 - z) / 1.8));
-  }
-  { const dx = x + 5, dz = z - 1; h += 0.45 * Math.exp(-(dx * dx + dz * dz) / (2 * 1.6 * 1.6)); } // roller
-  { const r = Math.hypot(x - BOWL.x, z - BOWL.z);                // bowl
-    if (r < BOWL.r0 + BOWL.dmax) h += r < BOWL.r0 ? -BOWL.D : -BOWL.D + arc(r - BOWL.r0, BOWL.R, BOWL.dmax); }
+  if (z >= -29.5 && z <= -14.5 && x > 14 && x < 19) h = Math.max(h, PLAZA_H * (19 - x) / 5);   // bank up to the plaza
+  if (x >= -12 && x <= 12 && z > 22.6 && z < 26) h = Math.max(h, Math.min(1.4, (z - 22.6) * 0.47)); // street bank
   return h;
 }
 
+// edges: which top edges grind ('n' = min z, 's' = max z, 'w' = min x, 'e' = max x)
 const BOXES = [
-  { min: [4, 0, -6], max: [8, 0.55, 2], edges: 'z' },     // funbox
-  { min: [-8, 0, 12], max: [0, 0.42, 12.5], edges: 'x' }, // ledge
+  { min: [-14, 0, -30], max: [14, PLAZA_H, -14], mat: 'plaza' },                 // the plaza
+  { min: [-4, 0, -14], max: [4, 0.96, -13.4], mat: 'step' },                     // stairs down its front
+  { min: [-4, 0, -13.4], max: [4, 0.64, -12.8], mat: 'step' },
+  { min: [-4, 0, -12.8], max: [4, 0.32, -12.2], mat: 'step' },
+  { min: [-10, PLAZA_H, -22.2], max: [-4, PLAZA_H + 0.45, -21.6], mat: 'ledge', edges: 'ns' }, // bench on the plaza
+  { min: [-25, 0, -4], max: [-13, 0.5, -3.4], mat: 'ledge', edges: 'ns' },       // long street ledge
+  { min: [-22, 0, 6], max: [-18, 0.42, 6.6], mat: 'ledge', edges: 'ns' },        // bench
+  { min: [-12, 0, 11], max: [-5, 0.17, 14], mat: 'pad', edges: 'nswe' },         // manual pad
+  { min: [-26, 0, 19.5], max: [26, 0.15, 20.1], mat: 'curb', edges: 'n' },       // curb along the road
+  { min: [-36, 0, -38], max: [36, 7, -30], mat: 'building' },                    // buildings round the block
+  { min: [-36, 0, 27], max: [36, 6, 36], mat: 'building' },
+  { min: [-38, 0, -30], max: [-29, 8, 27], mat: 'building' },
+  { min: [29, 0, -30], max: [38, 6, 27], mat: 'building' },
 ];
+// the hubba: a ledge that runs down beside the stairs
+const HUBBA = { x: -4.7, w: 0.6, top0: V(0, PLAZA_H + 0.38, -14.35), top1: V(0, 0.48, -11.9) };
 const RAILS = [
-  { a: V(4, 0.45, 14.5), b: V(14, 0.45, 14.5), kind: 'Rail', post: true },
-  { a: V(-15.6, 1.65, 3), b: V(-15.6, 0.45, 9), kind: 'Down rail', post: true },
+  { a: V(4.45, 1.86, -14.6), b: V(4.45, 0.62, -11.9), kind: 'Handrail', post: true },
+  { a: V(10, 0.42, -4), b: V(22, 0.42, -4), kind: 'Rail', post: true },
+  { a: V(12, 0.32, 7), b: V(21, 0.32, 7), kind: 'Flatbar', post: true },
+  { a: V(3, PLAZA_H + 0.42, -20), b: V(10, PLAZA_H + 0.42, -20), kind: 'Rail', post: true },
+  // the plaza lip either side of the stairs
+  { a: V(-14, PLAZA_H, -14), b: V(-4.05, PLAZA_H, -14), kind: 'Ledge' },
+  { a: V(4.05, PLAZA_H, -14), b: V(14, PLAZA_H, -14), kind: 'Ledge' },
 ];
+for (const dx of [-HUBBA.w / 2, HUBBA.w / 2])
+  RAILS.push({ a: V(HUBBA.x + dx, HUBBA.top0.y, HUBBA.top0.z), b: V(HUBBA.x + dx, HUBBA.top1.y, HUBBA.top1.z), kind: 'Hubba' });
 for (const b of BOXES) {
-  const y = b.max[1];
-  if (b.edges === 'z') for (const x of [b.min[0], b.max[0]]) RAILS.push({ a: V(x, y, b.min[2]), b: V(x, y, b.max[2]), kind: 'Ledge' });
-  else for (const z of [b.min[2], b.max[2]]) RAILS.push({ a: V(b.min[0], y, z), b: V(b.max[0], y, z), kind: 'Ledge' });
+  const y = b.max[1], e = b.edges || '';
+  if (e.includes('n')) RAILS.push({ a: V(b.min[0], y, b.min[2]), b: V(b.max[0], y, b.min[2]), kind: 'Ledge' });
+  if (e.includes('s')) RAILS.push({ a: V(b.min[0], y, b.max[2]), b: V(b.max[0], y, b.max[2]), kind: 'Ledge' });
+  if (e.includes('w')) RAILS.push({ a: V(b.min[0], y, b.min[2]), b: V(b.min[0], y, b.max[2]), kind: 'Ledge' });
+  if (e.includes('e')) RAILS.push({ a: V(b.max[0], y, b.min[2]), b: V(b.max[0], y, b.max[2]), kind: 'Ledge' });
 }
-{ const L = EDGE + QP.dmax, s = EDGE - 0.5, c = QP.H; // quarter pipe copings
-  RAILS.push({ a: V(-s, c, -L), b: V(s, c, -L), kind: 'Coping', minSpeed: 2 });
-  RAILS.push({ a: V(-s, c, L), b: V(s, c, L), kind: 'Coping', minSpeed: 2 });
-  RAILS.push({ a: V(-L, c, -s), b: V(-L, c, s), kind: 'Coping', minSpeed: 2 }); }
 for (const r of RAILS) { r.len = r.a.distanceTo(r.b); r.dir = r.b.clone().sub(r.a).normalize(); }
 
 function terrainNormal(x, z) {
@@ -380,6 +385,7 @@ addEventListener('keydown', e => {
     if (e.code === 'Tab') EDGE_IN.panel = true;
     if (e.code === 'KeyR') EDGE_IN.reset = true;
     if (e.code === 'KeyH') toggleIntro();
+    if (e.code === 'KeyP') EDGE_IN.setSpot = true;
     if (e.code === 'KeyQ') EDGE_IN.flip = true;
   }
   keys.add(e.code); setDevice('kbm'); startAudio();
@@ -409,7 +415,8 @@ function sampleInput() {
     const [rx, ry] = stick(p.axes[2] || 0, p.axes[3] || 0, 0.12);
     const anyBtn = p.buttons.some(b => b.pressed);
     if (lx || ly || rx || ry || anyBtn) { setDevice('pad'); startAudio(); }
-    const nowB = {}; for (const i of [0, 2, 8, 9]) nowB[i] = pb(i);
+    const nowB = {}; for (const i of [0, 2, 8, 9, 12]) nowB[i] = pb(i);
+    if (nowB[12] && !prevBtn[12]) EDGE_IN.setSpot = true;
     if (anyBtn && introVisible) hideIntro();
     if (nowB[2] && !prevBtn[2]) EDGE_IN.flip = true;
     if (nowB[8] && !prevBtn[8]) EDGE_IN.panel = true;
@@ -523,12 +530,12 @@ function gridTexture(base, line) {
   const size = 2 * WORLD + 4, seg = MOBILE ? 200 : 330;
   const geo = new THREE.PlaneGeometry(size, size, seg, seg); geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position, colors = [];
-  const flat = new THREE.Color(0xb9b6ae), ramp = new THREE.Color(0x9fb1bf), deck = new THREE.Color(0xa69e90), bowl = new THREE.Color(0x8fa6b2);
+  const flat = new THREE.Color(0xb9b6ae), ramp = new THREE.Color(0xa7aeb3), road = new THREE.Color(0x5f6166);
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = terrainH(x, z);
     pos.setY(i, h);
     const n = terrainNormal(x, z);
-    const c = h < -0.05 ? bowl.clone() : n.y < 0.985 ? ramp.clone() : h > 0.3 ? deck.clone() : flat.clone();
+    const c = n.y < 0.985 || h > 0.3 ? ramp.clone() : z > 20.1 && z < 22.6 ? road.clone() : flat.clone();
     colors.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -539,11 +546,32 @@ function gridTexture(base, line) {
   scene.add(mesh);
 }
 const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, metalness: 0.85, roughness: 0.3 });
-const concrete = new THREE.MeshStandardMaterial({ map: gridTexture('#c4c0b6', 'rgba(40,46,56,0.3)'), roughness: 0.9 });
+function windowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#8b5e4a'; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = 'rgba(0,0,0,0.12)'; for (let y = 0; y < 128; y += 8) g.fillRect(0, y, 128, 1);
+  g.fillStyle = '#3d4a57'; for (const x of [16, 72]) for (const y of [20, 76]) g.fillRect(x, y, 40, 36);
+  g.fillStyle = 'rgba(255,255,255,0.18)'; for (const x of [16, 72]) for (const y of [20, 76]) g.fillRect(x + 3, y + 3, 12, 30);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'),
+  ledge: gridTexture('#9a9ea3', 'rgba(30,30,35,0.25)'), pad: gridTexture('#bdb8ad', 'rgba(40,46,56,0.3)'),
+  curb: gridTexture('#b9423a', 'rgba(255,255,255,0.15)'), building: windowTexture() };
+const concrete = new THREE.MeshStandardMaterial({ map: boxTex.plaza, roughness: 0.9 });
 for (const b of BOXES) {
   const sx = b.max[0] - b.min[0], sy = b.max[1] - b.min[1], sz = b.max[2] - b.min[2];
-  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), concrete);
-  m.position.set((b.min[0] + b.max[0]) / 2, sy / 2, (b.min[2] + b.max[2]) / 2);
+  const tex = boxTex[b.mat || 'plaza'].clone(); tex.needsUpdate = true;
+  tex.repeat.set(Math.max(1, Math.round(Math.max(sx, sz) / (b.mat === 'building' ? 4 : 2))), Math.max(1, Math.round((b.mat === 'building' ? sy : Math.min(sx, sz)) / (b.mat === 'building' ? 3 : 2))));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshStandardMaterial({ map: tex, roughness: b.mat === 'building' ? 0.95 : 0.9 }));
+  m.position.set((b.min[0] + b.max[0]) / 2, b.min[1] + sy / 2, (b.min[2] + b.max[2]) / 2);
+  m.castShadow = m.receiveShadow = true; scene.add(m);
+}
+{ // the hubba: a sloped concrete block whose top runs down beside the stairs
+  const d = HUBBA.top1.clone().sub(HUBBA.top0), len = d.length(), th = 0.7;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(HUBBA.w, th, len), new THREE.MeshStandardMaterial({ map: boxTex.ledge, roughness: 0.9 }));
+  const mid = HUBBA.top0.clone().add(HUBBA.top1).multiplyScalar(0.5); mid.x = HUBBA.x;
+  m.quaternion.setFromUnitVectors(V(0, 0, 1), d.clone().normalize());
+  m.position.copy(mid).add(V(0, -th / 2, 0).applyQuaternion(m.quaternion));
   m.castShadow = m.receiveShadow = true; scene.add(m);
 }
 function tube(a, b, r, mat) {
@@ -560,8 +588,12 @@ for (const r of RAILS) {
     tube(V(p.x, groundAt(p.x, p.z, p.y - 0.2).h - 0.05, p.z), V(p.x, p.y - 0.03, p.z), 0.03, metal);
   }
 }
-{ const ring = new THREE.Mesh(new THREE.TorusGeometry(BOWL.r0 + BOWL.dmax, 0.04, 8, 96), metal);
-  ring.rotation.x = Math.PI / 2; ring.position.set(BOWL.x, 0, BOWL.z); scene.add(ring); }
+// the saved spot: a little marker on the ground
+const spotMarker = new THREE.Group(); spotMarker.visible = false; scene.add(spotMarker);
+{ const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.04, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffb547 }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.03; spotMarker.add(ring);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 6), new THREE.MeshBasicMaterial({ color: 0xffb547 })); pole.position.y = 0.7; spotMarker.add(pole);
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.25), new THREE.MeshBasicMaterial({ color: 0xffb547, side: THREE.DoubleSide })); flag.position.set(0.2, 1.27, 0); spotMarker.add(flag); }
 
 // Skater: a jointed figure standing sideways on a board that flips.
 const skater = new THREE.Group(); scene.add(skater);
@@ -613,16 +645,16 @@ function limbIK(upper, lower, root, target, pole, L1, L2) {
   placeBone(upper, root, _j); placeBone(lower, _j, _e);
 }
 const toRig = local => local.clone().applyQuaternion(pelvis.quaternion).add(pelvis.position);
-const pose = { push: 0, pushBlend: 0, crouch: 0, lookFwd: 1, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0 };
+const pose = { push: 0, pushBlend: 0, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0 };
 
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
    ============================================================ */
-const SPAWN = { pos: V(0, 0, 8), yaw: 0 };
+const SPAWN = { pos: V(0, 0, 6), yaw: 0 };
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
-  trick: null, flipBuf: 0, flipName: null, grindKey: 'C', grindSeg: 0, grindSwitchT: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
+  trick: null, flipBuf: 0, flipName: null, sliding: false, grindKey: 'C', grindSeg: 0, grindSwitchT: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
 };
 const stats = { score: 0, best: 0 };
 const combo = { parts: [], pts: 0, ammo: 0 };
@@ -640,6 +672,21 @@ for (const k of Object.keys(TRICKS)) TRICKS['Nollie ' + k] = { ...TRICKS[k], pts
 // keyboard and controller: flip button + a direction
 const DIR_TRICK = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Hardflip' };
 
+// a saved spot: where you were, which way you faced and how fast you were going
+let spot = null;
+function setSpot() {
+  spot = { pos: S.pos.clone(), vel: S.vel.clone(), yaw: S.yaw, grounded: S.grounded && !S.rail, n: S.n.clone() };
+  spotMarker.position.copy(S.pos); spotMarker.visible = true;
+  showTrickName('Spot set'); sfx.click();
+}
+function returnToSpot() {
+  if (!spot) { respawn(); return; }
+  Object.assign(S, { pos: spot.pos.clone(), vel: spot.vel.clone(), yaw: spot.yaw, grounded: spot.grounded, n: spot.n.clone(), rail: null, railCool: 0.3,
+    trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0, sinceGround: 0, airTime: 0, coyoteOk: false, popped: false });
+  combo.parts = []; combo.pts = 0; combo.ammo = 0;
+  const hv = Math.hypot(S.vel.x, S.vel.z);
+  cam.yaw = hv > 1 ? yawOf(V(S.vel.x, 0, S.vel.z)) : S.yaw; cam.pivot.copy(S.pos);
+}
 function respawn() {
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0 });
   S.pos.y = terrainH(S.pos.x, S.pos.z);
@@ -722,11 +769,14 @@ function stepGround(dt) {
   const dir = Math.abs(vf) > 0.3 ? Math.sign(vf) : 1;
   S.pushT -= dt;
   if (S.bail <= 0) {
-    const autoPush = device === 'touch' && T.autoPush && !IN.brake && Math.abs(vf) < T.autoPushSpeed;
+    // touch: push along only while the steering thumb is down; let go to coast
+    const autoPush = device === 'touch' && T.autoPush && touch.stickId !== null && !IN.brake && Math.abs(vf) < T.autoPushSpeed;
     if ((IN.push || autoPush) && !IN.ollie && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
       vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push(); pose.push = clamp(T.pushInterval * 0.95, 0.25, 0.6);
     }
-    if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.brakeDecel * dt);
+    // pulling back powerslides: the board swings sideways and scrubs the speed off
+    S.sliding = IN.brake && Math.abs(vf) > 0.8;
+    if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), (S.sliding ? T.slideDecel : T.brakeDecel) * dt);
   } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
   vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.rollFriction * dt);
   S.vel.copy(f).multiplyScalar(vf).addScaledVector(r, newVl);
@@ -940,7 +990,8 @@ function stepRail(dt) {
 }
 
 function step(dt) {
-  if (EDGE_IN.reset) { EDGE_IN.reset = false; respawn(); }
+  if (EDGE_IN.reset) { EDGE_IN.reset = false; returnToSpot(); }
+  if (EDGE_IN.setSpot) { EDGE_IN.setSpot = false; setSpot(); }
   if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
   if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipName = FL.flipName; FL.flipName = null; }
   S.flipBuf -= dt;
@@ -1001,7 +1052,8 @@ function updateVisuals(dt, time) {
   // grind stance: turn and tip the board about the point that rides the rail
   const setup = !S.rail && !S.grounded && !S.trick && S.bail <= 0;
   const gk = S.rail ? GRINDS[S.grindKey] : setup ? GRINDS[grindKey()] : GRINDS.C;
-  pose.gYaw = dampAngle(pose.gYaw, gk.yaw, 18, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, 18, dt);
+  pose.slide = damp(pose.slide, S.sliding && S.grounded && S.bail <= 0 ? 1 : 0, S.sliding ? 10 : 6, dt);
+  pose.gYaw = dampAngle(pose.gYaw, gk.yaw + pose.slide * T.slideAngle * DEG, 18, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, 18, dt);
   pose.gPivot = damp(pose.gPivot, gk.pivot, 18, dt); pose.gDrop = damp(pose.gDrop, gk.drop, 18, dt);
   boardOrient.position.set(0, 0, 0);
   if (Math.abs(pose.gYaw) + Math.abs(pose.gPitch) + pose.gDrop > 1e-3) {
@@ -1021,7 +1073,7 @@ function updateVisuals(dt, time) {
   // ---- the rider ----
   S.steerVis = damp(S.steerVis, S.grounded || S.rail ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
   const air = !S.grounded && !S.rail;
-  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? 0.3 : 0, air ? 0.25 : 0) + S.landDip * 2.5, 0, 1);
+  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? 0.3 : 0, air ? 0.25 : 0, pose.slide * 0.45) + S.landDip * 2.5, 0, 1);
   pose.crouch = damp(pose.crouch, crouchTarget, S.landDip > 0.05 ? 25 : 14, dt);
   const crouchAmt = pose.crouch;
   const boardLift = boardFlip.position.y;
@@ -1051,7 +1103,7 @@ function updateVisuals(dt, time) {
   qA.setFromUnitVectors(UP, UP.clone().lerp(worldUpLocal, S.rail ? 0.6 : S.grounded ? 0.45 : 0.2).normalize());
   qB.setFromAxisAngle(V(1, 0, 0), -0.22 * pb); qA.multiply(qB);            // lean toward the nose while pushing
   qB.setFromAxisAngle(UP, 1.35 * pb); qA.multiply(qB);                     // hips square up to the nose
-  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt) * (1 - pb) - S.steerVis * 0.3);
+  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt) * (1 - pb) * (1 - pose.slide) + 0.38 * pose.slide - S.steerVis * 0.3 * (1 - pose.slide));
   pelvis.quaternion.copy(qA).multiply(qB);
   // the hips don't follow the board up: when it rises the knees tuck instead
   pelvis.position.set(lerp(-0.05 - 0.07 * crouchAmt, 0.04, pb), baseY + lerp(0.7, 0.46, crouchAmt) - 0.06 * pb - standDip, lerp(0.01, -0.12, pb));
@@ -1084,8 +1136,8 @@ function updateVisuals(dt, time) {
     const sp = S.vel.length(), t = AC.currentTime;
     rollGain.gain.setTargetAtTime(S.grounded && !S.rail && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
     rollFilter.frequency.setTargetAtTime(200 + sp * 70, t, 0.05);
-    grindGain.gain.setTargetAtTime(S.rail ? 0.07 : 0, t, 0.02);
-    grindFilter.frequency.setTargetAtTime((S.rail && GRINDS[S.grindKey].slide ? 700 : 1800) + Math.abs(S.railS) * 120, t, 0.05);
+    grindGain.gain.setTargetAtTime(S.rail ? 0.07 : pose.slide > 0.3 ? 0.06 * Math.min(1, sp / 4) : 0, t, 0.02);
+    grindFilter.frequency.setTargetAtTime(!S.rail ? 500 + sp * 60 : (GRINDS[S.grindKey].slide ? 700 : 1800) + Math.abs(S.railS) * 120, t, 0.05);
   }
 }
 
@@ -1136,7 +1188,7 @@ function buildPanel() {
 buildPanel();
 function togglePanel() { const p = $('panel'); p.hidden = !p.hidden; }
 $('btn-reset').addEventListener('click', () => { Object.assign(T, DEFAULTS); saveTuning(); buildPanel(); $('copy-status').textContent = 'Defaults restored'; });
-$('btn-respawn').addEventListener('click', () => respawn());
+$('btn-respawn').addEventListener('click', () => { spot = null; spotMarker.visible = false; respawn(); });
 $('btn-close').addEventListener('click', () => togglePanel());
 $('btn-copy').addEventListener('click', () => {
   const changed = {}; for (const k in T) if (T[k] !== DEFAULTS[k]) changed[k] = T[k];
@@ -1200,7 +1252,8 @@ function nameFlick(w, arrival, quickMs) {
   const fa = norm180(m(arrival));
   let name = null;
   if (fa > 65 && fa < 115) {
-    name = pre >= T.sweep360 ? '360 Inward Heelflip' : pre <= -T.sweep360 ? '360 Hardflip'
+    // a flick straight up has no varial version, so a smaller swing already makes it a 360
+    name = pre >= T.sweepUp360 ? '360 Inward Heelflip' : pre <= -T.sweepUp360 ? '360 Hardflip'
       : quick && post >= T.nudge ? 'Hardflip' : quick && post <= -T.nudge ? 'Inward Heelflip' : 'Ollie';
   } else if (fa >= 15 && fa <= 65) {
     name = pre >= T.sweep360 ? '360 Flip' : pre >= T.sweepVarial ? 'Varial Kickflip' : 'Kickflip';
@@ -1388,6 +1441,7 @@ function endCanvasPointer(e) {
 canvas.addEventListener('pointerup', endCanvasPointer);
 canvas.addEventListener('pointercancel', endCanvasPointer);
 $('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
+$('tb-spot').addEventListener('click', () => { EDGE_IN.setSpot = true; });
 $('tb-tune').addEventListener('click', () => togglePanel());
 if (MOBILE) enableTouch();
 
@@ -1435,7 +1489,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
