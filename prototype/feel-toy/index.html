@@ -163,12 +163,12 @@
     <h1>Skate Feel Toy</h1>
     <p>A street block with a stair set, rails, ledges and banks, and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
     <ul class="touch-list touch-only">
-      <li><b>Left thumb:</b> tap to push (each tap is a kick). Hold and move from where you touched to steer, pull down to powerslide to a stop, hold left or right in the air to spin.</li>
+      <li><b>Left thumb steers:</b> move from where you touched, pull down to powerslide to a stop, hold left or right in the air to spin.</li>
       <li><b>Manuals:</b> tip the right stick about halfway down (or halfway up for a nose manual). Manuals keep a combo going.</li>
       <li><b>Walk</b> gets you off the board to walk anywhere, including up stairs; <b>Skate</b> gets you back on.</li>
-      <li><b>Right thumb does tricks</b>, also wherever you touch. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
+      <li><b>Right thumb does tricks</b>, also wherever you touch. <b>Tap it to push</b> (each tap is a kick). Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
       <li><b>Set spot</b> drops a marker where you are, facing the way you're going; <b>Return</b> puts you back there, standing, to try the line again.</li>
-      <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail. Tap the right side for a quick ollie.</li>
+      <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail.</li>
     </ul>
     <div class="table-wrap desk-only">
     <table class="controls">
@@ -225,7 +225,7 @@ const DEFAULTS = {
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, sweepUp360: 40, shuv360: 120, tapOllie: true, holdReleasePops: false,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, sweepUp360: 40, shuv360: 120, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -271,10 +271,10 @@ const SPEC = [
     ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
   ]],
   ['Touch', [
-    ['stickRadius', 'Stick size (px)', 30, 100, 1], ['tapOllie', 'Tap the right side to ollie', 'bool'],
+    ['stickRadius', 'Stick size (px)', 30, 100, 1],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v7';
+const STORE_KEY = 'skate-feel-toy-v8';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -480,7 +480,7 @@ function sampleInput() {
   const ky = (keys.has('KeyS') ? 1 : 0) - (keys.has('KeyW') ? 1 : 0);
   IN.steer = clamp(lx + kx + touch.sx, -1, 1);
   IN.stickY = clamp(ly + ky + touch.sy, -1, 1);
-  IN.push = ly + ky < -0.5 || pb(0); // touch pushes by tapping the steering thumb instead
+  IN.push = ly + ky < -0.5 || pb(0); // touch pushes by tapping the trick thumb instead
   IN.brake = IN.stickY > 0.6;
   const ollie = keys.has('Space') || FL.ollie;
   if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
@@ -1189,7 +1189,7 @@ function stepRail(dt) {
 function step(dt) {
   if (EDGE_IN.reset) { EDGE_IN.reset = false; returnToSpot(); }
   if (EDGE_IN.setSpot) { EDGE_IN.setSpot = false; setSpot(); }
-  if (EDGE_IN.push) { EDGE_IN.push = false; if (!S.walking) S.pushQueue = Math.min(2, S.pushQueue + 1); }
+  if (EDGE_IN.push) { EDGE_IN.push = false; if (!S.walking && S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
   if (EDGE_IN.walk) { EDGE_IN.walk = false; toggleWalk(); }
   if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
   if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipName = FL.flipName; FL.flipName = null; }
@@ -1664,14 +1664,13 @@ canvas.addEventListener('pointermove', e => {
 function endCanvasPointer(e) {
   const now = performance.now();
   if (e.pointerId === touch.stickId) {
-    // a quick tap of the steering thumb is one push; holding it is just steering
-    if (e.type === 'pointerup' && now - touch.t0 < 230 && touch.moved < 14) EDGE_IN.push = true;
     touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick();
   }
   if (e.pointerId === ts.id) {
     if (e.type === 'pointerup') moveTrickStick(e.clientX, e.clientY, now); // a fast flick can end on the lift
     const tap = now - ts.t0 < 200 && ts.moved < 12;
-    if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); FL.popNow = true; sayAt('Ollie', ts.x, ts.y); touchFlick.rim = []; touchFlick.windup = null; }
+    // a quick tap of the trick thumb is one push (the steering thumb only steers)
+    if (tap && e.type === 'pointerup') { EDGE_IN.push = true; touchFlick.rim = []; touchFlick.windup = null; }
     flickRelease(touchFlick, now);
     GS.touchX = GS.touchY = 0;
     ts.id = null; placeIdleTrickStick();

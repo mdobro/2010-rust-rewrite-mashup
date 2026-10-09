@@ -48,11 +48,11 @@ The trick stick also reads from where your right thumb lands (the knob is
 drawn on the fixed stick), so a touch that lands off-centre is still a clean
 ollie.
 
-- **Left thumb: tap to push**, one kick per tap (two quick taps queue two).
-  Each kick's speed comes on over the drive of the stride, so the camera
-  doesn't jolt.
-  Hold and move from where you touched to steer; holding never pushes. Pull
-  down to powerslide to a stop, hold left or right in the air to spin.
+- **Left thumb steers**: move from where you touched. Pull down to powerslide
+  to a stop, hold left or right in the air to spin.
+- **Tap the right thumb to push**, one kick per tap (two quick taps queue
+  two). Each kick's speed comes on over the drive of the stride, so the
+  camera doesn't jolt. Taps only push while you're rolling on the ground.
 - **Manuals:** tip the right stick about halfway down (manual) or halfway up
   (nose manual). All the way down is still the ollie crouch. A balance meter
   shows while you manual (see below).
@@ -62,7 +62,7 @@ ollie.
 - **Set spot / Return** buttons drop a marker where you are, facing the way
   you're going, and put you back there standing still to try the line again.
 - **Right thumb is the flick-it stick**, with the same motions as a
-  controller's right stick. A quick tap is a small ollie.
+  controller's right stick. A quick tap pushes instead of doing a trick.
 
 ### Flick-it tricks (right stick, regular stance)
 
@@ -82,7 +82,6 @@ exact boxes:
 | FS / BS 360 Pop Shuvit | Sweep round the bottom (about 120°) onto the left / right |
 | Nollie anything | The same, upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
-| Small ollie | Tap the right side |
 
 The motions follow the Skate flick-it chart as published in GameSpot's trick
 list for EA's current *skate.*. The swing angles are all on sliders in the
