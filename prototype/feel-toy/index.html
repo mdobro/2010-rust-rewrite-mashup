@@ -842,6 +842,7 @@ function returnToSpot() {
   cam.yaw = S.yaw; cam.pivot.copy(S.pos);
 }
 function respawn() {
+  gStick.start = null; gStick.skip = null;
   pose.yawLag = 0; pose.posLag.set(0, 0, 0);
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0,
     walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0, pushLeft: 0, manHold: 0, revertT: 0 });
@@ -895,6 +896,7 @@ function revert() {
   sfx.land(0.25);
 }
 function takeoff() {
+  gStick.start = null; gStick.skip = Math.hypot(GS.x, GS.y) >= 0.45 ? stickSector() : null;
   if (S.revertT > 0) { S.revertT = 0; bankCombo(); }
   S.spinLock = Math.abs(IN.steer) > 0.2 ? Math.sign(IN.steer) : 0; S.spinRamp = 0;
   S.fakieTakeoff = !S.rail && fakie(); S.takeoffY = S.pos.y;
@@ -1110,21 +1112,51 @@ function land(g) {
 // Grinds follow Skate's idea: where you hold the trick stick as you land on the rail lines the board up.
 // pitch: nose up (+); yaw: board turned across the rail; pivot: the point that sits on the rail (board z);
 // drop: lowers the board so the deck, not the trucks, rides the rail (slides).
+// Grinds: hold the trick stick in the air. A straight direction or a diagonal is one grind; holding a
+// direction and then rolling round to the next one ("right, then up") is another. FS / BS comes from
+// which side you come at the rail: the rail on your toe side is frontside.
 const GRINDS = {
-  C:  { name: '50-50',         pitch: 0,     yaw: 0,     pivot: 0,     drop: 0,    fric: 1,   mult: 1 },
-  D:  { name: '5-0',           pitch: 0.2,   yaw: 0,     pivot: 0.27,  drop: 0,    fric: 1.3, mult: 1.15 },
-  U:  { name: 'Nosegrind',     pitch: -0.2,  yaw: 0,     pivot: -0.27, drop: 0,    fric: 1.3, mult: 1.25 },
-  UR: { name: 'Crooked Grind', pitch: -0.14, yaw: 0.38,  pivot: -0.27, drop: 0.02, fric: 1.6, mult: 1.4 },
-  DR: { name: 'Smith Grind',   pitch: -0.16, yaw: -0.38, pivot: 0.27,  drop: 0.02, fric: 1.6, mult: 1.4 },
-  L:  { name: 'Boardslide',    pitch: 0,     yaw: Math.PI / 2,  pivot: 0, drop: 0.1, fric: 2.2, mult: 1.2, slide: true },
-  R:  { name: 'Lipslide',      pitch: 0,     yaw: -Math.PI / 2, pivot: 0, drop: 0.1, fric: 2.2, mult: 1.3, slide: true },
-  UL: { name: 'Noseslide',     pitch: -0.08, yaw: 1.2,   pivot: -0.33, drop: 0.1, fric: 2.4, mult: 1.4, slide: true },
-  DL: { name: 'Tailslide',     pitch: 0.08,  yaw: -1.2,  pivot: 0.33,  drop: 0.1, fric: 2.4, mult: 1.4, slide: true },
+  C:     { name: '50-50',      pitch: 0,     yaw: 0,            pivot: 0,     drop: 0,    fric: 1,   mult: 1 },
+  D:     { name: '5-0',        pitch: 0.2,   yaw: 0,            pivot: 0.27,  drop: 0,    fric: 1.3, mult: 1.15 },
+  U:     { name: 'Nosegrind',  pitch: -0.2,  yaw: 0,            pivot: -0.27, drop: 0,    fric: 1.3, mult: 1.25 },
+  UL:    { name: 'Crooked',    pitch: -0.14, yaw: 0.38,         pivot: -0.27, drop: 0.02, fric: 1.6, mult: 1.4 },
+  UR:    { name: 'Overcrook',  pitch: -0.14, yaw: -0.38,        pivot: -0.27, drop: 0.02, fric: 1.6, mult: 1.45 },
+  DR:    { name: 'Salad',      pitch: 0.16,  yaw: -0.3,         pivot: 0.27,  drop: 0.02, fric: 1.5, mult: 1.4 },
+  'R>U': { name: 'Smith',      pitch: -0.16, yaw: -0.38,        pivot: 0.27,  drop: 0.04, fric: 1.6, mult: 1.4 },
+  'L>U': { name: 'Feeble',     pitch: -0.16, yaw: 0.38,         pivot: 0.27,  drop: 0.04, fric: 1.6, mult: 1.4 },
+  'L>D': { name: 'Willy',      pitch: 0.16,  yaw: 0.38,         pivot: -0.27, drop: 0.04, fric: 1.6, mult: 1.45 },
+  'R>D': { name: 'Over Willy', pitch: 0.16,  yaw: -0.38,        pivot: -0.27, drop: 0.04, fric: 1.6, mult: 1.5 },
+  L:     { name: 'Boardslide', pitch: 0,     yaw: Math.PI / 2,  pivot: 0,     drop: 0.1,  fric: 2.2, mult: 1.2, slide: true },
+  R:     { name: 'Lipslide',   pitch: 0,     yaw: -Math.PI / 2, pivot: 0,     drop: 0.1,  fric: 2.2, mult: 1.3, slide: true },
+  'U>L': { name: 'Noseslide',  pitch: -0.08, yaw: 1.2,          pivot: -0.33, drop: 0.1,  fric: 2.4, mult: 1.4, slide: true },
+  'U>R': { name: 'Nose Blunt', pitch: -0.4,  yaw: -1.2,         pivot: -0.36, drop: 0.06, fric: 2.6, mult: 1.6, slide: true },
+  'D>L': { name: 'Tailslide',  pitch: 0.08,  yaw: -1.2,         pivot: 0.33,  drop: 0.1,  fric: 2.4, mult: 1.4, slide: true },
+  'D>R': { name: 'Bluntslide', pitch: 0.4,   yaw: 1.2,          pivot: 0.36,  drop: 0.06, fric: 2.6, mult: 1.6, slide: true },
 };
-function grindKey() {
+// Track where the stick went first in this hold, so rolling from one direction round to the next
+// ("right, then up", or through the diagonal) is a different grind from holding the diagonal.
+// Where the thumb ends a pop flick doesn't count as the first direction.
+const gStick = { start: null, skip: null };
+const ADJ = { U: ['L', 'R'], D: ['L', 'R'], L: ['U', 'D'], R: ['U', 'D'] };
+const diagOf = (a, b) => (a === 'U' || a === 'D' ? a + b : b + a);
+function stickSector() { return SECT[((Math.round(Math.atan2(-GS.y, GS.x) / (Math.PI / 4)) % 8) + 8) % 8]; }
+function trackGrindStick() {
   const m = Math.hypot(GS.x, GS.y);
-  if (m < 0.45) return 'C';
-  return SECT[((Math.round(Math.atan2(-GS.y, GS.x) / (Math.PI / 4)) % 8) + 8) % 8];
+  if (m < 0.3) { gStick.start = null; gStick.skip = null; return; }
+  if (m < 0.45) return;
+  const cur = stickSector(), st = gStick.start;
+  if (!st) { if (cur !== gStick.skip) { gStick.start = cur; gStick.skip = null; } return; }
+  if (st === cur) return;
+  if (ADJ[st] ? ADJ[st].some(b => cur === b || cur === diagOf(st, b)) : st.includes(cur)) return; // rolling on round
+  gStick.start = cur;
+}
+function grindKey() {
+  if (Math.hypot(GS.x, GS.y) < 0.45) return 'C';
+  const cur = stickSector(), st = gStick.start || cur;
+  if (st === cur) return cur === 'DL' ? 'D>L' : cur;                 // straight down-left: tailslide
+  if (ADJ[st]) { const b = ADJ[st].find(b => cur === b || cur === diagOf(st, b)); return b ? st + '>' + b : cur; }
+  if (st.includes(cur)) return st.replace(cur, '') + '>' + cur;      // through a diagonal onto a side
+  return cur;
 }
 // a rail below and close enough that holding the stick means "grind", not "grab"
 function railNearby() {
@@ -1137,7 +1169,7 @@ function railNearby() {
 }
 function grindSegment() {
   const g = GRINDS[S.grindKey];
-  if (S.grindSeg > 0.12) addTrick(g.name, Math.round((60 + 180 * S.grindSeg) * g.mult), 1);
+  if (S.grindSeg > 0.12) addTrick(S.grindName || g.name, Math.round((60 + 180 * S.grindSeg) * g.mult), 1);
   S.grindSeg = 0;
 }
 function tryRail() {
@@ -1169,8 +1201,13 @@ function tryRail() {
   if (S.trick) { addTrick(S.trick.name, S.trick.pts, S.trick.ammo); S.trick = null; }
   if (S.grabT > 0) endGrab();
   S.rail = r; S.railT = t; S.railS = s; S.railTime = 0; S.grounded = false;
-  S.grindKey = grindKey(); S.grindSeg = 0; S.grindSwitchT = 0;
-  if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(GRINDS[S.grindKey].name);
+  S.grindKey = grindKey(); S.grindSeg = 0; S.grindSwitchT = 0; S.exitArmed = false;
+  { // frontside when the rail is on your toe side (the board's right of the nose), counting which way you're drifting
+    const c = r.a.clone().addScaledVector(r.dir, t * r.len), toe = V(Math.cos(S.yaw), 0, -Math.sin(S.yaw));
+    const side = (c.x - S.pos.x) * toe.x + (c.z - S.pos.z) * toe.z + 0.15 * (S.vel.x * toe.x + S.vel.z * toe.z);
+    S.grindName = (side >= 0 ? 'FS ' : 'BS ') + GRINDS[S.grindKey].name;
+  }
+  if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(S.grindName);
   const dir = r.dir.clone().multiplyScalar(Math.sign(s));
   const keepFakie = Math.cos(wrap(yawOf(V(dir.x, 0, dir.z)) - S.yaw)) < 0;
   const yaw0 = S.yaw;
@@ -1196,6 +1233,15 @@ function stepRail(dt) {
   };
   if (S.railT <= 0 || S.railT >= 1 || Math.abs(S.railS) < 0.4) { exitRail(); S.vel.y += 0.6; return; }
   if (IN.ollie) S.crouch = Math.min(1, S.crouch + dt / T.crouchTime);
+  // push the left stick hard left or right to hop off that side
+  if (Math.abs(IN.steer) < 0.5) S.exitArmed = true; // a stick already held over as you land doesn't throw you off
+  if (S.exitArmed && Math.abs(IN.steer) > 0.85 && S.railTime > 0.1 && !IN.ollie) {
+    const hv = V(S.vel.x, 0, S.vel.z).normalize(), rgt = V(-hv.z, 0, hv.x); // right of the way you're going, like the camera
+    exitRail();
+    S.vel.addScaledVector(rgt, Math.sign(IN.steer) * 2.4).addScaledVector(UP, 2.2); S.railCool = 0.6;
+    if (device !== 'kbm') showTrickName('Grind exit');
+    return;
+  }
   if (EDGE_IN.ollieUp || (!T.autoGrind && !IN.grind)) {
     const popping = EDGE_IN.ollieUp; EDGE_IN.ollieUp = false;
     const [, rgt] = surfaceAxes(UP);
@@ -1209,6 +1255,7 @@ function step(dt) {
   if (EDGE_IN.setSpot) { EDGE_IN.setSpot = false; setSpot(); }
   if (EDGE_IN.push) { EDGE_IN.push = false; if (!S.walking && S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
   if (EDGE_IN.revert) { EDGE_IN.revert = false; revert(); }
+  trackGrindStick();
   if (EDGE_IN.walk) { EDGE_IN.walk = false; toggleWalk(); }
   if (EDGE_IN.ollieDown) EDGE_IN.ollieDown = false;
   if (EDGE_IN.flip) { EDGE_IN.flip = false; S.flipBuf = 0.18; S.flipName = FL.flipName; FL.flipName = null; }
@@ -1754,7 +1801,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

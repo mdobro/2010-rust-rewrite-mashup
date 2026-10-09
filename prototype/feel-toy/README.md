@@ -123,15 +123,41 @@ on the rail. When you touch down, the rider swings round and settles onto the
 rail over a fraction of a second instead of snapping. Once you're on, the
 grind is locked until you pop off.
 
-| Hold | Grind |
+| Hold the trick stick | Grind |
 | --- | --- |
 | Centre (let go) | 50-50 |
 | Down | 5-0 (back truck, nose up) |
 | Up | Nosegrind (front truck, tail up) |
-| Up-right | Crooked grind |
-| Down-right | Smith grind |
-| Left / Right | Boardslide / Lipslide (board across the rail) |
-| Up-left / Down-left | Noseslide / Tailslide |
+| Up-left | Crooked |
+| Up-right | Overcrook |
+| Down-right | Salad |
+| Right, then roll up | Smith |
+| Left, then roll up | Feeble |
+| Left, then roll down | Willy |
+| Right, then roll down | Over Willy |
+| Left / Right | Boardslide / Lipslide |
+| Up, then roll left | Noseslide |
+| Up, then roll right | Nose Blunt |
+| Down, then roll left (or straight down-left) | Tailslide |
+| Down, then roll right | Bluntslide |
+
+"Then roll" means hold the first direction and slide round to the next one.
+Coming in from a diagonal onto a side counts too: up-left then left is a
+Noseslide. Where your thumb ends the pop flick (usually straight up) doesn't
+count as the first direction, so after an ollie you can slide straight to
+up-left for a Crooked.
+
+Nose Blunt is on up-then-right. The list it came from gives "up and left"
+for both Noseslide and Nose Blunt, and up-then-right mirrors Tailslide /
+Bluntslide.
+
+**FS or BS** isn't a stick input: it comes from which side you meet the rail.
+With the rail on your toe side it's frontside, with it on your heel side it's
+backside, and the name says so (FS Smith, BS Boardslide...).
+
+**Grind exit:** push the left stick hard left or right while grinding to hop
+off that side. Pushing it as you land on the rail doesn't count. Let it back
+towards the middle first.
 
 Slides drag more than truck grinds and score a little more. Down then a flick
 up pops you off, as on the ground.
