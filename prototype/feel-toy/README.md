@@ -50,9 +50,18 @@ ollie.
 
 - **Left thumb steers**: move from where you touched. Pull down to powerslide
   to a stop, hold left or right in the air to spin.
+- **Double tap the left thumb to revert**: a flat 180 on the ground. You keep
+  rolling the same way, now fakie (or back to regular). Revert within 0.4 s of
+  landing a trick (*Revert: time after landing to keep the combo*) and it adds
+  to the combo instead of the combo paying out first. That short window is
+  also why a landed combo now pays out a moment after you land.
 - **Tap the right thumb to push**, one kick per tap (two quick taps queue
   two). Each kick's speed comes on over the drive of the stride, so the
   camera doesn't jolt. Taps only push while you're rolling on the ground.
+- **Tap, then touch the right thumb again and hold** to keep pushing, one kick
+  after another, until you let go. Moving that thumb away (to flick a trick)
+  stops the pushing. The second touch has to come within *Double tap: second
+  tap within* of the first.
 - **Manuals:** tip the right stick about halfway down (manual) or halfway up
   (nose manual). All the way down is still the ollie crouch. A balance meter
   shows while you manual (see below).
