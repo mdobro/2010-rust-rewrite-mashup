@@ -171,7 +171,7 @@
     <ul class="touch-list touch-only">
       <li><b>Left thumb steers:</b> move from where you touched, pull down to powerslide to a stop, hold left or right in the air to spin. <b>Double tap</b> it to revert (a flat 180 to fakie).</li>
       <li><b>Manuals:</b> tip the right stick about halfway down (or halfway up for a nose manual). Manuals keep a combo going.</li>
-      <li><b>Walk</b> gets you off the board to walk anywhere, including up stairs; <b>Skate</b> gets you back on.</li>
+      <li><b>Walk</b> gets you off the board to walk anywhere, including up stairs; while walking the right stick turns and tilts the camera. <b>Skate</b> gets you back on.</li>
       <li><b>Right thumb does tricks</b>, also wherever you touch. <b>Tap it to push</b> (each tap is a kick); <b>tap, then touch and hold</b> to keep pushing until you let go. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-left: kickflip. Down, then up-right: heelflip. Down, then <b>arc</b> round the bottom onto the right or left: pop shuvit. Swing in from the right side to the bottom, flick up-left: 360 flip. Push up and flick down for nollies.</li>
       <li><b>Set spot</b> drops a marker where you are, facing the way you're going; <b>Return</b> puts you back there, standing, to try the line again.</li>
       <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail.</li>
@@ -233,7 +233,7 @@ const DEFAULTS = {
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, grindAngle: 12, grindSlideAngle: 55,
-  camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
+  camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, lookSpeed: 2.6, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
   flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
 };
@@ -265,7 +265,7 @@ const SPEC = [
   ['Camera', [
     ['camDist', 'Distance behind', 1.5, 8, 0.05], ['camHeight', 'Height', 0.5, 3.5, 0.05], ['camPitch', 'Look down', -0.7, 0.2, 0.01],
     ['camFov', 'Field of view', 50, 100, 1], ['fovKick', 'FOV boost at speed', 0, 30, 1],
-    ['camLag', 'Position follow stiffness', 2, 40, 0.5], ['camFollow', 'Swing behind you (ground)', 0.5, 15, 0.1],
+    ['camLag', 'Position follow stiffness', 2, 40, 0.5], ['lookSpeed', 'Walking: trick stick turns the camera (rad/s)', 0.5, 6, 0.1], ['camFollow', 'Swing behind you (ground)', 0.5, 15, 0.1],
     ['camFollowAir', 'Swing behind you (air)', 0, 8, 0.1],
   ]],
   ['Trick stick', [
@@ -1858,8 +1858,18 @@ function updateCamera(dt) {
   else if (S.grounded) { target = hv > 1.2 ? yawOf(V(S.vel.x, 0, S.vel.z)) : travelYaw(); rate *= clamp(hv / 4, 0.35, 1.3); }
   else { if (hv > 2) target = yawOf(V(S.vel.x, 0, S.vel.z)); rate = T.camFollowAir; }
   if (S.bail > 0) rate *= 0.3;
-  cam.yaw = dampAngle(cam.yaw, target, rate, dt);
-  const pitch = T.camPitch;
+  // walking: the trick stick looks around (left / right turns, up / down tilts), and the walk direction
+  // turns with the view; after you let go the camera stays put for a moment before following again
+  const look = S.walking && Math.hypot(GS.x, GS.y) > 0.15;
+  if (look) {
+    const turn = -GS.x * Math.abs(GS.x) * T.lookSpeed * dt;
+    cam.yaw = wrap(cam.yaw + turn); if (S.walkFrame != null) S.walkFrame = wrap(S.walkFrame + turn);
+    cam.lookHold = 1.5;
+  } else cam.lookHold = Math.max(0, (cam.lookHold || 0) - dt);
+  if (!S.walking) cam.lookHold = 0;
+  if (!look && cam.lookHold <= 0) cam.yaw = dampAngle(cam.yaw, target, rate, dt);
+  cam.tilt = damp(cam.tilt || 0, look ? clamp(GS.y, -1, 1) * 0.55 : S.walking && cam.lookHold > 0 ? cam.tilt || 0 : 0, look ? 8 : 3, dt);
+  const pitch = T.camPitch - cam.tilt;
   const fwd = V(-Math.sin(cam.yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(cam.yaw) * Math.cos(pitch));
   cam.dip = damp(cam.dip || 0, S.landDip, 14, dt);                     // eased, so a landing doesn't jolt the view
   const pivot = cam.pivot.clone().add(V(0, T.camHeight - cam.dip - 0.25 * S.crouch, 0));

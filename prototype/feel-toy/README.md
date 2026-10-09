@@ -67,7 +67,10 @@ ollie.
   shows while you manual (see below).
 - **Walk / Skate** gets off the board and back on. Walking goes wherever the
   left stick points (relative to the camera), runs at full tilt and climbs
-  stairs; the board is carried under your arm.
+  stairs; the board is carried under your arm. While walking, the **trick
+  stick moves the camera**: left and right turn the view, and your walking
+  direction turns with it. Up and down tilt it, to look up at a roof or down
+  a drop.
 - **Set spot / Return** buttons drop a marker where you are, facing the way
   you're going, and put you back there standing still to try the line again.
 - **Right thumb is the flick-it stick**, with the same motions as a
@@ -205,6 +208,11 @@ and you drop to the tail or nose. With the keyboard (M / N) the balance looks af
 ## Walking
 
 Walk / Skate (touch), Y (controller) or F (keyboard) steps off the board.
+While walking, the trick stick (or the right stick, or the arrow keys) looks
+around: left and right turn the camera, up and down tilt it. The walk
+direction turns with the view. Let go and the camera stays where you left it
+for a moment before swinging back behind you (*Walking: trick stick turns the
+camera*).
 Walking follows the left stick relative to the camera (the direction is
 locked while you hold the stick, so the camera swinging round doesn't curve
 your path), runs when the stick is all the way over, steps up stairs and stops at taller walls. Step back on and
