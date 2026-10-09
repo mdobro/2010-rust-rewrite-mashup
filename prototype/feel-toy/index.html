@@ -232,7 +232,7 @@ const DEFAULTS = {
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
-  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, grindAngle: 12, grindSlideAngle: 55,
+  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, coneBail: 2.2, potholeBail: 3.5, grindAngle: 12, grindSlideAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, lookSpeed: 2.6, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
   flickRim: 0.6, flickTime: 0.25, lateArm: 0.12, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
@@ -259,7 +259,7 @@ const SPEC = [
   ]],
   ['Grinding', [
     ['autoGrind', 'Auto grind (off: hold LB / Shift)', 'bool'], ['railMagnet', 'Rail magnet radius (m)', 0.1, 1.6, 0.05],
-    ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1], ['grindAngle', 'Board angled this much keeps its angle (crooked, smith) (°)', 3, 40, 1], ['grindSlideAngle', 'Board this far across the rail slides (°)', 30, 85, 1],
+    ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1], ['coneBail', 'Bail when hitting a cone faster than (m/s)', 0.5, 10, 0.1], ['potholeBail', 'Bail when rolling into a pothole faster than (m/s)', 0.5, 12, 0.1], ['grindAngle', 'Board angled this much keeps its angle (crooked, smith) (°)', 3, 40, 1], ['grindSlideAngle', 'Board this far across the rail slides (°)', 30, 85, 1],
     ['railCatch', 'Catch a rail from this far above (m)', 0.1, 1.2, 0.05],
   ]],
   ['Camera', [
@@ -339,7 +339,7 @@ const box = (x0, y0, z0, x1, y1, z1, mat, extra) => ({ min: [x0, y0, z0], max: [
 /* ---------------- levels ---------------- */
 const LEVELS = [
   { id: 'park', name: 'Beach Park', blurb: 'A Venice Beach style skatepark on the sand: clover bowl, flow bowl, snake run and an L-shaped street plaza' },
-  { id: 'city', name: 'Downtown', blurb: 'A hilly city section: bomb the hills, terraced steps, a civic plaza, a schoolyard bank and a rooftop line off a parking garage' },
+  { id: 'city', name: 'Downtown', blurb: 'A hillside neighbourhood to explore: bomb the hill through the roadworks, a storm channel, stoops and plazas, a construction site, a sunken car park and a rooftop line' },
 ];
 const LEVEL_ID = (() => {
   const q = new URLSearchParams(location.search).get('level');
@@ -527,186 +527,250 @@ function levelPark() {
   };
 }
 
-/* Downtown: a hillside section of a city. Two avenues run down the hill (north is up), crossed by
-   three flat cross streets. Sidewalks are proper 15 cm curbs (grindable, and they bail you if you
-   ride into them fast) with curb ramps at every crosswalk. Blocks, north to south:
-     top     a museum plinth plaza at the top of the hill (spawn), buildings
-     upper   the Hillside Steps: five terraces down the hill with stair sets, rails, a hubba and
-             planters; buildings stepping down either side
-     lower   the Civic Plaza: an office tower, fountain plaza, grand stairs with two rails and a big bank
-             down to the street; a schoolyard below a huge bank on the west side
-     bottom  a parking garage you can ride up, then a rooftop line: gap to a roof, gap to another,
-             drop to a loading dock and stairs down; a transit plaza with a bus shelter */
+/* Downtown: a hillside neighbourhood built to be found, not handed to you. North is up the hill.
+     Bomb Hill     the east avenue drops 6 m off the hilltop; a crest at the middle intersection kicks you
+                   up if you're fast, and there are roadworks on the way down: a coned-off lane, a steel plate,
+                   potholes
+     The Channel   a concrete storm channel down the west edge (LA river style): banks both sides, a centre
+                   divider, an overpass, a debris kicker; get in through the gaps in the fence
+     Hillside      row houses with stoops (little stair sets with rails), the public Hillside Steps terraces,
+                   and the bank plaza that rises off the sidewalk as the hill drops: its edge turns into a
+                   ledge and a drop, with big stairs and rails at the bottom
+     Lowlands      the schoolyard bank; a sunken store car park (driveway bank, parking blocks, a planter
+                   island, speed bumps, a wheelchair ramp with a handrail, a drop to the sidewalk); the
+                   courthouse plaza (grand stairs, fountain, ledges, a ramp with a rail); a fenced
+                   construction site (plywood kickers on pallets and a Jersey barrier, a dirt pile, a pipe,
+                   a foundation slab, a scaffold plank, a dumpster)
+     Rooftops      at the top of the hill, push up the parking-garage ramp and gap from roof to roof
+   Potholes and cones: roll into them fast and you bail; ollie over them for points. */
 function levelCity() {
-  // the hill: flat at the top (z < -50), down 4 m to a flat middle (z -10..10), down 4 m more to the flat bottom (z > 50)
-  const hill = z => z <= -50 ? 8 : z < -10 ? 8 - 4 * (z + 50) / 40 : z <= 10 ? 4 : z < 50 ? 4 - 4 * (z - 10) / 40 : 0;
-  const AVE = [-30, 30], CROSS = [-60, 0, 60], RW = 6, SW = 4, CURB = 0.15; // road half width, sidewalk width
-  // blocks whose ground is replaced: [x0, x1, z0, z1, height function]
+  const hill = z => z <= -56 ? 10 : z < -10 ? 10 - 6 * (z + 56) / 46 : z <= 10 ? 4 : z < 46 ? 4 - 4 * (z - 10) / 36 : 0;
+  const AVE = [-36, 24], CROSS = [-66, 0, 56], RW = 6, SW = 4, CURB = 0.15;
+  const CHX = [-88, -81, -71, -64], CHD = 4.5;                 // channel: west top, floor, floor, east top; depth
+  const chFloor = z => hill(z) - CHD;
+  const potholes = [[21, -40, 0.8], [27.2, -27, 0.6], [22, 24, 0.7], [26.5, 38, 0.6], [5, 58, 0.7], [-20, 53.5, 0.6], [-38.5, -20, 0.7], [-33, 30, 0.8], [70, 58, 0.6]];
+  const bumps = [[46, 56, 26], [46, 56, 38]];                  // speed bumps across the car-park lane: x0, x1, z
+  const dirt = { x: 58, z: 100, r: 5.5, h: 1.5 };              // the dirt pile in the construction site
+  // blocks whose ground is set apart from the hill
   const cuts = [
-    [-20, 20, -50, -10, () => 3.6],                                                   // under the terraces
-    [-66, -40, 10, 50, (x, z) => z < 22 ? 4 - 4 * (z - 10) / 12 : 0],                  // the schoolyard bank and yard
+    [-26, 14, -56, -10, () => 3.6],                                              // under the Hillside Steps terraces
+    [34, 60, -40, -22, () => 3],                                               // under the bank plaza
+    [-26, 14, 10, 46, (x, z) => z < 20 ? 4 - 4 * (z - 10) / 10 : 0],             // schoolyard: a big bank down into the yard
+    [34, 86, 10, 46, (x, z) => z < 18 ? 4 - 3 * (z - 10) / 8 : 1],              // the store car park, sunk below the street
   ];
   function terrainH(x, z) {
-    for (const [x0, x1, z0, z1, f] of cuts) if (x > x0 && x < x1 && z > z0 && z < z1) return f(x, z);
-    return hill(z);
+    let h = hill(z);
+    if (x < CHX[3]) {                                                            // the storm channel
+      const f = x < CHX[1] ? (x - CHX[0]) / (CHX[1] - CHX[0]) : x <= CHX[2] ? 1 : (CHX[3] - x) / (CHX[3] - CHX[2]);
+      return h - CHD * clamp(f, 0, 1);
+    }
+    for (const [x0, x1, z0, z1, f] of cuts) if (x > x0 && x < x1 && z > z0 && z < z1) { h = f(x, z); break; }
+    for (const [px, pz, r] of potholes) { const d = Math.hypot(x - px, z - pz); if (d < r) h -= 0.06 * (1 - (d / r) ** 2); }
+    for (const [x0, x1, bz] of bumps) if (x > x0 && x < x1 && Math.abs(z - bz) < 0.45) h += 0.1 * Math.cos((z - bz) / 0.45 * Math.PI / 2) ** 2;
+    const dd = Math.hypot(x - dirt.x, z - dirt.z); if (dd < dirt.r) h += dirt.h * (1 - (dd / dirt.r) ** 2);
+    return h;
   }
-  const inRoad = (x, z) => AVE.some(a => Math.abs(x - a) < RW) || CROSS.some(c => Math.abs(z - c) < RW);
-  const asphalt = new THREE.Color(0x56585d), lot = new THREE.Color(0xb3afa6), yard = new THREE.Color(0xa9a59b), grass = new THREE.Color(0x7d9a5b);
-  const regions = [
-    { x0: -72, x1: 72, z0: -102, z1: 102, res: 1, col: (x, z) => inRoad(x, z) ? asphalt : x < -40 && z > 22 && z < 50 ? yard : lot },
-    { x0: -66, x1: -40, z0: 10, z1: 22.5, res: 0.5, col: () => grass },              // the schoolyard bank, finer
-  ];
-  const boxes = [], hubbas = [], rails = [], cars = [];
-  // a box that sits on the hill: from below the ground at its low end up to `top`
+  const inRoad = (x, z) => x > -60 && (AVE.some(a => Math.abs(x - a) < RW) || CROSS.some(c => Math.abs(z - c) < RW));
+  const C = c => new THREE.Color(c);
+  const asphalt = C(0x56585d), lotAsphalt = C(0x67696e), concrete = C(0xb3afa6), channelC = C(0xb7b3a9), grass = C(0x7d9a5b), dirtC = C(0x8f7a5a), yard = C(0xa9a59b);
+  const groundCol = (x, z) => x < CHX[3] ? channelC : inRoad(x, z) ? asphalt
+    : x > 34 && x < 86 && z > 66 ? dirtC : x > 34 && x < 86 && z > 18 && z < 46 ? lotAsphalt
+    : (x > -26 && x < 14 && z < -70) || (x > -60 && x < -46 && z > 66) || (x > 34 && x < 60 && z > -56 && z < -40) ? grass
+    : x > -26 && x < 14 && z > 20 && z < 46 ? yard : concrete;
+  const regions = [{ x0: -92, x1: 90, z0: -112, z1: 112, res: 1, col: groundCol }];
+  const boxes = [], hubbas = [], rails = [], hazards = [];
   const onHill = (x0, z0, x1, z1, top, mat, extra) => box(x0, Math.min(terrainH(x0, z0), terrainH(x1, z1), terrainH(x0, z1), terrainH(x1, z0)) - 0.6, z0, x1, top, z1, mat, extra);
   const building = (x0, z0, x1, z1, floors, color, tex = 'brick') => boxes.push(onHill(x0, z0, x1, z1, hill(Math.max(z0, z1)) + floors * 3.4, 'building', { color, tex }));
-  const COLORS = [0x9b5a46, 0xb9a88f, 0x7f8a92, 0xa7744f, 0xcfc4ad, 0x8c6a5d, 0x6e7b86, 0xb58b67];
+  const COLORS = [0x9b5a46, 0xb9a88f, 0x7f8a92, 0xa7744f, 0xcfc4ad, 0x8c6a5d, 0x6e7b86, 0xb58b67, 0xc98f6b, 0x8d9a7c];
   let ci = 0; const col = () => COLORS[ci++ % COLORS.length];
+  const cone = (x, z) => hazards.push({ kind: 'cone', x, z, r: 0.22, h: 0.72 });
 
-  // ---- sidewalks: along the avenues (sloped where the hill is), and along the cross streets ----
-  const segZ = [[-96, -66], [-54, -6], [6, 54], [66, 96]];
-  const kinks = [-50, -10, 10, 50];
+  // ---- streets: sidewalks with real curbs (sloped where the hill is), curb ramps at every crossing ----
+  const segZ = [[-110, -72], [-60, -6], [6, 50], [62, 110]], kinks = [-56, -10, 10, 46];
   for (const a of AVE) for (const side of [-1, 1]) {
     const x0 = a + side * RW, x1 = a + side * (RW + SW), lo = Math.min(x0, x1), hi = Math.max(x0, x1);
-    const curbEdge = side < 0 ? 'e' : 'w';            // the edge facing the road
     for (const [z0, z1] of segZ) {
-      const cutsZ = [z0, ...kinks.filter(k => k > z0 && k < z1), z1];
-      for (let i = 0; i < cutsZ.length - 1; i++) {
-        const za = cutsZ[i], zb = cutsZ[i + 1];
-        if (Math.abs(hill(za) - hill(zb)) < 1e-6) boxes.push(box(lo, hill(za) - 0.6, za, hi, hill(za) + CURB, zb, 'sidewalk', { edges: curbEdge }));
+      const cz = [z0, ...kinks.filter(k => k > z0 && k < z1), z1];
+      for (let i = 0; i < cz.length - 1; i++) {
+        const za = cz[i], zb = cz[i + 1];
+        if (Math.abs(hill(za) - hill(zb)) < 1e-6) boxes.push(box(lo, hill(za) - 0.6, za, hi, hill(za) + CURB, zb, 'sidewalk', { edges: side < 0 ? 'e' : 'w' }));
         else hubbas.push({ a: V((lo + hi) / 2, hill(za) + CURB, za), b: V((lo + hi) / 2, hill(zb) + CURB, zb), w: SW, color: 0xc4c0b6, kind: 'Curb' });
       }
     }
   }
-  const segX = [[-66, -36], [-24, 24], [36, 66]];
+  const segX = [[-60, -46], [-26, 14], [34, 86]];
   for (const c of CROSS) for (const side of [-1, 1]) {
-    const z0 = c + side * RW, z1 = c + side * (RW + SW), lo = Math.min(z0, z1), hi = Math.max(z0, z1), y = hill(c) + CURB;
-    for (const [xa, xb] of segX) {
-      const xs = xa === -24 ? [-20, 20] : xa === -66 ? [-66, -40] : [40, 66]; // the avenue sidewalks cover the corners
-      boxes.push(box(xs[0], y - 0.75, lo, xs[1], y, hi, 'sidewalk', { edges: side < 0 ? 's' : 'n' }));
-    }
+    const z0 = c + side * RW, z1 = c + side * (RW + SW), y = hill(c) + CURB;
+    for (const [xa, xb] of segX) boxes.push(box(xa, y - 0.75, Math.min(z0, z1), xb, y, Math.max(z0, z1), 'sidewalk', { edges: side < 0 ? 's' : 'n' }));
   }
-  // curb ramps at every crosswalk, out into the road
   for (const a of AVE) for (const side of [-1, 1]) for (const c of CROSS) for (const dz of [-1, 1]) {
-    const xm = a + side * (RW + SW / 2), zc = c + dz * RW, y = hill(c) + CURB;
-    hubbas.push({ a: V(xm, y, zc), b: V(xm, hill(c) + 0.01, zc - dz * 1.4), w: 2.6, noRails: true, color: 0xb9b5ab });
+    const xm = a + side * (RW + SW / 2), zc = c + dz * RW;
+    hubbas.push({ a: V(xm, hill(c) + CURB, zc), b: V(xm, hill(c) + 0.01, zc - dz * 1.4), w: 2.6, noRails: true, color: 0xb9b5ab });
   }
   for (const c of CROSS) for (const side of [-1, 1]) for (const a of AVE) for (const dx of [-1, 1]) {
-    const zm = c + side * (RW + SW / 2), xc = a + dx * RW, y = hill(c) + CURB;
-    hubbas.push({ a: V(xc, y, zm), b: V(xc - dx * 1.4, hill(c) + 0.01, zm), w: 2.6, noRails: true, color: 0xb9b5ab });
+    const zm = c + side * (RW + SW / 2), xc = a + dx * RW;
+    hubbas.push({ a: V(xc, hill(c) + CURB, zm), b: V(xc - dx * 1.4, hill(c) + 0.01, zm), w: 2.6, noRails: true, color: 0xb9b5ab });
   }
 
-  // ---- top row (z -96..-70, h 8): museum plaza in the middle ----
-  building(-20, -96, 20, -84, 5, 0xd8d2c4, 'stone');
-  boxes.push(box(-12, 7, -84, 12, 8.9, -81, 'marble', { edges: 's' }));               // the museum plinth
-  boxes.push(...stairs('z', -81, 1, -4, 4, 8.9, 8, 4, 0.4, 7));
-  rails.push(handrail('z', -81, 1, 0, 8.9, 8, 4, 0.4));
-  boxes.push(box(-18, 7, -78, -10, 8.48, -77.4, 'marble', { edges: 'ns' }), box(10, 7, -78, 18, 8.48, -77.4, 'marble', { edges: 'ns' }));
-  boxes.push(box(-6, 7, -75, 6, 8.55, -73, 'ledge', { edges: 'nswe' }));             // a planter with ledges all round
-  building(-66, -96, -40, -82, 6, col()); building(-66, -82, -40, -70, 4, col());
-  building(40, -96, 66, -84, 7, col()); building(40, -84, 66, -70, 3, col());
+  // ---- the storm channel: a fence along the top with gaps, a divider on the floor, an overpass ----
+  for (const [z0, z1] of [[-110, -32], [-28, 18], [22, 74], [78, 110]]) boxes.push(onHill(CHX[3], z0, CHX[3] + 0.08, z1, hill(z0) + 1.9, 'fence'));
+  boxes.push(box(-76.3, chFloor(0) - 0.4, -10, -75.7, chFloor(0) + 0.5, 10, 'ledge', { edges: 'ew' }));                      // divider, flat stretch
+  hubbas.push({ a: V(-76, chFloor(10) + 0.5, 10), b: V(-76, chFloor(46) + 0.5, 46), w: 0.6, kind: 'Ledge', color: 0x9a9ea3 }); // ...and on down the slope
+  hubbas.push({ a: V(-76, chFloor(62) + 0.6, 62), b: V(-76, chFloor(62) + 0.02, 59.4), w: 1.2, noRails: true, color: 0xc49a5c }); // a sheet of ply someone dragged in
+  boxes.push(box(-78.2, chFloor(30) - 0.3, 28.5, -77.2, hill(30) + 9, 31.5, 'plaza'), box(-69, chFloor(30) - 0.3, 28.5, -68, hill(30) + 9, 31.5, 'plaza')); // overpass piers
+  hubbas.push({ a: V(-65.15, hill(26) + 0.45, 26), b: V(-65.15, hill(36) + 0.45, 36), w: 1.7, kind: 'Ledge', color: 0x9a9ea3 });  // DIY ledge on the bank top, under the bridge
 
-  // ---- upper row: the Hillside Steps (terraces 8 -> 4 down the hill) ----
-  const T5 = [], L = (40 - 4 * 1.35) / 5;
-  let z = -50;
-  for (let k = 0; k < 5; k++) {
-    const zEnd = k < 4 ? z + L : -10, top = 8 - k;
-    T5.push([z, zEnd, top]);
-    boxes.push(box(-20, 3, z, 20, top, zEnd, 'plaza', { edges: 'ew' }));
-    if (k < 4) {
-      boxes.push(...stairs('z', zEnd, 1, -5, 5, top, top - 1, 4, 0.45, 3));
-      rails.push(handrail('z', zEnd, 1, -5.45, top, top - 1, 4, 0.45));
-      hubbas.push(stairHubba('z', zEnd, 1, 5.6, top, top - 1, 4, 0.45));
-      rails.push({ a: V(-20, top, zEnd), b: V(-6.05, top, zEnd), kind: 'Ledge', paint: true }, { a: V(6.4, top, zEnd), b: V(20, top, zEnd), kind: 'Ledge', paint: true });
-      z = zEnd;
+  // ---- top of the hill: the overlook park; the garage and the rooftop line ----
+  boxes.push(box(-20, 9, -84, 8, 10.45, -83.4, 'ledge', { edges: 'ns' }));          // the overlook wall (look down the hill)
+  boxes.push(box(-12, 9, -100, 0, 11.1, -92, 'plaza', { edges: 's' }), ...stairs('z', -92, 1, -9, -3, 11.1, 10, 4, 0.4, 9));  // monument platform
+  rails.push(handrail('z', -92, 1, -6, 11.1, 10, 4, 0.4));
+  boxes.push(box(2, 9, -100, 10, 10.42, -99.4, 'wood', { edges: 'ns' }), box(-24, 9, -96, -18, 10.42, -95.4, 'wood', { edges: 'ns' }));  // park benches
+  building(-60, -110, -46, -96, 3, col()); building(-60, -96, -46, -82, 3, col()); building(-60, -82, -46, -72, 4, col());
+  hubbas.push({ a: V(40, 10.02, -79.5), b: V(40, 14.5, -100), w: 6, color: 0x9b9a95 });            // garage ramp, climbing north
+  boxes.push(box(37, 9, -108, 43, 14.5, -100, 'garage'), box(43, 9, -108, 55, 14.5, -78, 'garage', { edges: 'es' }));  // top deck
+  boxes.push(box(58, 9, -106, 68, 14.0, -92, 'building', { color: 0x9b5a46, tex: 'brick', edges: 'we' }));   // roof 1: 3 m gap
+  boxes.push(box(70, 9, -106, 77, 13.4, -86, 'building', { color: 0xb9a88f, tex: 'brick', edges: 'w' }));    // roof 2: 2 m gap
+  boxes.push(box(61, 9, -88, 77, 12.0, -78, 'building', { color: 0x8c6a5d, tex: 'brick', edges: 'nw' }));    // loading dock roof
+  boxes.push(...stairs('x', 61, -1, -87, -82.5, 12.0, 10, 5, 0.4, 9));
+  rails.push(handrail('x', 61, -1, -87.45, 12.0, 10, 5, 0.4));
+  boxes.push(box(59.5, 14, -103, 61.5, 15.2, -101, 'metal'), box(63.5, 14, -98, 66.5, 14.8, -95.5, 'metal'), box(72, 13.4, -100, 75, 13.9, -93, 'ledge', { edges: 'nswe' }));
+  building(77, -110, 86, -78, 6, col());
+
+  // ---- Bomb Hill roadworks: a coned-off lane with a plate and a pothole in it ----
+  for (let i = 0; i <= 4; i++) cone(29.2 - i * 0.9, -54 + i * 1.6);
+  for (let zc = -46; zc <= -32; zc += 2.8) cone(25.4, zc);
+  for (let i = 1; i <= 4; i++) cone(25.4 + i * 0.9, -32 + i * 1.6);
+  boxes.push(box(26.2, hill(-38.5) - 0.4, -40.5, 28.8, hill(-40.5) + 0.03, -36.5, 'metal'));     // steel road plate (a tiny kicker)
+  for (const [x, z] of [[-14, 1], [-16.4, 1], [-15.2, -0.3], [-15.2, 2.3]]) cone(x, z);           // round a manhole on the middle cross street
+
+  // ---- hillside houses with stoops along the west avenue ----
+  for (const [z0, z1] of [[-56, -10], [10, 46]]) for (let zc = z0 + 5; zc < z1 - 3; zc += 9) {
+    const g = hill(zc);
+    boxes.push(onHill(-60, zc - 4.5, -49.5, zc + 4.5, g + 9.5, 'building', { color: col(), tex: 'brick' }));
+    if (Math.abs(zc | 0) % 2 === 0) continue;                                          // not every house has a stoop
+    boxes.push(box(-49.5, g - 0.5, zc - 1.2, -48.3, g + 0.9, zc + 1.2, 'step'));
+    boxes.push(...stairs('x', -48.3, 1, zc - 1.2, zc + 1.2, g + 0.9, g, 3, 0.45, g - 0.5));
+    rails.push(handrail('x', -48.3, 1, zc + 1.6, g + 0.9, g, 3, 0.45));
+  }
+
+  // ---- the Hillside Steps: seven terraces from the hilltop down to the middle street ----
+  const L = (46 - 6 * 1.35) / 7, TOPS = [10, 9, 8, 7, 6, 5, hill(-10) + CURB]; let z = -56; // the last terrace meets the sidewalk flush
+  for (let k = 0; k < 7; k++) {
+    const zEnd = k < 6 ? z + L : -10, top = TOPS[k], next = TOPS[k + 1];
+    boxes.push(box(-26, 3, z, 14, top, zEnd, 'plaza', { edges: 'ew' }));
+    if (k < 6) {
+      boxes.push(...stairs('z', zEnd, 1, -12, -2, top, next, 4, 0.45, 3));
+      rails.push(handrail('z', zEnd, 1, -12.45, top, next, 4, 0.45));
+      hubbas.push(stairHubba('z', zEnd, 1, -1.4, top, next, 4, 0.45));
+      rails.push({ a: V(-26, top, zEnd), b: V(-13.05, top, zEnd), kind: 'Ledge', paint: true }, { a: V(-0.8, top, zEnd), b: V(14, top, zEnd), kind: 'Ledge', paint: true });
     }
+    if (k % 2 === 0) boxes.push(box(-23, 3, z + 1.2, -17, top + 0.5, z + 2.8, 'ledge', { edges: 'nswe' }));   // planters
+    else boxes.push(box(4, 3, z + 2, 11, top + 0.45, z + 2.6, 'marble', { edges: 'ns' }));                     // benches
+    z = zEnd + (k < 6 ? 0 : 0);
   }
-  for (const [z0, z1, top] of T5) {                                                  // planters and benches on each terrace
-    boxes.push(box(-17, 3, z0 + 1.5, -11, top + 0.5, z0 + 3.2, 'ledge', { edges: 'nswe' }));
-    boxes.push(box(11, 3, z0 + 2.2, 17, top + 0.45, z0 + 2.8, 'marble', { edges: 'ns' }));
-  }
-  building(-66, -50, -40, -38, 5, col()); building(-66, -38, -40, -24, 4, col()); building(-66, -24, -40, -10, 6, col());
-  building(40, -50, 66, -34, 4, col()); building(40, -34, 66, -22, 7, col()); building(40, -22, 66, -10, 3, col());
 
-  // ---- lower row: the Civic Plaza ----
-  boxes.push(box(-4, -0.5, 10, 20, 4, 30, 'marble', { edges: 'e' }));                 // upper plaza, level with the cross street
-  building(-20, 10, -4, 34, 11, 0x6f8fa8, 'office');                                 // the office tower
-  boxes.push(...stairs('z', 30, 1, 0, 16, 4, 2, 8, 0.4, -0.5));                      // grand stairs
-  boxes.push(box(-4, -0.5, 30, 20, 2, 42, 'marble'));                                // lower plaza
-  rails.push(handrail('z', 30, 1, 5.5, 4, 2, 8, 0.4), handrail('z', 30, 1, 10.5, 4, 2, 8, 0.4));
-  rails.push({ a: V(-4, 4, 30), b: V(-0.05, 4, 30), kind: 'Ledge', paint: true }, { a: V(16.05, 4, 30), b: V(20, 4, 30), kind: 'Ledge', paint: true });
-  hubbas.push({ a: V(8, 2, 42), b: V(8, hill(50) + CURB + 0.02, 50), w: 24, color: 0xd4cfc3 }); // the big bank down to the street
-  boxes.push(box(6, 3.5, 16, 12, 4.5, 22, 'ledge', { edges: 'nswe' }));                // fountain
-  boxes.push(box(1, 3.5, 13, 9, 4.45, 13.6, 'marble', { edges: 'ns' }), box(12, 3.5, 25.5, 19, 4.45, 26.1, 'marble', { edges: 'ns' }));
-  boxes.push(box(14, 3.5, 12, 18, 4.6, 15.5, 'ledge', { edges: 'nswe' }));             // planter
-  boxes.push(box(0, 1.5, 36, 8, 2.45, 36.6, 'marble', { edges: 'ns' }), box(10, 1.5, 34, 16, 2.18, 38, 'pad', { edges: 'nswe' }));
-  // schoolyard: the big bank down from the cross street, a yard, the school, a 3-stair to its door
-  building(-66, 22, -54, 50, 4, 0xc79b77);
-  boxes.push(box(-54, -0.5, 33, -51, 0.75, 41, 'plaza'), ...stairs('x', -51, 1, 34, 40, 0.75, 0, 4, 0.4, -0.5));
-  rails.push(handrail('x', -51, 1, 33.55, 0.75, 0, 4, 0.4));
-  boxes.push(box(-48, 0, 28, -42, 0.45, 28.6, 'ledge', { edges: 'ns' }), box(-48, 0, 44, -42, 0.45, 44.6, 'ledge', { edges: 'ns' }));
-  rails.push({ a: V(-50, 0.4, 36), b: V(-43, 0.4, 36), kind: 'Rail', post: true });
-  building(40, 10, 66, 26, 6, col()); building(52, 26, 66, 50, 4, col());
-  boxes.push(box(42, hill(32) - 0.6, 32, 48, hill(32.6) + 0.45, 32.6, 'ledge', { edges: 'ns' }));
+  // ---- the bank plaza: level with the sidewalk at the top, a ledge and a drop as the hill falls away ----
+  boxes.push(box(34, 3, -40, 60, 7.5, -22, 'marble', { edges: 'w' }));
+  boxes.push(...stairs('z', -22, 1, 40, 52, 7.5, 5.0, 10, 0.4, 3));
+  rails.push(handrail('z', -22, 1, 43.5, 7.5, 5.0, 10, 0.4), handrail('z', -22, 1, 48.5, 7.5, 5.0, 10, 0.4));
+  rails.push({ a: V(34, 7.5, -22), b: V(39.95, 7.5, -22), kind: 'Ledge', paint: true }, { a: V(52.05, 7.5, -22), b: V(60, 7.5, -22), kind: 'Ledge', paint: true });
+  boxes.push(box(38, 7, -34.6, 48, 7.95, -34, 'marble', { edges: 'ns' }), box(50, 7, -38, 56, 8.05, -33, 'ledge', { edges: 'nswe' }));
+  boxes.push(box(36, 7, -27, 40, 7.45, -26.4, 'wood', { edges: 'ns' }));
+  building(60, -56, 86, -10, 12, 0x6f8fa8, 'office');
 
-  // ---- bottom row (flat): the garage and the rooftop line; the transit plaza ----
-  // the garage: one long ramp up the west side to the top deck, then gaps east roof to roof
-  hubbas.push({ a: V(-17, 0.02, 95.5), b: V(-17, 4.5, 74), w: 6, color: 0x9b9a95 });   // ramp, climbing north (push or walk up it)
-  boxes.push(box(-20, 0, 70.5, -14, 4.5, 74, 'garage'), box(-14, 0, 70.5, -2, 4.5, 96, 'garage', { edges: 'es' })); // top deck
-  boxes.push(box(1, 0, 72, 11, 4.0, 86, 'building', { color: 0x9b5a46, tex: 'brick', edges: 'we' }));   // roof 1: 3 m gap, 0.5 m drop
-  boxes.push(box(13, 0, 72, 20, 3.4, 92, 'building', { color: 0xb9a88f, tex: 'brick', edges: 'w' }));    // roof 2: 2 m gap
-  boxes.push(box(4, 0, 90, 20, 2.0, 96, 'building', { color: 0x8c6a5d, tex: 'brick', edges: 'nw' }));    // loading dock: drop off roof 2
-  boxes.push(...stairs('x', 4, -1, 91, 95.5, 2.0, 0, 5, 0.4));                          // stairs down off the dock
-  rails.push(handrail('x', 4, -1, 90.55, 2.0, 0, 5, 0.4));
-  boxes.push(box(2.5, 4.0, 75, 4.5, 5.2, 77, 'metal'), box(6.5, 4.0, 80, 9.5, 4.8, 82.5, 'metal'));   // roof units
-  boxes.push(box(15, 3.4, 78, 18, 3.9, 85, 'ledge', { edges: 'nswe' }));                // skylight to grind
-  building(40, 70, 66, 84, 5, col()); building(54, 84, 66, 96, 8, col());
-  // transit plaza: shelter roof on posts, benches, bike rack rail
-  boxes.push(box(42, 0, 88, 50, 0.45, 88.6, 'ledge', { edges: 'ns' }), box(42, 0, 92, 52, 0.45, 92.6, 'ledge', { edges: 'ns' }));
-  rails.push({ a: V(42, 0.42, 95), b: V(50, 0.42, 95), kind: 'Rail', post: true });
-  building(-66, 70, -40, 84, 3, col()); building(-66, 84, -48, 96, 6, col());
-  boxes.push(box(-46, 0, 86, -42, 0.55, 94, 'ledge', { edges: 'nswe' }));
-  // the edge of the map: tall buildings all round
-  for (const [x0, z0, x1, z1] of [[-90, -120, 90, -96], [-90, 96, 90, 120], [-90, -96, -66, 96], [66, -96, 90, 96]])
-    boxes.push(box(x0, -1, z0, x1, x0 === -90 && z0 === -120 ? 40 : 28, z1, 'building', { color: 0x7e7a75, tex: 'office' }));
+  // ---- schoolyard: the big bank, the yard, the school door with its rail, benches and tables ----
+  building(-26, 20, -12, 46, 4, 0xc79b77);
+  boxes.push(box(-12, -0.5, 29, -9, 0.75, 35, 'plaza'), ...stairs('x', -9, 1, 30, 34, 0.75, 0, 4, 0.4, -0.5));
+  rails.push(handrail('x', -9, 1, 29.55, 0.75, 0, 4, 0.4));
+  boxes.push(box(-4, 0, 26, 2, 0.75, 27.6, 'wood', { edges: 'ns' }), box(5, 0, 26, 11, 0.75, 27.6, 'wood', { edges: 'ns' }));   // picnic tables
+  boxes.push(box(-4, 0, 43, 6, 0.45, 43.6, 'ledge', { edges: 'ns' }));
+  rails.push({ a: V(4, 0.42, 34), b: V(11, 0.42, 34), kind: 'Rail', post: true });                // bike rack
+
+  // ---- the store car park: sunk below the street, driveway bank down from the north ----
+  for (let zc = 20.5; zc < 44; zc += 2.7) boxes.push(box(37, 0.5, zc, 37.3, 1.12, zc + 1.8, 'pad', { edges: 'ew' }));  // parking blocks
+  boxes.push(box(40, 0.5, 31.5, 46, 1.45, 33.5, 'ledge', { edges: 'nswe' }));                                     // planter island
+  building(60, 30, 86, 46, 2, 0xd9c7a2, 'brick');
+  boxes.push(box(56, 0.5, 30, 60, 1.45, 46, 'sidewalk', { edges: 'ws' }));                                         // store walkway
+  hubbas.push({ a: V(58, 1.45, 30), b: V(58, 1.02, 23.5), w: 2, color: 0xc4c0b6, noRails: true });               // wheelchair ramp...
+  rails.push({ a: V(56.85, 2.3, 30), b: V(56.85, 1.87, 23.8), kind: 'Handrail', post: true });                   // ...and its handrail
+  boxes.push(box(40, 1.0, 40, 44.4, 2.45, 41.8, 'car', { color: 0x2f5d8a }), box(40, 1.0, 23, 44.4, 2.45, 24.8, 'car', { color: 0xdedad2 }));
+  for (const [x, z] of [[54.5, 28.5], [54.5, 31.5]]) cone(x, z);
+  building(60, 10, 86, 30, 3, col());
+
+  // ---- courthouse plaza ----
+  building(-26, 96, 14, 110, 7, 0xd8d2c4, 'stone');
+  boxes.push(box(-22, -0.5, 84, 10, 1.8, 96, 'marble', { edges: '' }));                                           // the podium
+  boxes.push(...stairs('z', 84, -1, -14, 2, 1.8, 0, 8, 0.4, -0.5));
+  rails.push(handrail('z', 84, -1, -8.5, 1.8, 0, 8, 0.4), handrail('z', 84, -1, -3.5, 1.8, 0, 8, 0.4));
+  rails.push({ a: V(-22, 1.8, 84), b: V(-14.05, 1.8, 84), kind: 'Ledge', paint: true }, { a: V(2.05, 1.8, 84), b: V(10, 1.8, 84), kind: 'Ledge', paint: true });
+  hubbas.push({ a: V(-24, 1.8, 94.5), b: V(-24, 0.02, 82), w: 2, color: 0xd4cfc3, noRails: true });              // the access ramp up the side...
+  boxes.push(box(-25, -0.5, 94.5, -22, 1.8, 96, 'marble'));
+  rails.push({ a: V(-25.1, 2.65, 94.3), b: V(-25.1, 0.87, 82.2), kind: 'Handrail', post: true });                // ...with a long rail
+  boxes.push(box(-8, 0, 70, 0, 0.6, 76, 'ledge', { edges: 'nswe' }));                                             // fountain
+  boxes.push(box(-24, 0, 72, -12, 0.48, 72.6, 'marble', { edges: 'ns' }), box(4, 0, 76, 13, 0.48, 76.6, 'marble', { edges: 'ns' }));
+  boxes.push(box(6, 0, 68, 12, 0.55, 71, 'ledge', { edges: 'nswe' }), box(-20, 0, 78, -16, 1.1, 82, 'marble', { edges: 'nswe' }));  // planter, statue plinth
+
+  // ---- construction site: chain-link with a gate and a gap; ply kickers, barriers, a dirt pile... ----
+  for (const [x0, z0, x1, z1] of [[34, 66, 44, 66.08], [50, 66, 86, 66.08], [34, 66, 34.08, 90], [34, 94, 34.08, 110]]) boxes.push(box(x0, -0.2, z0, x1, 1.9, z1, 'fence'));
+  boxes.push(box(52, 0, 80, 54.4, 0.25, 81.4, 'wood'));                                                          // pallets...
+  hubbas.push({ a: V(52, 0.55, 80.7), b: V(49.4, 0.02, 80.7), w: 1.3, noRails: true, color: 0xc49a5c });        // ...with a sheet of ply on them
+  boxes.push(box(60, 0, 71, 60.6, 0.8, 77, 'ledge', { edges: 'ew', color: 0xd8d4ca }));                          // Jersey barrier...
+  hubbas.push({ a: V(60.25, 0.92, 74), b: V(57.4, 0.02, 74), w: 1.2, noRails: true, color: 0xc49a5c });          // ...with ply resting on its top edge
+  for (const x of [38, 44.4]) boxes.push(box(x, 0, 102, x + 6, 0.8, 102.6, 'ledge', { edges: 'ns', color: 0xd8d4ca }));  // a row of barriers
+  rails.push({ a: V(40, 0.5, 86), b: V(48, 0.5, 86), kind: 'Pipe', post: true });                               // a pipe on blocks
+  boxes.push(box(66, 0, 92, 84, 1.2, 108, 'plaza', { edges: 'nswe' }));                                          // foundation slab
+  boxes.push(box(64, 0, 86, 70, 0.9, 86.3, 'wood', { edges: 'ns' }));                                            // scaffold plank
+  boxes.push(box(76, 0, 70, 80, 1.3, 72, 'car', { color: 0x2f6b46, edges: 'nswe' }));                           // dumpster
+  for (const [x, z] of [[44, 68.5], [47, 68.5], [50, 69], [62, 88], [36.5, 92]]) cone(x, z);
+
+  // ---- riverside park and the rest of the lowlands ----
+  boxes.push(box(-58, 0, 80, -52, 0.45, 80.6, 'wood', { edges: 'ns' }), box(-58, 0, 96, -52, 0.45, 96.6, 'wood', { edges: 'ns' }));
+  // the edge of the map
+  for (const [x0, z0, x1, z1, h] of [[-100, -130, 100, -110, 30], [-100, 110, 100, 130, 24], [-100, -110, -88, 110, 26], [86, -110, 100, 110, 28]])
+    boxes.push(box(x0, -6, z0, x1, h + (z0 < 0 && z1 <= -110 ? 10 : 0), z1, 'building', { color: 0x7e7a75, tex: 'office' }));
   // parked cars along the flat cross streets
   const carCols = [0xb23a32, 0x2f5d8a, 0xdedad2, 0x2b2b2e, 0x9aa3a8, 0x3f6b46];
   let k2 = 0;
-  for (const c of CROSS) for (const side of [-1, 1]) for (const xc of [-52, -10, 14, 50]) {
+  for (const c of CROSS) for (const side of [-1, 1]) for (const xc of [-52, -6, 46, 72]) {
     if ((k2++ * 7) % 3 === 0) continue;
     const zc = c + side * (RW - 1.1), y = hill(c);
     boxes.push(box(xc - 2.2, y, zc - 0.9, xc + 2.2, y + 1.45, zc + 0.9, 'car', { color: carCols[k2 % carCols.length] }));
   }
+  for (const hz of hazards) hz.y = terrainH(hz.x, hz.z);
+  for (const [x, z, r] of potholes) hazards.push({ kind: 'pothole', x, z, r, h: 0.12, y: terrainH(x, z) });
   return {
-    terrainH, regions, boxes, hubbas, rails,
-    spawn: { pos: V(30, 8, -62), yaw: Math.PI }, bounds: [-65.5, 65.5, -95.5, 95.5], fog: [90, 260], sky: 0xa7c6dd,
+    terrainH, regions, boxes, hubbas, rails, hazards,
+    spawn: { pos: V(24, 10, -66), yaw: Math.PI }, bounds: [-87.5, 85.5, -109.5, 109.5], fog: [90, 260], sky: 0xa7c6dd,
     decor(D) {
-      // lane lines and crosswalks
-      for (const a of AVE) for (let zz = -94; zz < 94; zz += 6) if (!CROSS.some(c => zz + 3 > c - RW - SW - 1 && zz < c + RW + SW + 1)) D.dash(a, zz, a, zz + 3, 0xe2c044);
-      for (const c of CROSS) for (let xx = -64; xx < 64; xx += 6) if (!AVE.some(a => xx + 3 > a - RW - SW - 1 && xx < a + RW + SW + 1)) D.dash(xx, c, xx + 3, c, 0xe2c044);
+      for (const a of AVE) for (let zz = -108; zz < 108; zz += 6) if (!CROSS.some(c => zz + 3 > c - RW - SW - 1 && zz < c + RW + SW + 1)) D.dash(a, zz, a, zz + 3, 0xe2c044);
+      for (const c of CROSS) for (let xx = -58; xx < 84; xx += 6) if (!AVE.some(a => xx + 3 > a - RW - SW - 1 && xx < a + RW + SW + 1)) D.dash(xx, c, xx + 3, c, 0xe2c044);
       for (const a of AVE) for (const c of CROSS) for (const s of [-1, 1]) {
-        // zebra crossings in line with the sidewalks: across the avenue, and across the cross street
         for (let i = -4; i <= 4; i++) D.dash(a + i * 1.25, c + s * (RW + SW / 2) - 1.4, a + i * 1.25, c + s * (RW + SW / 2) + 1.4, 0xf0ece2, 0.6);
         for (let i = -4; i <= 4; i++) D.dash(a + s * (RW + SW / 2) - 1.4, c + i * 1.25, a + s * (RW + SW / 2) + 1.4, c + i * 1.25, 0xf0ece2, 0.6);
       }
-      // street lamps and trees along the sidewalks
-      for (const a of AVE) for (const side of [-1, 1]) for (let zz = -92; zz < 94; zz += 14) {
+      for (const a of AVE) for (const side of [-1, 1]) for (let zz = -106; zz < 108; zz += 14) {
         if (CROSS.some(c => Math.abs(zz - c) < RW + SW + 1)) continue;
         const x = a + side * (RW + 0.6), y = hill(zz) + CURB;
         D.lamp(x, y, zz, side); D.tree(a + side * (RW + SW - 0.9), y, zz + 7);
       }
-      D.water(6.4, 16.4, 11.6, 21.6, 4.42);                                           // the fountain
-      D.plane(-30, 24.5, -26, 44, 0.01, 0xc06b3f, false);                             // a basketball key, for colour
-      D.shelter(42, 87, 52, 90, 2.6);
+      for (let zc = 20.5; zc < 44; zc += 2.7) D.dash(37.5, zc - 0.45, 46, zc - 0.45, 0xf0ece2, 0.12);           // parking bays
+      for (const [x0, x1, bz] of bumps) D.bump(x0, x1, bz, 1);
+      D.plate(26.2, -40.5, 28.8, -36.5);
+      D.manhole(-15.2, 1);
+      D.water(-7.6, 70.4, -0.4, 75.6, 0.55);
+      D.plane(-2, 30, 10, 42, 0.012, 0xc06b3f, false);                                                           // basketball court
+      for (const [x, z] of [[-30, -75], [-20, -102], [6, -76], [-58, 72], [-50, 104], [10, 92]]) D.tree(x, terrainH(x, z), z);
+      D.overpass(-92, -40, 26, 36, hill(30) + 9);
+      D.shelter(-56, 88, -52, 90, 2.6);
     },
   };
 }
-
 
 /* ---------------- the chosen level ---------------- */
 const LV = ({ park: levelPark, city: levelCity, block: levelBlock })[LEVEL_ID]();
 const TERRAIN = LV.regions, BOXES = LV.boxes, HUBBAS = LV.hubbas, RAILS = LV.rails, terrainH = LV.terrainH;
 const [WX0, WX1, WZ0, WZ1] = LV.bounds;
+const HAZARDS = LV.hazards || [];
 const outOfWorld = p => p.x < WX0 || p.x > WX1 || p.z < WZ0 || p.z > WZ1;
 const clampWorld = p => { p.x = clamp(p.x, WX0, WX1); p.z = clamp(p.z, WZ0, WZ1); };
 for (const h of HUBBAS) {
@@ -1050,13 +1114,14 @@ function windowTexture(kind = 'brick') {
 const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'),
   ledge: gridTexture('#9a9ea3', 'rgba(30,30,35,0.25)'), pad: gridTexture('#bdb8ad', 'rgba(40,46,56,0.3)'),
   curb: gridTexture('#b9423a', 'rgba(255,255,255,0.15)'), sidewalk: gridTexture('#c4c0b6', 'rgba(40,46,56,0.3)'),
-  marble: gridTexture('#e4e0d6', 'rgba(60,60,70,0.18)'), garage: gridTexture('#a8a69f', 'rgba(30,30,35,0.25)'),
+  marble: gridTexture('#e4e0d6', 'rgba(60,60,70,0.18)'), garage: gridTexture('#a8a69f', 'rgba(30,30,35,0.25)'), wood: gridTexture('#b58a57', 'rgba(70,45,20,0.3)'),
   brick: windowTexture('brick'), office: windowTexture('office'), stone: windowTexture('stone') };
 const roofMat = flatMat(0x55575b);
 for (const b of BOXES) {
   const sx = b.max[0] - b.min[0], sy = b.max[1] - b.min[1], sz = b.max[2] - b.min[2];
   let top, side;
   if (b.mat === 'car') { side = flatMat(b.color, { roughness: 0.35, metalness: 0.3 }); top = side; }
+  else if (b.mat === 'fence') { side = top = new THREE.MeshStandardMaterial({ color: 0xa3aab0, metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.32, depthWrite: false }); }
   else if (b.mat === 'metal') { side = top = flatMat(0x9aa1a6, { metalness: 0.5, roughness: 0.45 }); }
   else if (b.mat === 'building') {
     const tex = boxTex[b.tex || 'brick'].clone(); tex.needsUpdate = true;
@@ -1168,6 +1233,24 @@ for (const r of RAILS) {
       for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) decorTube(V(x, g0, z), V(x, g0 + h, z), 0.06, pole);
       decorAdd(boxGeo, flatMat(0x6f8796, { transparent: true, opacity: 0.8 }), place((x0 + x1) / 2, g0 + h + 0.06, (z0 + z1) / 2, 0, x1 - x0 + 0.4, 0.12, z1 - z0 + 0.4)); },
   };
+  const orange = flatMat(0xf06a1c), white = flatMat(0xf4f1ea), black = flatMat(0x232325), holeMat = paintOf(0x2f3033), patch = paintOf(0x4a4c51);
+  const trafficConeGeo = new THREE.ConeGeometry(0.2, 0.62, 12), bandGeo = new THREE.CylinderGeometry(0.115, 0.15, 0.1, 12);
+  for (const hz of HAZARDS) {
+    if (hz.kind === 'cone') {
+      decorAdd(boxGeo, black, place(hz.x, hz.y + 0.02, hz.z, 0, 0.42, 0.04, 0.42));
+      decorAdd(trafficConeGeo, orange, place(hz.x, hz.y + 0.35, hz.z)); decorAdd(bandGeo, white, place(hz.x, hz.y + 0.38, hz.z));
+    } else { // a ragged dark hole with a lighter patched rim
+      const pts = []; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2, rr = hz.r * (0.82 + 0.18 * Math.sin(i * 2.7 + hz.x)); pts.push(new THREE.Vector2(Math.cos(a) * rr, Math.sin(a) * rr)); }
+      decorAdd(new THREE.ShapeGeometry(new THREE.Shape(pts)).rotateX(-Math.PI / 2), holeMat, place(hz.x, terrainH(hz.x, hz.z) + 0.01, hz.z));
+      decorAdd(new THREE.CircleGeometry(hz.r * 1.35, 16).rotateX(-Math.PI / 2), patch, place(hz.x, terrainH(hz.x + hz.r, hz.z) + 0.008, hz.z));
+    }
+  }
+  D.bump = (x0, x1, z) => { const g = new THREE.CylinderGeometry(0.45, 0.45, x1 - x0, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(Math.PI / 2);
+    decorAdd(g, flatMat(0xe2c044), place((x0 + x1) / 2, terrainH((x0 + x1) / 2, z + 0.6), z, 0, 1, 0.22, 1)); };
+  D.plate = (x0, z0, x1, z1) => decorAdd(boxGeo, flatMat(0x4b4f55, { metalness: 0.6, roughness: 0.4 }), place((x0 + x1) / 2, terrainH((x0 + x1) / 2, (z0 + z1) / 2) + 0.015, (z0 + z1) / 2, 0, x1 - x0, 0.03, z1 - z0));
+  D.manhole = (x, z) => decorAdd(new THREE.CircleGeometry(0.4, 16).rotateX(-Math.PI / 2), paintOf(0x3a3c40), place(x, terrainH(x, z) + 0.01, z));
+  D.overpass = (x0, x1, z0, z1, y) => { const m = flatMat(0x9c9890); decorAdd(boxGeo, m, place((x0 + x1) / 2, y, (z0 + z1) / 2, 0, x1 - x0, 1.2, z1 - z0));
+    for (const zz of [z0 + 0.3, z1 - 0.3]) decorAdd(boxGeo, m, place((x0 + x1) / 2, y + 0.9, zz, 0, x1 - x0, 0.6, 0.3)); };
   if (LV.decor) LV.decor(D);
   decorFlush();
 }
@@ -1400,6 +1483,24 @@ function bankCombo() {
   showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}`, 'landed');
   combo.parts = []; combo.pts = 0; combo.ammo = 0; combo.sketchy = false;
 }
+// Cones and potholes: roll into them fast and you bail (slow, a cone just bumps you); clear them in the air for points
+function checkHazards() {
+  for (const hz of HAZARDS) {
+    const dx = S.pos.x - hz.x, dz = S.pos.z - hz.z;
+    if (Math.abs(dx) > hz.r + 1 || Math.abs(dz) > hz.r + 1) continue;
+    const d = Math.hypot(dx, dz), reach = hz.r + (hz.kind === 'cone' ? 0.22 : 0);
+    if (d > reach) continue;
+    const sp = Math.hypot(S.vel.x, S.vel.z);
+    if (S.grounded && !S.rail && S.bail <= 0) {
+      if (hz.kind === 'pothole') { if (sp > T.potholeBail) doBail('Pothole!'); }
+      else if (sp > T.coneBail) doBail('Hit a cone');
+      else { const nx = dx / (d || 1), nz = dz / (d || 1), vn = S.vel.x * nx + S.vel.z * nz;      // a slow nudge just bumps off
+        S.pos.x = hz.x + nx * reach; S.pos.z = hz.z + nz * reach; if (vn < 0) { S.vel.x -= 1.5 * vn * nx; S.vel.z -= 1.5 * vn * nz; } }
+    } else if (!S.grounded && !S.rail && S.bail <= 0 && S.pos.y > hz.y + hz.h && hz.cleared !== S.jumpId) {
+      hz.cleared = S.jumpId; addTrick(hz.kind === 'cone' ? 'Cone Hop' : 'Pothole Ollie', hz.kind === 'cone' ? 45 : 25, 1);
+    }
+  }
+}
 function doBail(reason) {
   if (S.bail > 0) return;
   S.manual = null; S.bankT = 0;
@@ -1423,6 +1524,7 @@ function revert() {
   sfx.land(0.25);
 }
 function takeoff() {
+  S.jumpId = (S.jumpId || 0) + 1;                                    // hazards can each be cleared once per jump
   for (const f of [touchFlick, padFlick]) if (f) { f.airArmed = false; f.neutralT = null; } // the pop's own stick motion can't be a late flip
   S.pushQueue = 0; S.pushLeft = 0;                                   // pushes don't carry through the air
   gStick.start = null; gStick.skip = Math.hypot(GS.x, GS.y) >= 0.45 ? stickSector() : null;
@@ -1836,6 +1938,7 @@ function step(dt) {
   else if (S.rail) stepRail(dt);
   else if (S.grounded) stepGround(dt);
   else stepAir(dt);
+  if (HAZARDS.length && !S.walking) checkHazards();
   EDGE_IN.ollieUp = false; EDGE_IN.flip = false;
   if (S.grounded && S.trick) S.trick = null;
 }

@@ -305,37 +305,64 @@ grind. Coping grinds need a pop or some air first.
 
 ### Downtown
 
-A hillside section of a city.
+A hillside neighbourhood built to be found, not handed to you. North is up the
+hill. You start at the top of Bomb Hill.
 
 **Streets**
-- Two avenues run down the hill, crossed by three flat cross streets.
-- Sidewalks are real 15 cm curbs. You can grind them, and riding into one
-  fast bails you.
+- Sidewalks are real 15 cm curbs. You can grind them, and riding into one fast
+  bails you.
 - Curb ramps are at every zebra crossing.
-- Lane lines, street lamps, trees and parked cars line the streets.
+- Lane lines, lamps, trees and parked cars line the streets.
 
-**Blocks, top of the hill to the bottom**
-- **Museum plaza** (spawn, at the top of the east avenue): a plinth with a
-  stair set and rail, benches and a planter. Bomb the hill from here: two
-  4 m drops, and you can pass 14 m/s by the bottom.
-- **Hillside Steps**: five terraces down the hill, each with a stair set, a
-  handrail, a hubba, grindable lips, planters and benches.
-- **Civic Plaza**:
-  - an office tower, a fountain plaza with marble ledges and a planter;
-  - grand stairs with two rails down to a lower plaza;
-  - a wide bank back down to the street.
-- **Schoolyard**: a huge 4 m bank from the cross street down into the yard.
-  There are benches, a rail, and a 3-stair with a handrail up to the school
-  door.
-- **Garage and rooftops**:
-  - push or walk up the parking-garage ramp to the top deck (4.5 m);
-  - ollie the 3 m gap to a roof, roll across the next gap to a lower roof;
-  - drop to the loading dock and take its stairs and rail down.
-  - The roofs have AC units and a skylight to grind.
-- **Transit plaza**: a bus shelter, benches and a bike-rack rail.
+**Bomb Hill**
+- The east avenue drops 6 m off the hilltop. The middle intersection is a
+  crest that kicks you up if you're fast.
+- On the way down there are roadworks: a coned-off lane, a steel road plate,
+  and potholes in the lanes.
 
-Riding across any slope (a bank, a bowl wall, a hill) the trucks steer you
-down the fall line, so you carve back down instead of stalling.
+**The Channel**
+- A concrete storm channel runs down the west edge, LA River style, with
+  banks on both sides. Its floor slopes with the hill, so you can pick up
+  real speed.
+- There's a centre divider to grind and a sheet of plywood someone dragged
+  in as a kicker.
+- An overpass crosses it, with a DIY ledge on the bank under the bridge.
+- Get in through the gaps in the chain-link fence.
+
+**Hillside**
+- **Row houses:** some have stoops, little stair sets with handrails.
+- **The Hillside Steps:** seven public terraces down the hill, each with stairs,
+  a rail, a hubba, painted lips, planters and benches.
+- **The bank plaza:** level with the sidewalk at the top. As the hill drops
+  away its edge turns into a ledge and then a 2.5 m drop, with big stairs and
+  two rails at the bottom.
+
+**Lowlands**
+- **The schoolyard:** a big bank down into the yard, a rail at the school
+  door, picnic tables and a bike rack.
+- **The store car park:** sunk below the street. Get in down the driveway
+  bank or off the retaining wall. Inside are parking blocks, a planter
+  island, speed bumps, a wheelchair ramp with a handrail, and a drop off the
+  south end onto the sidewalk.
+- **The courthouse plaza:** grand stairs with two rails, a fountain, marble
+  ledges, a statue plinth, and an access ramp with a long rail up the side.
+- **The construction site:** fenced, with a gate and a gap in the fence.
+  Inside are plywood on pallets and on a Jersey barrier as kickers, a dirt
+  pile, a row of barriers, a pipe on blocks, a foundation slab, a scaffold
+  plank, a dumpster and cones.
+
+**Rooftops**
+- At the top of the hill, push up the parking-garage ramp to the top deck.
+- Ollie the 3 m gap to a roof, roll across the next gap, drop to the loading
+  dock, and take its stairs and rail down.
+
+**Hazards**
+- **Cones:** hit one faster than about 2 m/s and you bail. Slower, it just
+  bumps you.
+- **Potholes:** roll into one faster than 3.5 m/s and you bail.
+- **Clearing them:** ollie a cone for a "Cone Hop" and a pothole for a
+  "Pothole Ollie". Each counts once per jump.
+- Both speeds are on sliders.
 
 The old practice block still loads with `?level=block`. The automated tests
 use it.
@@ -349,9 +376,11 @@ use it.
 3. Ollie onto a handrail or a hubba from the top of the stairs, holding a
    direction on the trick stick to pick the grind. Pop about two to four
    metres before the top of the rail.
-4. Take the rooftop line off the parking garage.
-5. Set a spot at the top of a line, then use Return to retry it.
-6. Pull back to powerslide before the buildings.
+4. Bomb the hill and ollie the potholes and cones on the way down, then find
+   the gap in the fence into the storm channel.
+5. Take the rooftop line off the parking garage.
+6. Set a spot at the top of a line, then use Return to retry it.
+7. Pull back to powerslide before the buildings.
 
 ## Sharing a setup
 
