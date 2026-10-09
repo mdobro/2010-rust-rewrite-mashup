@@ -222,7 +222,7 @@ const DEFAULTS = {
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
-  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
+  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, grindAngle: 12, grindSlideAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
   flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
@@ -249,7 +249,7 @@ const SPEC = [
   ]],
   ['Grinding', [
     ['autoGrind', 'Auto grind (off: hold LB / Shift)', 'bool'], ['railMagnet', 'Rail magnet radius (m)', 0.1, 1.6, 0.05],
-    ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1],
+    ['railFriction', 'Rail friction', 0, 4, 0.05], ['railAngle', 'Max entry angle (°)', 10, 85, 1], ['grindAngle', 'Board angled this much keeps its angle (crooked, smith) (°)', 3, 40, 1], ['grindSlideAngle', 'Board this far across the rail slides (°)', 30, 85, 1],
     ['railCatch', 'Catch a rail from this far above (m)', 0.1, 1.2, 0.05],
   ]],
   ['Camera', [
@@ -1150,6 +1150,22 @@ function trackGrindStick() {
   if (ADJ[st] ? ADJ[st].some(b => cur === b || cur === diagOf(st, b)) : st.includes(cur)) return; // rolling on round
   gStick.start = cur;
 }
+// Lined up, the stick picks the grind. Angled, a truck grind keeps the angle (nose: crooked / overcrook,
+// tail: smith / feeble), with the side the board points deciding which. Across the rail it's a slide.
+const PARTNER = { UL: 'UR', UR: 'UL', 'R>U': 'L>U', 'L>U': 'R>U', 'L>D': 'R>D', 'R>D': 'L>D' };
+function grindFromAngle(key, rel) {
+  const a = Math.abs(rel) / DEG, pos = rel > 0, g = GRINDS[key];
+  if (a < T.grindAngle) return key;
+  const nose = key === 'U' || key === 'C', tail = key === 'D';
+  if (a >= T.grindSlideAngle) {
+    if (g.slide) return key;
+    return nose && key === 'U' ? (pos ? 'U>L' : 'U>R') : tail ? (pos ? 'D>R' : 'D>L') : pos ? 'L' : 'R';
+  }
+  if (g.slide) return key;
+  if (nose) return pos ? 'UL' : 'UR';
+  if (tail) return pos ? 'L>U' : 'R>U';
+  return PARTNER[key] && Math.sign(g.yaw) !== Math.sign(rel) ? PARTNER[key] : key;
+}
 function grindKey() {
   if (Math.hypot(GS.x, GS.y) < 0.45) return 'C';
   const cur = stickSector(), st = gStick.start || cur;
@@ -1201,18 +1217,21 @@ function tryRail() {
   if (S.trick) { addTrick(S.trick.name, S.trick.pts, S.trick.ammo); S.trick = null; }
   if (S.grabT > 0) endGrab();
   S.rail = r; S.railT = t; S.railS = s; S.railTime = 0; S.grounded = false;
-  S.grindKey = grindKey(); S.grindSeg = 0; S.grindSwitchT = 0; S.exitArmed = false;
-  { // frontside when the rail is on your toe side (the board's right of the nose), counting which way you're drifting
-    const c = r.a.clone().addScaledVector(r.dir, t * r.len), toe = V(Math.cos(S.yaw), 0, -Math.sin(S.yaw));
-    const side = (c.x - S.pos.x) * toe.x + (c.z - S.pos.z) * toe.z + 0.15 * (S.vel.x * toe.x + S.vel.z * toe.z);
-    S.grindName = (side >= 0 ? 'FS ' : 'BS ') + GRINDS[S.grindKey].name;
-  }
-  if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(S.grindName);
+  S.grindSeg = 0; S.grindSwitchT = 0; S.exitArmed = false;
+  // frontside when the rail is on your toe side (the board's right of the nose), counting which way you're drifting
+  const cr = r.a.clone().addScaledVector(r.dir, t * r.len), toe = V(Math.cos(S.yaw), 0, -Math.sin(S.yaw));
+  const rn = V(-r.dir.z, 0, r.dir.x).normalize();                    // across the rail, flat
+  const side = ((cr.x - S.pos.x) * rn.x + (cr.z - S.pos.z) * rn.z + 0.15 * (S.vel.x * rn.x + S.vel.z * rn.z)) * Math.sign(toe.dot(rn) || 1);
   const dir = r.dir.clone().multiplyScalar(Math.sign(s));
   const keepFakie = Math.cos(wrap(yawOf(V(dir.x, 0, dir.z)) - S.yaw)) < 0;
-  const yaw0 = S.yaw;
+  const yaw0 = S.yaw, held = grindKey();
   S.yaw = keepFakie ? wrap(yawOf(V(dir.x, 0, dir.z)) + Math.PI) : yawOf(V(dir.x, 0, dir.z));
   pose.yawLag += wrap(yaw0 - S.yaw); // the rider swings round onto the rail instead of snapping
+  // the board's real angle to the rail (how you came in, plus any set-up in the air) picks the grind family
+  const rel = wrap(yaw0 + GRINDS[held].yaw - S.yaw);
+  S.grindKey = grindFromAngle(held, rel); S.grindYaw = GRINDS[S.grindKey].slide || Math.abs(rel) < T.grindAngle * DEG ? GRINDS[S.grindKey].yaw : rel;
+  S.grindName = (side >= 0 ? 'FS ' : 'BS ') + GRINDS[S.grindKey].name;
+  if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(S.grindName);
   const onRail = r.a.clone().addScaledVector(r.dir, t * r.len); onRail.y += 0.035;
   pose.posLag.add(S.pos.clone().sub(onRail)); S.pos.copy(onRail); // ...and settles onto it
   const halfTurns = Math.round(Math.abs(S.spin) / Math.PI); if (halfTurns) addTrick(`${halfTurns * 180} Spin`, 60 * halfTurns, halfTurns);
@@ -1338,7 +1357,7 @@ function updateVisuals(dt, time) {
   // grind stance: turn and tip the board about the point that rides the rail
   // in the air the board turns into the grind you're holding, even mid-flip, so you see it lined up before the rail
   const setup = !S.rail && !S.grounded && S.bail <= 0;
-  const gk = S.walking ? GRINDS.C : S.rail ? GRINDS[S.grindKey] : setup ? GRINDS[grindKey()]
+  const gk = S.walking ? GRINDS.C : S.rail ? { ...GRINDS[S.grindKey], yaw: S.grindYaw ?? GRINDS[S.grindKey].yaw } : setup ? GRINDS[grindKey()]
     : S.manual && S.grounded ? { ...MANUAL_POSE[S.manual], pitch: MANUAL_POSE[S.manual].pitch * (1 + 0.45 * S.manBal) } : GRINDS.C;
   pose.slide = damp(pose.slide, S.sliding && S.grounded && S.bail <= 0 ? 1 : 0, S.sliding ? 10 : 6, dt);
   const gRate = setup ? 11 : 18; // a touch slower in the air so the turn reads

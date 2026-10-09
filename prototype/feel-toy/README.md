@@ -151,6 +151,20 @@ Nose Blunt is on up-then-right. The list it came from gives "up and left"
 for both Noseslide and Nose Blunt, and up-then-right mirrors Tailslide /
 Bluntslide.
 
+**The angle you come in at matters.** What counts is the board's real angle
+to the rail as it lands: how you approached, plus any set-up from the stick.
+- **Lined up** (under 12°): the stick picks the grind, as in the table.
+- **Angled** (12–55°): a truck grind keeps that angle instead of snapping
+  straight. Holding up, or letting go, gives a Crooked or an Overcrook
+  depending on which way the board points. Holding down gives a Feeble or a
+  Smith. An angled grind you set up already flips to its mirror if the board
+  points the other way.
+- **Across the rail** (over 55°): you slide. Letting go gives a Boardslide or
+  Lipslide, up a Noseslide or Nose Blunt, down a Tailslide or Bluntslide.
+
+Both thresholds are sliders (*Board angled this much keeps its angle*, *Board
+this far across the rail slides*).
+
 **FS or BS** isn't a stick input: it comes from which side you meet the rail.
 With the rail on your toe side it's frontside, with it on your heel side it's
 backside, and the name says so (FS Smith, BS Boardslide...).
