@@ -230,7 +230,15 @@ where you point it until you get back on the board (*Walking: trick stick
 turns the camera*).
 Walking follows the left stick relative to the camera (the direction is
 locked while you hold the stick, so the camera swinging round doesn't curve
-your path), runs when the stick is all the way over, steps up stairs and stops at taller walls. Step back on and
+your path), runs when the stick is all the way over, steps up stairs and stops at taller walls.
+
+**Sprinting:** tap the trick stick while walking, or hold Shift (keyboard) or
+A or L3 (controller). The sprint lasts until you let go of the movement
+stick. You walk at about 3 m/s, run at 5 m/s with the stick all the way over,
+and sprint at 7.5 m/s. All three speeds are on sliders.
+
+On foot you hear footsteps instead of the board rolling. They come about
+twice a second walking and quicker as you speed up. Step back on and
 you roll off in the direction you were walking.
 
 ## Braking

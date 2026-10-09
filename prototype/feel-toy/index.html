@@ -229,7 +229,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 2.6, runSpeed: 4.2, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 3.2, runSpeed: 5, sprintSpeed: 7.5, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
@@ -247,7 +247,7 @@ const SPEC = [
     ['revertWindow', 'Revert: time after landing to keep the combo (s)', 0, 1.5, 0.05], ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDelay', 'Manual: hold the stick steady this long first (s)', 0, 0.6, 0.02], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
     ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualAssist', 'Manual: self-righting with a steady thumb', 0, 3, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
     ['slamBail', 'Bail when hitting a wall faster than (m/s)', 2, 15, 0.25], ['curbBail', 'Bail when catching a curb faster than (m/s)', 0.5, 10, 0.25],
-    ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
+    ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['sprintSpeed', 'Sprint speed (tap the trick stick)', 3, 12, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
     ['turnRate', 'Turn rate, slow', 0.5, 6, 0.05], ['turnRateFast', 'Turn rate, fast', 0.3, 5, 0.05],
     ['grip', 'Grip (less side slip)', 1, 30, 0.5], ['carveKeep', 'Speed kept when carving', 0, 1, 0.01],
   ]],
@@ -1532,6 +1532,7 @@ function sampleInput() {
   IN.ollie = ollie;
   IN.grab = false; // no grabs: in the air the trick stick sets the board up for a grind instead
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
+  IN.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(0) || pb(10); // on foot: hold to sprint (touch taps the trick stick instead)
 }
 function trickDir() {
   if (IN.stickY < -0.5) return 'up';
@@ -1585,6 +1586,9 @@ const sfx = {
   kill: () => burst({ dur: 0.12, freq: 2500, q: 4, vol: 0.25, tone: 1300, toneEnd: 2600, toneVol: 0.15 }),
   bail: () => (buzz(70), burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 })),
   click: () => burst({ dur: 0.03, freq: 5000, type: 'highpass', vol: 0.08 }),
+  // a shoe on concrete: a soft low thud and a little scuff, harder when running
+  step: sp => { const k = Math.min(1, sp / 7); burst({ dur: 0.07, freq: 500 + Math.random() * 150, type: 'lowpass', vol: 0.1 + 0.12 * k, tone: 95 + Math.random() * 20, toneEnd: 55, toneVol: 0.06 + 0.08 * k });
+    burst({ dur: 0.05 + 0.04 * k, freq: 2600 + Math.random() * 800, q: 1.2, vol: 0.03 + 0.04 * k }); },
 };
 
 /* ============================================================
@@ -1998,7 +2002,7 @@ function toggleWalk() {
   if (!S.walking) {
     if (!S.grounded || S.rail || S.bail > 0) return;
     endManual(false); bankCombo();
-    S.walking = true; S.crouch = 0; S.sliding = false; S.pushQueue = 0; S.pushLeft = 0; S.trick = null;
+    S.walking = true; S.sprint = false; S.crouch = 0; S.sliding = false; S.pushQueue = 0; S.pushLeft = 0; S.trick = null;
     S.vel.multiplyScalar(0.3); S.n.copy(UP);
     if (device !== 'kbm') showTrickName('Walking');
   } else {
@@ -2016,7 +2020,9 @@ function stepWalk(dt) {
   const fw = fwdOf(fy), rt = V(Math.cos(fy), 0, -Math.sin(fy));
   const want = fw.multiplyScalar(-iy).addScaledVector(rt, ix);
   if (want.lengthSq() > 1e-4) want.normalize();
-  const speed = m < 0.12 ? 0 : m > 0.92 ? T.runSpeed : T.walkSpeed * m / 0.92;
+  if (m < 0.12) S.sprint = false;                                   // a sprint lasts until you let go of the stick
+  const sprinting = m >= 0.12 && (S.sprint || IN.sprint);
+  const speed = m < 0.12 ? 0 : sprinting ? T.sprintSpeed * Math.max(m, 0.6) : m > 0.92 ? T.runSpeed : T.walkSpeed * m / 0.92;
   S.vel.x = damp(S.vel.x, want.x * speed, 10, dt); S.vel.z = damp(S.vel.z, want.z * speed, 10, dt);
   if (speed > 0) S.yaw = dampAngle(S.yaw, yawOf(want), 10, dt);
   const prev = S.pos.clone();
@@ -2033,7 +2039,9 @@ function stepWalk(dt) {
   if (g2.h - S.pos.y > 0.44) { S.pos.x = prev.x; S.pos.z = prev.z; S.vel.x = S.vel.z = 0; return; }
   if (S.pos.y - g2.h > 0.02) { S.vel.y -= T.gravity * dt; S.pos.y = Math.max(g2.h, S.pos.y + S.vel.y * dt); if (S.pos.y === g2.h) S.vel.y = 0; }
   else { S.pos.y = g2.h; S.vel.y = 0; }
-  S.walkPhase += Math.hypot(S.vel.x, S.vel.z) * dt * 3.4;
+  const hs = Math.hypot(S.vel.x, S.vel.z), lastPhase = S.walkPhase;
+  S.walkPhase += Math.PI * dt * (1.6 + 0.25 * hs) * Math.min(1, hs / 0.6);  // steps a second: about 2 walking, 3 running, 3.5 sprinting
+  if (hs > 0.4 && Math.floor(lastPhase / Math.PI) !== Math.floor(S.walkPhase / Math.PI) && S.pos.y - g2.h < 0.05) sfx.step(hs);  // a footfall each half cycle
 }
 function updateWalkButton() { const b = document.getElementById('tb-walk'); if (b) b.textContent = S.walking ? 'Skate' : 'Walk'; }
 // a saved spot: a marker on the ground and the way you were facing (no speed: you start from a stand)
@@ -2526,7 +2534,7 @@ function stepRail(dt) {
 function step(dt) {
   if (EDGE_IN.reset) { EDGE_IN.reset = false; returnToSpot(); }
   if (EDGE_IN.setSpot) { EDGE_IN.setSpot = false; setSpot(); }
-  if (EDGE_IN.push) { EDGE_IN.push = false; if (!S.walking && S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
+  if (EDGE_IN.push) { EDGE_IN.push = false; if (S.walking) S.sprint = true; else if (S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
   if (EDGE_IN.revert) { EDGE_IN.revert = false; revert(); }
   trackGrindStick();
   if (EDGE_IN.walk) { EDGE_IN.walk = false; toggleWalk(); }
@@ -2715,7 +2723,7 @@ function updateVisuals(dt, time) {
   // sound beds
   if (AC) {
     const sp = S.vel.length(), t = AC.currentTime;
-    rollGain.gain.setTargetAtTime(S.grounded && !S.rail && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
+    rollGain.gain.setTargetAtTime(S.grounded && !S.rail && !S.walking && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
     rollFilter.frequency.setTargetAtTime(200 + sp * 70, t, 0.05);
     grindGain.gain.setTargetAtTime(S.rail ? 0.07 : pose.slide > 0.3 ? 0.06 * Math.min(1, sp / 4) : 0, t, 0.02);
     grindFilter.frequency.setTargetAtTime(!S.rail ? 500 + sp * 60 : (GRINDS[S.grindKey].slide ? 700 : 1800) + Math.abs(S.railS) * 120, t, 0.05);
@@ -3113,7 +3121,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
