@@ -217,7 +217,7 @@
 <div id="touch-ui" hidden>
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div><div id="stick-label"></div>
   <canvas id="tstick-trail"></canvas><div id="tstick-base" class="idle"></div><div id="tstick-knob" hidden></div>
-  <div class="tbar"><button type="button" id="tb-walk">Walk</button><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
+  <div class="tbar"><button type="button" id="tb-walk">Walk</button><button type="button" id="tb-cam">Cam</button><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
   <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
 </div>
 <div id="error" hidden></div>
@@ -234,7 +234,7 @@ const DEFAULTS = {
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, coneBail: 2.2, potholeBail: 3.5, grindAngle: 12, grindSlideAngle: 55,
-  camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, lookSpeed: 2.6, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
+  camMode: 0, camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camShake: 1, camLag: 12, lookSpeed: 2.6, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
   flickRim: 0.6, flickTime: 0.25, lateArm: 0.12, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
 };
@@ -265,7 +265,7 @@ const SPEC = [
   ]],
   ['Camera', [
     ['camDist', 'Distance behind', 1.5, 8, 0.05], ['camHeight', 'Height', 0.5, 3.5, 0.05], ['camPitch', 'Look down', -0.7, 0.2, 0.01],
-    ['camFov', 'Field of view', 50, 100, 1], ['fovKick', 'FOV boost at speed', 0, 30, 1],
+    ['camFov', 'Field of view', 50, 100, 1], ['fovKick', 'FOV boost at speed', 0, 30, 1], ['camMode', 'Filmer camera (0 off, 1 low and wide)', 0, 1, 1], ['camShake', 'Landing shake', 0, 2, 0.05],
     ['camLag', 'Position follow stiffness', 2, 40, 0.5], ['lookSpeed', 'Walking: trick stick turns the camera (rad/s)', 0.5, 6, 0.1], ['camFollow', 'Swing behind you (ground)', 0.5, 15, 0.1],
     ['camFollowAir', 'Swing behind you (air)', 0, 8, 0.1],
   ]],
@@ -618,7 +618,12 @@ function cityKit(baseH, seed0 = 1) {
     }
   }
   const zebra = (x, z, axis, n = 8) => { for (let i = -n / 2; i <= n / 2; i++) axis === 'x' ? dash(x + i * 1.25, z - 1.4, x + i * 1.25, z + 1.4, 0xf0ece2, 0.6) : dash(x - 1.4, z + i * 1.25, x + 1.4, z + i * 1.25, 0xf0ece2, 0.6); };
-  const car = (x, z, alongX = true, y = terrainH(x, z)) => B(x - (alongX ? 2.2 : 0.9), y, z - (alongX ? 0.9 : 2.2), x + (alongX ? 2.2 : 0.9), y + 1.45, z + (alongX ? 0.9 : 2.2), 'car', { color: pick([0xb23a32, 0x2f5d8a, 0xdedad2, 0x2b2b2e, 0x9aa3a8, 0x3f6b46, 0xd4a017]) });
+  const car = (x, z, alongX = true, y = terrainH(x, z)) => {
+    const hx = alongX ? 2.2 : 0.9, hz = alongX ? 0.9 : 2.2, b = B(x - hx, y, z - hz, x + hx, y + 1.45, z + hz, 'car', { color: pick([0xb23a32, 0x2f5d8a, 0xdedad2, 0x2b2b2e, 0x9aa3a8, 0x3f6b46, 0xd4a017]) });
+    const cx = alongX ? 1.3 : 0.93, cz = alongX ? 0.93 : 1.3;                                       // glass round the cabin, wheels at the corners
+    decorFns.push(D => { D.prop(x - cx, y + 0.92, z - cz, x + cx, y + 1.38, z + cz, 0x27313b);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const wx = x + sx * (alongX ? 1.45 : 0.92), wz = z + sz * (alongX ? 0.92 : 1.45); D.prop(wx - (alongX ? 0.33 : 0.12), y, wz - (alongX ? 0.12 : 0.33), wx + (alongX ? 0.33 : 0.12), y + 0.62, wz + (alongX ? 0.12 : 0.33), 0x1a1a1c); } });
+    return b; };
 
   /* ---------- spot templates (each is the kind of place you'd actually find) ---------- */
   // a raised plaza with stairs (rails, a hubba) down one side, ledges and planters on top
@@ -1086,6 +1091,31 @@ function buildDowntown(K) {
     if (Math.abs(x) < 31 && z > 49) return band(z, 4, 1) ? side : lightG;                                    // courthouse forecourt
     return band(x, 5, 1) || band(z, 5, 1) ? sideJ : side;
   };
+  K.dtSurface = (x, z) => {
+    if (Math.abs(x) > E || Math.abs(z) > E) return null;
+    if (inRoad(x, z) || (x > 74 && z > 52) || (x > 49 && z > -31 && z < 31)) return 'rough';
+    if (x < -64 && z > 66 && Math.hypot(x + 92, z - 94) < 26 && Math.abs(x + 92) > 1.6) return 'rough';
+    return 'smooth';
+  };
+
+  /* ---------- grime and paint: oil in the gutters and the parking lane, scuffs and wax, tags on the walls ---------- */
+  const stain = (x, y, z, r, a) => decorFns.push(D => D.stain(x, y, z, r, a));
+  for (const a of AV) for (const side of [-1, 1]) for (let z = -E + 2; z < E; z += R(2.5, 7)) if (!ST.some(c => Math.abs(z - c) < RW + 1)) stain(a + side * (RW - 0.4), 0, z, R(0.4, 1.0), R(0.15, 0.35));
+  for (const c of ST) for (const side of [-1, 1]) for (let x = -E + 2; x < E; x += R(2.5, 7)) if (!AV.some(a => Math.abs(x - a) < RW + 1)) stain(x, 0, c + side * (RW - 0.4), R(0.4, 1.0), R(0.15, 0.35));
+  for (const a of AV) for (let z = -E + 4; z < E; z += R(6, 14)) stain(a + (a < 0 ? 1 : -1) * 2.9 + R(-0.4, 0.4), 0, z, R(0.5, 1.1), R(0.25, 0.5));    // oil where cars park
+  for (const c of ST) for (let x = -E + 4; x < E; x += R(6, 14)) stain(x, 0, c + (c < 0 ? 1 : -1) * 2.9 + R(-0.4, 0.4), R(0.5, 1.1), R(0.25, 0.5));
+  for (let i = 0; i < 220; i++) { const x = R(-E, E), z = R(-E, E); if (!inRoad(x, z)) stain(x, terrainH(x, z), z, R(0.3, 1.4), R(0.06, 0.18)); }  // general wear
+  for (const b of boxes) if (/ledge|marble|wood/.test(b.mat) && b.edges && b.max[1] - b.min[1] < 2 && b.max[1] < 4) {   // wax and scuffs along the edges people skate
+    const cx = (b.min[0] + b.max[0]) / 2, cz = (b.min[2] + b.max[2]) / 2, lx = b.max[0] - b.min[0], lz = b.max[2] - b.min[2];
+    for (let k = 0; k < Math.min(6, Math.max(lx, lz) / 2); k++) { const t = R(-0.45, 0.45); stain(lx > lz ? cx + t * lx : cx, b.max[1], lx > lz ? cz : cz + t * lz, R(0.25, 0.5), R(0.18, 0.35)); }
+  }
+  const tag = (x, y, z, w, h, rot) => decorFns.push(D => D.tag(x, y, z, w, h, rot));
+  tag(115.97, G + 1.7, -19, 5, 2.2, -Math.PI / 2); tag(115.97, G + 1.8, -6, 4, 1.8, -Math.PI / 2);            // the DIY wall
+  tag(53.28, G + 2.2, 2, 3.5, 1.8, -Math.PI / 2); tag(54.72, G + 2.6, 2, 3.5, 1.8, Math.PI / 2); tag(88.72, G + 2.4, 2, 3.5, 1.8, Math.PI / 2); tag(87.28, G + 2.0, 2, 3.5, 1.6, -Math.PI / 2); // overpass piers
+  tag(95, G + 2.15, 7.97, 6, 0.9, Math.PI);                                                                   // over the bank to wall
+  tag(-13.5, G + 3.4, -65.97, 12, 4, 0);                                                                       // the garage wall: a big piece
+  tag(51.97, G + 2.6, 57, 6, 2.4, -Math.PI / 2);                                                               // the corner store's side
+  tag(-13, G + 9.2, -116.47, 10, 3.4, 0);                                                                      // high on the building behind the roofs
   return spots;
 }
 
@@ -1115,7 +1145,7 @@ function levelCity() {
   const poolCol = (x, z, h) => { const g = 0.15; return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
-    terrainH, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots,
+    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots,
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
   };
@@ -1436,7 +1466,7 @@ function levelMega() {
     { name: 'The Dam', pos: V(-345, 24, 200), yaw: -Math.PI / 2 }, { name: 'Waterfront', pos: V(0, 0, 230), yaw: Math.PI },
     { name: 'Port', pos: V(190, 0, 270), yaw: -Math.PI / 2 });
   return {
-    terrainH, regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -1585,6 +1615,7 @@ addEventListener('keydown', e => {
     if (e.code === 'KeyH') toggleIntro();
     if (e.code === 'KeyP') EDGE_IN.setSpot = true;
     if (e.code === 'KeyF') EDGE_IN.walk = true;
+    if (e.code === 'KeyC') toggleCam();
     if (e.code === 'KeyQ') EDGE_IN.flip = true;
   }
   keys.add(e.code); setDevice('kbm'); startAudio();
@@ -1654,22 +1685,26 @@ function trickDir() {
 /* ============================================================
    Sound: everything synthesized with WebAudio, started on first input.
    ============================================================ */
-let AC = null, noiseBuf = null, rollGain, rollFilter, grindGain, grindFilter;
+let AC = null, noiseBuf = null, rollGain, rollFilter, roughGain, roughFilter, grindGain, grindFilter, ringOsc, ringGain, ambGain, ambFilter;
 function startAudio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const loop = (freq, q) => {
+    const loop = (freq, q, type = 'bandpass') => {
       const src = AC.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
-      const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+      const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
       const g = AC.createGain(); g.gain.value = 0;
       src.connect(f); f.connect(g); g.connect(AC.destination); src.start();
       return [g, f];
     };
     [rollGain, rollFilter] = loop(300, 0.8);
     [grindGain, grindFilter] = loop(2400, 4);
+    [roughGain, roughFilter] = loop(700, 0.7, 'lowpass');            // asphalt and dirt: a coarse rumble
+    [ambGain, ambFilter] = loop(240, 0.5, 'lowpass');                // the city (or the sea) in the distance
+    ringOsc = AC.createOscillator(); ringOsc.type = 'triangle'; ringOsc.frequency.value = 1700;
+    ringGain = AC.createGain(); ringGain.gain.value = 0; ringOsc.connect(ringGain); ringGain.connect(AC.destination); ringOsc.start();
   } catch (_) { AC = null; }
 }
 function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, tone = 0, toneEnd = 0, toneVol = 0.2 }) {
@@ -1688,8 +1723,13 @@ function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, t
 }
 function buzz(ms) { if (device !== 'touch') return; try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} }
 const sfx = {
-  pop: () => burst({ dur: 0.05, freq: 3000, type: 'highpass', vol: 0.35, tone: 180, toneEnd: 90, toneVol: 0.3 }),
-  land: s => (s > 0.35 && buzz(Math.round(12 + 30 * s)), burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 })),
+  // the tail cracking down: a sharp wooden snap with a hollow body under it
+  pop: () => { burst({ dur: 0.03, freq: 2300, q: 1.3, vol: 0.55, tone: 560, toneEnd: 190, toneVol: 0.16 }); burst({ dur: 0.1, freq: 320, type: 'lowpass', vol: 0.32, tone: 120, toneEnd: 62, toneVol: 0.26 }); },
+  // a wheel over a crack in the slabs: a tick and a little knock
+  clack: k => { burst({ dur: 0.016, freq: 2800, type: 'highpass', vol: 0.04 + 0.07 * k }); burst({ dur: 0.035, freq: 200, type: 'lowpass', vol: 0.05 + 0.09 * k, tone: 95, toneEnd: 60, toneVol: 0.03 + 0.04 * k }); },
+  land: s => { if (s > 0.35) buzz(Math.round(12 + 30 * s));
+    burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 });   // the deck slapping down
+    burst({ dur: 0.05 + 0.04 * s, freq: 3400, q: 2, vol: 0.08 + 0.18 * s }); },                                                // trucks and hardware rattling
   push: () => burst({ dur: 0.14, freq: 900, q: 0.7, vol: 0.08 }),
   shot: () => burst({ dur: 0.09, freq: 1400, q: 0.6, vol: 0.32, tone: 220, toneEnd: 60, toneVol: 0.18 }),
   hit: () => (buzz(8), burst({ dur: 0.04, freq: 4000, q: 8, vol: 0.2, tone: 1900, toneVol: 0.12 })),
@@ -1708,17 +1748,40 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, MOBILE ? 1.5 : 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;   // filmic: brights roll off, colours hold
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(LV.sky || 0x9fc4dc);
-scene.fog = new THREE.Fog(LV.sky || 0x9fc4dc, ...(LV.fog || [60, 140]));
+// late afternoon: a deep blue overhead fading to a warm haze at the horizon, and a low, warm sun
+const HAZE = 0xe9d7bf;
+scene.background = (() => { const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#4f86c6'); gr.addColorStop(0.55, '#9fc0dc'); gr.addColorStop(0.82, '#e3d6c4'); gr.addColorStop(1, '#efd9bc');
+  g.fillStyle = gr; g.fillRect(0, 0, 2, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+scene.fog = new THREE.Fog(HAZE, ...(LV.fog || [60, 140]));
 const camera = new THREE.PerspectiveCamera(72, 1, 0.1, LV.far || 400);
-scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a5550, 1.1));
-const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+scene.add(new THREE.HemisphereLight(0xc6dcf2, 0x6e5c4a, 1.0));
+const sun = new THREE.DirectionalLight(0xffd6a6, 2.9);
+const SUN_OFFSET = V(22, 15, 13);                                    // low in the west-south-west: long shadows
 sun.castShadow = true; sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
-Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 80 });
+Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 
+function graffitiAtlas() {
+  const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d');
+  const WORDS = ['GNAR', 'SK8', 'DUSK', 'KRUSH', 'NOVA', 'ZEKE', 'FLOW', 'VEXO'], PAL = [['#f2c230', '#e0542e'], ['#5fd0e8', '#2f5fd0'], ['#ff6fb0', '#8a2be2'], ['#9be15d', '#1f8a4c'], ['#ffffff', '#c7c7c7'], ['#ff8a3d', '#c21f1f'], ['#f5f0e1', '#e8b04a'], ['#7cf2c8', '#3a6bd6']];
+  for (let i = 0; i < 8; i++) {
+    const x0 = (i % 2) * 512, y0 = Math.floor(i / 2) * 256, word = WORDS[i], [c1, c2] = PAL[i];
+    g.save(); g.beginPath(); g.rect(x0, y0, 512, 256); g.clip(); g.translate(x0 + 256, y0 + 140); g.transform(1, 0, -0.18 + 0.1 * (i % 3), 1, 0, 0); g.rotate((i % 2 ? -1 : 1) * 0.05);
+    const size = Math.min(170, 900 / word.length); g.font = `900 ${size}px Impact, "Arial Black", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    if (i % 3 === 0) { g.fillStyle = 'rgba(20,20,24,0.9)'; g.beginPath(); g.ellipse(0, 0, 230, 105, 0, 0, Math.PI * 2); g.fill(); }        // a dark backing on some
+    g.lineWidth = 26; g.strokeStyle = '#141416'; g.strokeText(word, 6, 8);                                                                  // shadow
+    g.lineWidth = 16; g.strokeStyle = i % 2 ? '#ffffff' : '#141416'; g.strokeText(word, 0, 0);
+    const gr = g.createLinearGradient(0, -size / 2, 0, size / 2); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillText(word, 0, 0);
+    g.fillStyle = c2; for (let k = 0; k < 7; k++) { const dx = (Math.random() - 0.5) * 360; g.fillRect(dx, size * 0.3, 5, 20 + Math.random() * 55); }   // drips
+    g.fillStyle = 'rgba(255,255,255,0.8)'; for (let k = 0; k < 4; k++) { const dx = (Math.random() - 0.5) * 320, dy = (Math.random() - 0.5) * size * 0.6; g.beginPath(); g.arc(dx, dy, 6 + Math.random() * 6, 0, 7); g.fill(); }  // shines
+    g.restore();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
 function gridTexture(base, line) {
   const c = document.createElement('canvas'); c.width = c.height = 256;
   const g = c.getContext('2d');
@@ -1743,9 +1806,10 @@ function decorAdd(geo, mat, matrix) {
 function decorFlush() {
   for (const [mat, chunks] of decorQ) for (const list of chunks.values()) {
     let n = 0; for (const g of list) n += g.attributes.position.count;
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-    for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), withUV = !!mat.map, uv = withUV ? new Float32Array(n * 2) : null; let o = 0;
+    for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (withUV && g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    if (withUV) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));      // textured decor (stains, graffiti) keeps its mapping
     const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.userData.noShadow; m.receiveShadow = true; scene.add(m);
   }
   decorQ.clear();
@@ -1905,6 +1969,16 @@ for (const r of RAILS) {
 { // the level's own scenery
   const bark = flatMat(0x7a5a3c), leaf = flatMat(0x4f7d3a), frond = flatMat(0x5b8a3a), pole = flatMat(0x3c4146, { metalness: 0.4 }), lampHead = flatMat(0xf3e9c8, { emissive: 0x332b10 });
   const water = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.15, metalness: 0.2, transparent: true, opacity: 0.85 }); water.userData.noShadow = true;
+  // grime: one soft blotch texture, three strengths
+  const stainTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    for (let i = 0; i < 14; i++) { const x = 64 + (Math.random() - 0.5) * 50, y = 64 + (Math.random() - 0.5) * 50, r = 14 + Math.random() * 36, gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+    return new THREE.CanvasTexture(c); })();
+  const stainMats = [0.12, 0.25, 0.42].map(o => new THREE.MeshBasicMaterial({ map: stainTex, color: 0x1d1b18, transparent: true, opacity: Math.min(1, o * 3.2), depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+  const stainMat = a => stainMats[a < 0.16 ? 0 : a < 0.3 ? 1 : 2];
+  // graffiti: eight made-up pieces painted into one atlas
+  let tagCell = 0, tagAtlas = null;
+  const tagMat = () => tagAtlas || (tagAtlas = new THREE.MeshStandardMaterial({ map: graffitiAtlas(), transparent: true, alphaTest: 0.04, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
   const propMats = new Map(), propOf = c => { if (!propMats.has(c)) propMats.set(c, flatMat(c)); return propMats.get(c); };
   const boxGeo = new THREE.BoxGeometry(1, 1, 1), sphGeo = new THREE.SphereGeometry(1, 10, 8), coneGeo = new THREE.ConeGeometry(1, 1, 6);
   const D = {
@@ -1948,6 +2022,12 @@ for (const r of RAILS) {
     },
     building(cx, cz, w, d, h, color) { decorAdd(boxGeo, flatMat(color), place(cx, h / 2, cz, 0, w, h, d)); },
     water(x0, z0, x1, z1, y) { decorAdd(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), water, place((x0 + x1) / 2, y, (z0 + z1) / 2)); },
+    // a dark soft blotch on the ground: oil, wear, wax
+    stain(x, y, z, r, a) { decorAdd(new THREE.PlaneGeometry(2 * r, 2 * r * (0.6 + 0.4 * Math.abs(Math.sin(x * 7 + z)))).rotateX(-Math.PI / 2).rotateY(x * 13.7 + z * 3.1), stainMat(a), place(x, y + 0.014, z)); },
+    // a painted piece on a wall, facing rotY (0 faces +z)
+    tag(x, y, z, w, h, rotY) { const g = new THREE.PlaneGeometry(w, h), cell = tagCell++ % 8, u0 = (cell % 2) / 2, v0 = Math.floor(cell / 2) / 4, uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * 0.5, 1 - (v0 + (1 - uv.getY(i)) * 0.25));
+      decorAdd(g, tagMat(), place(x, y, z, rotY)); },
     prop(x0, y0, z0, x1, y1, z1, color) { decorAdd(boxGeo, propOf(color), place((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, 0, x1 - x0, y1 - y0, z1 - z0)); },
     shelter(x0, z0, x1, z1, h) { const g0 = terrainH(x0, z0);
       for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) decorTube(V(x, g0, z), V(x, g0 + h, z), 0.06, pole);
@@ -2154,6 +2234,10 @@ function stepWalk(dt) {
   const hs = Math.hypot(S.vel.x, S.vel.z), lastPhase = S.walkPhase;
   S.walkPhase += Math.PI * dt * (1.6 + 0.25 * hs) * Math.min(1, hs / 0.6);  // steps a second: about 2 walking, 3 running, 3.5 sprinting
   if (hs > 0.4 && Math.floor(lastPhase / Math.PI) !== Math.floor(S.walkPhase / Math.PI) && S.pos.y - g2.h < 0.05) sfx.step(hs);  // a footfall each half cycle
+}
+function toggleCam() {
+  T.camMode = T.camMode >= 0.5 ? 0 : 1; saveTuning(); showTrickName(T.camMode ? 'Filmer cam' : 'Follow cam');
+  const inp = document.getElementById('t-camMode'); if (inp) { inp.value = T.camMode; inp.parentElement.querySelector('output').textContent = T.camMode; }
 }
 function updateWalkButton() { const b = document.getElementById('tb-walk'); if (b) b.textContent = S.walking ? 'Skate' : 'Walk'; }
 // a saved spot: a marker on the ground and the way you were facing (no speed: you start from a stand)
@@ -2472,7 +2556,7 @@ function land(g) {
   if (sketchy && combo.parts.length) { combo.pts *= 0.5; combo.ammo = Math.floor(combo.ammo / 2); combo.sketchy = true; }
   S.spin = 0; S.popped = false;
   S.landDip = Math.min(0.35, impact * 0.04);
-  sfx.land(clamp(impact / 8, 0, 1));
+  sfx.land(clamp(impact / 8, 0, 1)); cam.shake = Math.max(cam.shake || 0, clamp((impact - 1.5) / 6, 0, 1));
   // land straight into a manual to keep the combo going
   const mk = manualInput();
   if (mk && combo.parts.length) startManual(mk); else if (combo.parts.length && T.revertWindow > 0) S.revertT = T.revertWindow; else bankCombo();
@@ -2700,14 +2784,17 @@ function updateCamera(dt) {
   if (!S.walking) cam.lookHold = 0;
   if (!look && cam.lookHold <= 0 && !S.walking) cam.yaw = dampAngle(cam.yaw, target, rate, dt); // on foot only the trick stick turns it
   cam.tilt = damp(cam.tilt || 0, look ? clamp(GS.y, -1, 1) * 0.55 : 0, look ? 8 : 3, dt);
-  const pitch = T.camPitch - cam.tilt;
+  // the filmer camera: down low and close behind, wide, like a fisheye following the board
+  cam.film = damp(cam.film || 0, T.camMode >= 0.5 ? 1 : 0, 4, dt);
+  const camH = lerp(T.camHeight, 0.58, cam.film), camD = lerp(T.camDist, 1.7, cam.film), fovB = lerp(T.camFov, Math.max(T.camFov, 84), cam.film);
+  const pitch = lerp(T.camPitch, -0.04, cam.film) - cam.tilt;
   const fwd = V(-Math.sin(cam.yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(cam.yaw) * Math.cos(pitch));
   cam.dip = damp(cam.dip || 0, S.landDip, 14, dt);                     // eased, so a landing doesn't jolt the view
-  const pivot = cam.pivot.clone().add(V(0, T.camHeight - cam.dip - 0.25 * S.crouch, 0));
+  const pivot = cam.pivot.clone().add(V(0, camH - cam.dip - 0.25 * S.crouch, 0));
   // pull the camera in front of any wall between it and the skater, then ease back out
   // ...and close enough that the skater's feet aren't hidden behind a ledge lip
-  let room = T.camDist;
-  for (let k = 1; k <= 24; k++) { const d = T.camDist * k / 24; if (solidAt(pivot.clone().addScaledVector(fwd, -d))) { room = Math.max(0.6, T.camDist * (k - 1) / 24); break; } }
+  let room = camD;
+  for (let k = 1; k <= 24; k++) { const d = camD * k / 24; if (solidAt(pivot.clone().addScaledVector(fwd, -d))) { room = Math.max(0.6, camD * (k - 1) / 24); break; } }
   const feet = S.pos.clone().add(V(0, 0.35, 0));
   for (let d = room; d > 0.6; d -= 0.2) {
     const c = pivot.clone().addScaledVector(fwd, -d); let clear = true;
@@ -2719,10 +2806,70 @@ function updateCamera(dt) {
   const pos = pivot.clone().addScaledVector(fwd, -cam.dist);
   const floor = groundAt(pos.x, pos.z, pos.y + 1).h + 0.25;
   if (pos.y < floor) pos.y = floor;
+  // a landing kicks the camera: a quick shake that dies away
+  cam.shake = damp(cam.shake || 0, 0, 9, dt);
+  const sh = cam.shake * 0.07 * T.camShake;
+  if (sh > 0.001) pos.add(V((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
   camera.position.copy(pos);
   camera.lookAt(pivot.clone().addScaledVector(fwd, 2));
-  camera.fov = damp(camera.fov, T.camFov + T.fovKick * clamp((S.vel.length() - 3) / 9, 0, 1), 2.5, dt);
+  camera.fov = damp(camera.fov, fovB + T.fovKick * clamp((S.vel.length() - 3) / 9, 0, 1), 2.5, dt);
   camera.updateProjectionMatrix();
+}
+
+// what the wheels are on: smooth concrete, rough asphalt or dirt, hollow wood, or ringing metal
+const SURF = { sidewalk: 'smooth', plaza: 'smooth', marble: 'smooth', ledge: 'smooth', pad: 'smooth', step: 'smooth', garage: 'rough', wood: 'wood', metal: 'metal', car: 'metal', building: 'rough' };
+function surfaceUnder() {
+  const p = S.pos;
+  for (const b of near(p.x, p.z)) if (!b.isHubba && p.x >= b.min[0] && p.x <= b.max[0] && p.z >= b.min[2] && p.z <= b.max[2] && Math.abs(b.max[1] - p.y) < 0.06) return SURF[b.mat] || 'smooth';
+  const h = hubbaAt(p.x, p.z); if (h && Math.abs(hubbaTopAt(h, hubbaLocal(h, p.x, p.z)[0]) - p.y) < 0.08) return h.color === 0xc49a5c ? 'wood' : 'smooth';
+  return LV.surface ? LV.surface(p.x, p.z) : LV.drag && LV.drag(p.x, p.z) > 0 ? 'rough' : 'smooth';
+}
+const METAL_RAILS = new Set(['Rail', 'Handrail', 'Pipe', 'Coping']);
+const amb = { car: 3, bird: 2, cell: '' };
+function soundBeds(dt) {
+  const sp = S.vel.length(), t = AC.currentTime, rolling = S.grounded && !S.rail && !S.walking && S.bail <= 0;
+  const surf = rolling ? surfaceUnder() : 'none', k = Math.min(1, sp / 10);
+  const smoothV = rolling && surf !== 'rough' ? Math.min(0.09, sp * 0.011) * (surf === 'wood' ? 1.4 : 1) : 0;
+  rollGain.gain.setTargetAtTime(smoothV, t, 0.03);
+  rollFilter.frequency.setTargetAtTime(surf === 'wood' ? 140 + sp * 30 : surf === 'metal' ? 900 + sp * 90 : 200 + sp * 70, t, 0.05);
+  rollFilter.Q.setTargetAtTime(surf === 'wood' ? 2.2 : surf === 'metal' ? 3 : 0.8, t, 0.05);
+  roughGain.gain.setTargetAtTime(rolling && surf === 'rough' ? Math.min(0.13, sp * 0.016) * (0.65 + 0.7 * Math.random()) : 0, t, 0.015);
+  roughFilter.frequency.setTargetAtTime(500 + sp * 60, t, 0.05);
+  // the cracks between slabs: front wheels, then back wheels a wheelbase later
+  if (rolling && surf === 'smooth' && sp > 0.8) {
+    const cell = Math.floor(S.pos.x / 2) + ':' + Math.floor(S.pos.z / 2);
+    if (amb.cell && cell !== amb.cell) { sfx.clack(k); setTimeout(() => sfx.clack(k * 0.8), Math.min(400, 550 / sp)); }
+    amb.cell = cell;
+  } else amb.cell = '';
+  // grinds: metal rings and hisses, concrete scrapes low and gritty
+  const metal = S.rail && METAL_RAILS.has(S.rail.kind), slide = S.rail && GRINDS[S.grindKey].slide;
+  grindGain.gain.setTargetAtTime(S.rail ? (metal ? 0.07 : 0.1) : pose.slide > 0.3 ? 0.06 * Math.min(1, sp / 4) : 0, t, 0.02);
+  grindFilter.frequency.setTargetAtTime(!S.rail ? 500 + sp * 60 : metal ? (slide ? 1500 : 2600) + Math.abs(S.railS) * 120 : (slide ? 520 : 820) + Math.abs(S.railS) * 40, t, 0.05);
+  grindFilter.Q.setTargetAtTime(S.rail && !metal ? 0.9 : 4, t, 0.05);
+  ringGain.gain.setTargetAtTime(metal && !slide ? 0.012 + 0.004 * Math.sin(t * 31) : 0, t, 0.03);
+  ringOsc.frequency.setTargetAtTime(1500 + Math.abs(S.railS) * 60, t, 0.1);
+  // the world around you
+  const beach = LEVEL_ID === 'park';
+  ambGain.gain.setTargetAtTime(beach ? 0.03 + 0.025 * Math.sin(t * 0.5) ** 2 : 0.022, t, 0.3);
+  ambFilter.frequency.setTargetAtTime(beach ? 380 + 200 * Math.sin(t * 0.5) ** 2 : 240, t, 0.3);
+  amb.car -= dt; amb.bird -= dt;
+  if (amb.car <= 0) { amb.car = 4 + Math.random() * 9; if (!beach) swell(2.2 + Math.random(), 320 + Math.random() * 200, 0.03 + Math.random() * 0.03); }
+  if (amb.bird <= 0) { amb.bird = 3 + Math.random() * 8; chirp(beach); }
+}
+// a car going by a block away: filtered noise that swells and fades, its pitch sliding as it passes
+function swell(dur, f, vol) {
+  const t = AC.currentTime, src = AC.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+  const fl = AC.createBiquadFilter(); fl.type = 'bandpass'; fl.Q.value = 1.2; fl.frequency.setValueAtTime(f * 1.3, t); fl.frequency.linearRampToValueAtTime(f * 0.8, t + dur);
+  const g = AC.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(AC.destination); src.start(t, Math.random()); src.stop(t + dur + 0.05);
+}
+// a bird (or a gull at the beach)
+function chirp(gull) {
+  const t0 = AC.currentTime, n = gull ? 2 : 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) { const t = t0 + i * (gull ? 0.32 : 0.11), o = AC.createOscillator(), g = AC.createGain(), f = gull ? 900 : 2600 + Math.random() * 1400;
+    o.type = gull ? 'sawtooth' : 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * (gull ? 0.7 : 1.35), t + (gull ? 0.25 : 0.07));
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gull ? 0.012 : 0.018, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + (gull ? 0.28 : 0.09));
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.32); }
 }
 
 /* ============================================================
@@ -2831,15 +2978,9 @@ function updateVisuals(dt, time) {
   rig.rotation.set(0, 0, S.bail > 0 ? clamp((1.2 - S.bail) * 3, 0, 1.35) : 0);
   rig.position.set(S.bail > 0 ? -clamp((1.2 - S.bail) * 0.6, 0, 0.4) : 0, 0, 0);
   // shadow camera follows the skater
-  sun.position.copy(S.pos).add(V(12, 25, 8)); sun.target.position.copy(S.pos);
+  sun.position.copy(S.pos).add(SUN_OFFSET); sun.target.position.copy(S.pos);
   // sound beds
-  if (AC) {
-    const sp = S.vel.length(), t = AC.currentTime;
-    rollGain.gain.setTargetAtTime(S.grounded && !S.rail && !S.walking && S.bail <= 0 ? Math.min(0.09, sp * 0.011) : 0, t, 0.03);
-    rollFilter.frequency.setTargetAtTime(200 + sp * 70, t, 0.05);
-    grindGain.gain.setTargetAtTime(S.rail ? 0.07 : pose.slide > 0.3 ? 0.06 * Math.min(1, sp / 4) : 0, t, 0.02);
-    grindFilter.frequency.setTargetAtTime(!S.rail ? 500 + sp * 60 : (GRINDS[S.grindKey].slide ? 700 : 1800) + Math.abs(S.railS) * 120, t, 0.05);
-  }
+  if (AC) soundBeds(dt);
 }
 
 /* ============================================================
@@ -3185,6 +3326,7 @@ canvas.addEventListener('pointercancel', endCanvasPointer);
 $('tb-respawn').addEventListener('click', () => { EDGE_IN.reset = true; });
 $('tb-spot').addEventListener('click', () => { EDGE_IN.setSpot = true; });
 $('tb-walk').addEventListener('click', () => { EDGE_IN.walk = true; });
+$('tb-cam').addEventListener('click', toggleCam);
 $('tb-tune').addEventListener('click', () => togglePanel());
 if (MOBILE) enableTouch();
 
