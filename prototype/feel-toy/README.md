@@ -33,6 +33,8 @@ does tricks** with Skate's flick-it motions.
 | Set the board up for a grind | Hold the right stick in the air | Arrow keys |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
 | Pick the grind (hold while landing on a rail) | Right stick direction | Arrow keys |
+| Manual / nose manual | Right stick halfway ↓ / ↑ | Hold M / N |
+| Get off and walk / back on | Y | F |
 | Set a spot / return to it | D-pad ↑ / Menu | P / R |
 | Tuning sliders | View | Tab |
 | Help | | H |
@@ -44,9 +46,14 @@ best. Two fixed sticks sit in the bottom corners and never move. The steering
 stick reads from wherever your left thumb lands, so a tap never starts a turn.
 The trick stick reads from its own centre, like a real stick.
 
-- **Left thumb steers.** While your thumb is down you push along
-  (auto-push); let go to coast. Push up to go faster, pull down to powerslide
-  to a stop, hold left or right in the air to spin.
+- **Left thumb: tap to push**, one kick per tap (two quick taps queue two).
+  Hold and move from where you touched to steer; holding never pushes. Pull
+  down to powerslide to a stop, hold left or right in the air to spin.
+- **Manuals:** tip the right stick about halfway down (manual) or halfway up
+  (nose manual). All the way down is still the ollie crouch.
+- **Walk / Skate** gets off the board and back on. Walking goes wherever the
+  left stick points (relative to the camera), runs at full tilt and climbs
+  stairs; the board is carried under your arm.
 - **Set spot / Return** buttons drop a marker where you are, facing the way
   you're going, and put you back there standing still to try the line again.
 - **Right thumb is the flick-it stick**, with the same motions as a
@@ -92,7 +99,7 @@ boardslide or a 5-0 before you reach the rail.
 
 Like Skate, where you hold the trick stick as you land on a rail or ledge
 lines the board up. Hold it in the air and the board is already set up in that
-position before you reach the rail; move it mid-grind to switch.
+position before you reach the rail; move it mid-grind to switch. Once you're on, the grind is locked until you pop off.
 
 | Hold | Grind |
 | --- | --- |
@@ -109,6 +116,22 @@ up pops you off, as on the ground.
 
 Steering is the same riding regular or fakie: stick right always turns the
 board the same way.
+
+## Manuals
+
+Tip the trick stick about halfway down for a manual (back wheels, nose up) or
+halfway up for a nose manual. They keep a combo alive: land a trick straight
+into a manual and the combo doesn't pay out until you roll out of it, and you
+can ollie or flip out of a manual into the next trick. Push all the way down
+and it's the ollie crouch instead. *Manual: trick stick tip from* sets where
+halfway starts.
+
+## Walking
+
+Walk / Skate (touch), Y (controller) or F (keyboard) steps off the board.
+Walking follows the left stick relative to the camera, runs when the stick is
+all the way over, steps up stairs and stops at taller walls. Step back on and
+you roll off in the direction you were walking.
 
 ## Braking
 
