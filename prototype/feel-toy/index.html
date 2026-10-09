@@ -1867,8 +1867,8 @@ function updateCamera(dt) {
     cam.lookHold = 1.5;
   } else cam.lookHold = Math.max(0, (cam.lookHold || 0) - dt);
   if (!S.walking) cam.lookHold = 0;
-  if (!look && cam.lookHold <= 0) cam.yaw = dampAngle(cam.yaw, target, rate, dt);
-  cam.tilt = damp(cam.tilt || 0, look ? clamp(GS.y, -1, 1) * 0.55 : S.walking && cam.lookHold > 0 ? cam.tilt || 0 : 0, look ? 8 : 3, dt);
+  if (!look && cam.lookHold <= 0 && !S.walking) cam.yaw = dampAngle(cam.yaw, target, rate, dt); // on foot only the trick stick turns it
+  cam.tilt = damp(cam.tilt || 0, look ? clamp(GS.y, -1, 1) * 0.55 : 0, look ? 8 : 3, dt);
   const pitch = T.camPitch - cam.tilt;
   const fwd = V(-Math.sin(cam.yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(cam.yaw) * Math.cos(pitch));
   cam.dip = damp(cam.dip || 0, S.landDip, 14, dt);                     // eased, so a landing doesn't jolt the view
