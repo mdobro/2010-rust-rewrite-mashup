@@ -161,7 +161,7 @@
 <div id="intro">
   <div class="card">
     <h1>Skate Feel Toy</h1>
-    <p>A street block with a stair set, rails, ledges and banks, and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
+    <p>A city block of street spots: a plaza with three stair sets, handrails and hubbas, a quarter pipe, banks, ledges, pads and a schoolyard with a pyramid, and every movement number on a slider. Two sticks, laid out like Skate: the left stick skates, the right stick does tricks with Skate's flick-it motions. The camera follows behind you.</p>
     <ul class="touch-list touch-only">
       <li><b>Left thumb steers:</b> move from where you touched, pull down to powerslide to a stop, hold left or right in the air to spin. <b>Double tap</b> it to revert (a flat 180 to fakie).</li>
       <li><b>Manuals:</b> tip the right stick about halfway down (or halfway up for a nose manual). Manuals keep a combo going.</li>
@@ -295,51 +295,112 @@ const DEG = Math.PI / 180;
    The park. Ground is an analytic height function, so physics
    and the rendered mesh always agree. Boxes and rails sit on top.
    ============================================================ */
-function arc(d, R, dmax) { if (d <= 0) return 0; const dd = Math.min(d, dmax); return R - Math.sqrt(R * R - dd * dd); }
-const WORLD = 30, STEP = 0.3, PLAZA_H = 1.28;
+const WORLD = 46, STEP = 0.3, PLAZA_H = 1.28, TIER_H = 2.24, QP_R = 2.6, QP_D = 2.55; // quarter pipe: radius, and how far the curve runs (about 80°)
+const smooth01 = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const taper = (v, a, b, len) => smooth01(Math.min(v - a, b - v) / len);   // fades a feature's ends into banks, never cliffs
 
-// A street block: flat ground, a raised plaza with a stair set, banks, ledges, rails, a curb,
-// all inside a ring of buildings. Smooth slopes live in terrainH; everything square is a box.
+/* Three zones inside a ring of buildings:
+   north  the plaza: main stair set with handrail and hubba, an upper tier (bank up, 3-stair with a
+          centre rail), a long 7-stair off the west end, bench, flat rail and pad on top
+   middle the street: long ledge, bench, pad-gap-pad, flat rail, flatbar, a quarter pipe with coping
+          on the west wall and a bank to the east wall
+   south  past the curb and the road, the schoolyard: pyramid funbox with a ledge down one bank,
+          kicker, benches, a two-tier manual pad and a bank up to the wall
+   Smooth slopes are TERRAIN features (each one has a box it lives in, which is also its mesh);
+   square things are BOXES; sloped ledges are HUBBAS. */
+const TERRAIN = [
+  // banks reach the top a little before the box they meet, so its side never catches the board
+  { x0: 15.5, x1: 21, z0: -35.5, z1: -15, h: (x, z) => PLAZA_H * clamp((21 - x) / 4.6, 0, 1) },        // bank up to the plaza
+  { x0: -6.5, x1: -2, z0: -36, z1: -31, h: (x, z) => PLAZA_H + (TIER_H - PLAZA_H) * clamp((-2 - x) / 3.6, 0, 1) }, // plaza up to the tier
+  { x0: -44, x1: -37.5, z0: -14, z1: 14, h: (x, z) => arc(-38 - x, QP_R, QP_D) * taper(z, -14, 14, 3.5) }, // quarter pipe
+  { x0: 37, x1: 44, z0: -14, z1: 14, h: (x, z) => 1.7 * (x - 37) / 7 * taper(z, -14, 14, 3) },        // bank to the east wall
+  { x0: -5, x1: 5, z0: 22, z1: 32, h: (x, z) => clamp(1 - Math.max(Math.abs(x) - 2, Math.abs(z - 27) - 2, 0) / 3, 0, 1) }, // pyramid
+  { x0: -42, x1: 42, z0: 31, z1: 36, h: (x, z) => 1.6 * (z - 31) / 5 * taper(x, -42, 42, 4) },        // bank up to the south wall
+];
+function arc(d, R, dmax) { if (d <= 0) return 0; const dd = Math.min(d, dmax); return R - Math.sqrt(R * R - dd * dd); }
 function terrainH(x, z) {
   let h = 0;
-  if (z >= -29.5 && z <= -14.5 && x > 14 && x < 19) h = Math.max(h, PLAZA_H * (19 - x) / 5);   // bank up to the plaza
-  if (x >= -12 && x <= 12 && z > 22.6 && z < 26) h = Math.max(h, Math.min(1.4, (z - 22.6) * 0.47)); // street bank
+  for (const t of TERRAIN) if (x >= t.x0 && x <= t.x1 && z >= t.z0 && z <= t.z1) h = Math.max(h, t.h(x, z));
   return h;
 }
 
 // edges: which top edges grind ('n' = min z, 's' = max z, 'w' = min x, 'e' = max x)
 const BOXES = [
-  { min: [-14, 0, -30], max: [14, PLAZA_H, -14], mat: 'plaza' },                 // the plaza
-  { min: [-4, 0, -14], max: [4, 0.96, -13.4], mat: 'step' },                     // stairs down its front
-  { min: [-4, 0, -13.4], max: [4, 0.64, -12.8], mat: 'step' },
-  { min: [-4, 0, -12.8], max: [4, 0.32, -12.2], mat: 'step' },
-  { min: [-10, PLAZA_H, -22.2], max: [-4, PLAZA_H + 0.45, -21.6], mat: 'ledge', edges: 'ns' }, // bench on the plaza
-  { min: [-25, 0, -4], max: [-13, 0.5, -3.4], mat: 'ledge', edges: 'ns' },       // long street ledge
-  { min: [-22, 0, 6], max: [-18, 0.42, 6.6], mat: 'ledge', edges: 'ns' },        // bench
-  { min: [-12, 0, 11], max: [-5, 0.17, 14], mat: 'pad', edges: 'nswe' },         // manual pad
-  { min: [-26, 0, 19.5], max: [26, 0.15, 20.1], mat: 'curb', edges: 'n' },       // curb along the road
-  { min: [-36, 0, -38], max: [36, 7, -30], mat: 'building' },                    // buildings round the block
-  { min: [-36, 0, 27], max: [36, 6, 36], mat: 'building' },
-  { min: [-38, 0, -30], max: [-29, 8, 27], mat: 'building' },
-  { min: [29, 0, -30], max: [38, 6, 27], mat: 'building' },
+  { min: [-22, 0, -36], max: [16, PLAZA_H, -14], mat: 'plaza', edges: '' },                     // the plaza
+  { min: [-22, 0, -36], max: [-6, TIER_H, -28], mat: 'plaza' },                                 // the upper tier
+  { min: [-20, PLAZA_H, -21.6], max: [-14, PLAZA_H + 0.45, -21], mat: 'ledge', edges: 'ns' },   // bench on the plaza
+  { min: [6, PLAZA_H, -30], max: [12, PLAZA_H + 0.18, -27], mat: 'pad', edges: 'nswe' },        // pad on the plaza
+  { min: [-34, 0, -4], max: [-18, 0.5, -3.4], mat: 'ledge', edges: 'ns' },                      // long street ledge
+  { min: [-26, 0, 6], max: [-22, 0.42, 6.6], mat: 'ledge', edges: 'ns' },                       // bench
+  { min: [-17, 0, 1], max: [-11, 0.17, 4], mat: 'pad', edges: 'nswe' },                         // pad, gap, higher pad
+  { min: [-9, 0, 1], max: [-4, 0.32, 4], mat: 'pad', edges: 'nswe' },
+  { min: [8, 0, -11], max: [13, 0.55, -8.5], mat: 'ledge', edges: 'nswe' },                    // planters
+  { min: [-31, 0, 8], max: [-27, 0.55, 11], mat: 'ledge', edges: 'nswe' },
+  { min: [4, 0, 11], max: [10, 0.45, 11.6], mat: 'ledge', edges: 'ns' },                         // bus-stop bench
+  { min: [-40, 0, 13.4], max: [40, 0.15, 14], mat: 'curb', edges: 'n' },                        // curb along the road
+  { min: [-22, 0, 23], max: [-16, 0.45, 23.6], mat: 'ledge', edges: 'ns' },                     // schoolyard benches
+  { min: [-22, 0, 27], max: [-16, 0.45, 27.6], mat: 'ledge', edges: 'ns' },
+  { min: [12, 0, 23], max: [19, 0.2, 29], mat: 'pad', edges: 'nswe' },                          // two-tier pad
+  { min: [13.5, 0, 24.5], max: [17.5, 0.44, 27.5], mat: 'pad', edges: 'nswe' },
+  { min: [-50, 0, -46], max: [50, 8, -36], mat: 'building' },                                   // buildings round the block
+  { min: [-50, 0, 36], max: [50, 6, 46], mat: 'building' },
+  { min: [-50, 0, -36], max: [-44, 8, 36], mat: 'building' },
+  { min: [44, 0, -36], max: [50, 6, 36], mat: 'building' },
 ];
-// the hubba: a ledge that runs down beside the stairs
-const HUBBA = { x: -4.7, w: 0.6, top0: V(0, PLAZA_H + 0.38, -14.35), top1: V(0, 0.48, -11.9) };
-// the hubba is a solid sloped block down to the ground: its top height along z, and the top's normal
-const hubbaTop = z => lerp(HUBBA.top0.y, HUBBA.top1.y, clamp((z - HUBBA.top0.z) / (HUBBA.top1.z - HUBBA.top0.z), 0, 1));
-const HUBBA_N = V(0, HUBBA.top1.z - HUBBA.top0.z, HUBBA.top0.y - HUBBA.top1.y).normalize();
-const inHubba = (x, z, pad = 0) => Math.abs(x - HUBBA.x) <= HUBBA.w / 2 + pad && z >= HUBBA.top0.z - pad && z <= HUBBA.top1.z + pad;
+// Stair sets: n drops from top to bottom, each tread long, descending along axis in direction dir from `at`.
+function stairs(axis, at, dir, a0, a1, top, bottom, n, tread) {
+  const out = [];
+  for (let i = 1; i < n; i++) {
+    const h = bottom + (top - bottom) * (n - i) / n, u0 = at + dir * tread * (i - 1), u1 = at + dir * tread * i;
+    const [lo, hi] = [Math.min(u0, u1), Math.max(u0, u1)];
+    const nose = axis === 'z' ? (dir > 0 ? 's' : 'n') : (dir > 0 ? 'e' : 'w');
+    out.push(axis === 'z' ? { min: [a0, 0, lo], max: [a1, h, hi], mat: 'step', nose } : { min: [lo, 0, a0], max: [hi, h, a1], mat: 'step', nose });
+  }
+  return out;
+}
+// a handrail (or a hubba) that follows a stair set, standing `off` beside it
+function stairLine(axis, at, dir, across, top, bottom, n, tread, lift0, lift1, back) {
+  const u0 = at - dir * back, u1 = at + dir * (tread * (n - 1) + 0.3), y0 = top + lift0, y1 = bottom + (top - bottom) / n + lift1;
+  return axis === 'z' ? [V(across, y0, u0), V(across, y1, u1)] : [V(u0, y0, across), V(u1, y1, across)];
+}
+BOXES.push(...stairs('z', -14, 1, -4, 4, PLAZA_H, 0, 4, 0.6));                 // main set down the plaza front
+BOXES.push(...stairs('z', -28, 1, -16, -10, TIER_H, PLAZA_H, 4, 0.6));         // tier set
+BOXES.push(...stairs('x', -22, -1, -24, -18, PLAZA_H, 0, 7, 0.5));             // the long 7 off the west end
+// sloped ledges: a block from the ground up to a top running from a to b, w wide
+const HUBBAS = [
+  { a: V(-4.7, PLAZA_H + 0.38, -14.35), b: V(-4.7, 0.48, -11.9), w: 0.6 },      // hubba beside the main set
+  { a: V(-21.65, PLAZA_H + 0.38, -24.6), b: V(-25.3, PLAZA_H / 7 + 0.16, -24.6), w: 0.6 }, // long hubba down the 7
+  { a: V(2.1, 1.35, 26.2), b: V(5.4, 0.35, 26.2), w: 0.5 },                    // ledge down the pyramid's east bank
+  { a: V(22, 0.55, 24), b: V(22, 0.02, 26), w: 3, noRails: true },              // kicker (launches north)
+];
+for (const h of HUBBAS) {
+  h.dir = V(h.b.x - h.a.x, 0, h.b.z - h.a.z); h.len = h.dir.length(); h.dir.normalize(); h.side = V(-h.dir.z, 0, h.dir.x);
+  const g = (h.b.y - h.a.y) / h.len; h.n = V(-g * h.dir.x, 1, -g * h.dir.z).normalize();
+}
+const hubbaLocal = (h, x, z) => { const dx = x - h.a.x, dz = z - h.a.z; return [dx * h.dir.x + dz * h.dir.z, dx * h.side.x + dz * h.side.z]; };
+const hubbaTopAt = (h, u) => lerp(h.a.y, h.b.y, clamp(u / h.len, 0, 1));
+function hubbaAt(x, z, pad = 0) {
+  for (const h of HUBBAS) { const [u, v] = hubbaLocal(h, x, z); if (u >= -pad && u <= h.len + pad && Math.abs(v) <= h.w / 2 + pad) return { h, u, v }; }
+  return null;
+}
 const RAILS = [
   { a: V(4.45, 1.86, -14.6), b: V(4.45, 0.62, -11.9), kind: 'Handrail', post: true },
+  (() => { const [a, b] = stairLine('z', -28, 1, -13, TIER_H, PLAZA_H, 4, 0.6, 0.58, 0.3, 0.6); return { a, b, kind: 'Handrail', post: true }; })(),
+  (() => { const [a, b] = stairLine('x', -22, -1, -17.55, PLAZA_H, 0, 7, 0.5, 0.58, 0.3, 0.6); return { a, b, kind: 'Handrail', post: true }; })(),
   { a: V(10, 0.42, -4), b: V(22, 0.42, -4), kind: 'Rail', post: true },
   { a: V(12, 0.32, 7), b: V(21, 0.32, 7), kind: 'Flatbar', post: true },
   { a: V(3, PLAZA_H + 0.42, -20), b: V(10, PLAZA_H + 0.42, -20), kind: 'Rail', post: true },
-  // the plaza lip either side of the stairs
-  { a: V(-14, PLAZA_H, -14), b: V(-4.05, PLAZA_H, -14), kind: 'Ledge' },
-  { a: V(4.05, PLAZA_H, -14), b: V(14, PLAZA_H, -14), kind: 'Ledge' },
+  { a: V(-38 - QP_D, arc(QP_D, QP_R, QP_D), -10.5), b: V(-38 - QP_D, arc(QP_D, QP_R, QP_D), 10.5), kind: 'Coping' },
+  { a: V(15.6, PLAZA_H + 0.42, -24), b: V(21.4, 0.42, -24), kind: 'Rail', post: true },      // down the plaza bank
+  { a: V(27, 0.42, 2), b: V(35.5, 0.42, 2), kind: 'Rail', post: true },                      // flat rail into the east bank
+  // the plaza and tier lips that drop off
+  { a: V(-22, PLAZA_H, -14), b: V(-5.05, PLAZA_H, -14), kind: 'Ledge' }, { a: V(4.05, PLAZA_H, -14), b: V(16, PLAZA_H, -14), kind: 'Ledge' },
+  { a: V(-22, PLAZA_H, -28), b: V(-22, PLAZA_H, -25.0), kind: 'Ledge' }, { a: V(-22, TIER_H, -36), b: V(-22, TIER_H, -28), kind: 'Ledge' }, { a: V(-22, PLAZA_H, -17.95), b: V(-22, PLAZA_H, -14), kind: 'Ledge' },
+  { a: V(-22, TIER_H, -28), b: V(-16.05, TIER_H, -28), kind: 'Ledge' }, { a: V(-9.95, TIER_H, -28), b: V(-6, TIER_H, -28), kind: 'Ledge' },
+  { a: V(-6, TIER_H, -31), b: V(-6, TIER_H, -28), kind: 'Ledge' },
 ];
-for (const dx of [-HUBBA.w / 2, HUBBA.w / 2])
-  RAILS.push({ a: V(HUBBA.x + dx, HUBBA.top0.y, HUBBA.top0.z), b: V(HUBBA.x + dx, HUBBA.top1.y, HUBBA.top1.z), kind: 'Hubba' });
+for (const h of HUBBAS) if (!h.noRails)
+  for (const s of [-h.w / 2, h.w / 2]) RAILS.push({ a: h.a.clone().addScaledVector(h.side, s), b: h.b.clone().addScaledVector(h.side, s), kind: 'Hubba' });
 for (const b of BOXES) {
   const y = b.max[1], e = b.edges || '';
   if (e.includes('n')) RAILS.push({ a: V(b.min[0], y, b.min[2]), b: V(b.max[0], y, b.min[2]), kind: 'Ledge' });
@@ -350,15 +411,20 @@ for (const b of BOXES) {
 for (const r of RAILS) { r.len = r.a.distanceTo(r.b); r.dir = r.b.clone().sub(r.a).normalize(); }
 
 function terrainNormal(x, z) {
-  const e = 0.05;
-  return V(-(terrainH(x + e, z) - terrainH(x - e, z)), 2 * e, -(terrainH(x, z + e) - terrainH(x, z - e))).normalize();
+  // slope from both sides, but ignore a side that falls off a feature's edge (a bank that sits on a box
+  // ends in a step down to bare ground, which isn't part of the surface you're on)
+  const e = 0.05, h = terrainH(x, z);
+  const slope = (lo, hi) => Math.abs(hi - h) > 0.2 ? (Math.abs(h - lo) > 0.2 ? 0 : (h - lo) / e) : Math.abs(h - lo) > 0.2 ? (hi - h) / e : (hi - lo) / (2 * e);
+  const sx = slope(terrainH(x - e, z), terrainH(x + e, z)), sz = slope(terrainH(x, z - e), terrainH(x, z + e));
+  return V(-sx, 1, -sz).normalize();
 }
 function groundAt(x, z, y) {
-  let h = terrainH(x, z), onBox = false, onHubba = false;
+  let h = terrainH(x, z), onBox = false, onHubba = null;
   for (const b of BOXES)
     if (x >= b.min[0] && x <= b.max[0] && z >= b.min[2] && z <= b.max[2] && b.max[1] <= y + STEP && b.max[1] > h) { h = b.max[1]; onBox = true; }
-  if (inHubba(x, z)) { const t = hubbaTop(z); if (t <= y + STEP && t > h) { h = t; onHubba = true; onBox = false; } }
-  return { h, n: onHubba ? HUBBA_N.clone() : onBox ? UP.clone() : terrainNormal(x, z) };
+  const hb = hubbaAt(x, z);
+  if (hb) { const t = hubbaTopAt(hb.h, hb.u); if (t <= y + STEP && t > h) { h = t; onHubba = hb.h; onBox = false; } }
+  return { h, n: onHubba ? onHubba.n.clone() : onBox ? UP.clone() : terrainNormal(x, z) };
 }
 let lastHitLow = false; // was the last thing collideBoxes hit low enough to be a curb?
 function collideBoxes(p, v) {
@@ -392,10 +458,12 @@ function collideBoxes(p, v) {
       lastHitLow = false; return Math.max(0, -vn);
     }
   }
-  // the hubba's sides and ends
-  if (inHubba(p.x, p.z, r) && p.y < hubbaTop(p.z) - 0.08) {
-    const x0 = HUBBA.x - HUBBA.w / 2 - r, x1 = HUBBA.x + HUBBA.w / 2 + r, z0 = HUBBA.top0.z - r, z1 = HUBBA.top1.z + r;
-    const [d, nx, nz] = [[p.x - x0, -1, 0], [x1 - p.x, 1, 0], [p.z - z0, 0, -1], [z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0])[0];
+  // sloped ledges: their sides and ends, in the ledge's own frame
+  const hb = hubbaAt(p.x, p.z, r);
+  if (hb && p.y < hubbaTopAt(hb.h, hb.u) - 0.08) {
+    const { h, u, v } = hb, hw = h.w / 2 + r;
+    const [d, du, dv] = [[u + r, -1, 0], [h.len + r - u, 1, 0], [v + hw, 0, -1], [hw - v, 0, 1]].sort((a, c) => a[0] - c[0])[0];
+    const nx = du * h.dir.x + dv * h.side.x, nz = du * h.dir.z + dv * h.side.z;
     p.x += nx * d; p.z += nz * d;
     const vn = v.x * nx + v.z * nz;
     if (vn < 0) { v.x -= 1.2 * vn * nx; v.z -= 1.2 * vn * nz; v.multiplyScalar(0.85); }
@@ -552,7 +620,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fc4dc);
-scene.fog = new THREE.Fog(0x9fc4dc, 45, 110);
+scene.fog = new THREE.Fog(0x9fc4dc, 60, 140);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 400);
 scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a5550, 1.1));
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
@@ -572,24 +640,26 @@ function gridTexture(base, line) {
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-{ // ground mesh straight from terrainH
-  const size = 2 * WORLD + 4, seg = MOBILE ? 200 : 330;
-  const geo = new THREE.PlaneGeometry(size, size, seg, seg); geo.rotateX(-Math.PI / 2);
-  const pos = geo.attributes.position, colors = [];
-  const flat = new THREE.Color(0xb9b6ae), ramp = new THREE.Color(0xa7aeb3), road = new THREE.Color(0x5f6166);
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i), h = terrainH(x, z);
-    pos.setY(i, h);
-    const n = terrainNormal(x, z);
-    const c = n.y < 0.985 || h > 0.3 ? ramp.clone() : z > 20.1 && z < 22.6 ? road.clone() : flat.clone();
-    colors.push(c.r, c.g, c.b);
+{ // flat ground, then a fine mesh for each sloped feature straight from terrainH (drawn just in front of the flat)
+  const size = 2 * WORLD + 8;
+  const gtex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)'); gtex.repeat.set(size / 2, size / 2);
+  const flat = new THREE.Mesh(new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: gtex, color: 0xb9b6ae, roughness: 0.92 }));
+  flat.receiveShadow = true; scene.add(flat);
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(2 * WORLD, 6.5).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x5f6166, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+  road.position.set(0, 0, 17.25); road.receiveShadow = true; scene.add(road);
+  const dash = new THREE.MeshBasicMaterial({ color: 0xe9e4d6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+  for (let x = -40; x < 40; x += 4) { const d = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.15).rotateX(-Math.PI / 2), dash); d.position.set(x + 1, 0.001, 17.25); scene.add(d); }
+  const rampCol = new THREE.Color(0xa7aeb3);
+  for (const t of TERRAIN) {
+    const sx = t.x1 - t.x0, sz = t.z1 - t.z0, nx = Math.ceil(sx / 0.15), nz = Math.ceil(sz / 0.15);
+    const geo = new THREE.PlaneGeometry(sx, sz, nx, nz).rotateX(-Math.PI / 2);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const x = pos.getX(i) + (t.x0 + t.x1) / 2, z = pos.getZ(i) + (t.z0 + t.z1) / 2; pos.setY(i, terrainH(x, z)); }
+    geo.computeVertexNormals();
+    const tex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)'); tex.repeat.set(sx / 2, sz / 2);
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, color: rampCol, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+    m.position.set((t.x0 + t.x1) / 2, 0, (t.z0 + t.z1) / 2); m.receiveShadow = m.castShadow = true; scene.add(m);
   }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geo.computeVertexNormals();
-  const tex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)'); tex.repeat.set(size / 2, size / 2);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.92 }));
-  mesh.receiveShadow = true; mesh.castShadow = true;
-  scene.add(mesh);
 }
 const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, metalness: 0.85, roughness: 0.3 });
 function windowTexture() {
@@ -614,20 +684,29 @@ for (const b of BOXES) {
   m.position.set((b.min[0] + b.max[0]) / 2, b.min[1] + sy / 2, (b.min[2] + b.max[2]) / 2);
   m.castShadow = m.receiveShadow = true; scene.add(m);
 }
-{ // painted safety strips on the plaza lip and the stair nosings, so drop-offs read from a low camera
+{ // painted safety strips on the drop-off lips and the stair nosings, so edges read from a low camera
   const paint = new THREE.MeshBasicMaterial({ color: 0xe3bf45 });
   const strip = (x0, x1, z0, z1, y) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), paint);
     m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y + 0.004, (z0 + z1) / 2); scene.add(m); };
-  strip(-14, -4, -14.14, -14, PLAZA_H); strip(4, 14, -14.14, -14, PLAZA_H); strip(-14, -13.86, -30, -14, PLAZA_H);
-  for (const b of BOXES) if (b.mat === 'step') strip(b.min[0], b.max[0], b.max[2] - 0.1, b.max[2], b.max[1]);
+  for (const rl of RAILS) if (rl.kind === 'Ledge' && Math.abs(rl.a.y - PLAZA_H) < 0.01 || Math.abs(rl.a.y - TIER_H) < 0.01 && rl.kind === 'Ledge') {
+    const [x0, x1] = [Math.min(rl.a.x, rl.b.x), Math.max(rl.a.x, rl.b.x)], [z0, z1] = [Math.min(rl.a.z, rl.b.z), Math.max(rl.a.z, rl.b.z)];
+    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, top = (x, z) => Math.abs(groundAt(x, z, rl.a.y + 0.1).h - rl.a.y) < 0.02; // paint the side that's on top
+    if (x1 - x0 > z1 - z0) top(mx, z0 - 0.07) ? strip(x0, x1, z0 - 0.14, z0, rl.a.y) : strip(x0, x1, z0, z0 + 0.14, rl.a.y);
+    else top(x0 - 0.07, mz) ? strip(x0 - 0.14, x0, z0, z1, rl.a.y) : strip(x0, x0 + 0.14, z0, z1, rl.a.y);
+  }
+  for (const b of BOXES) if (b.mat === 'step') {
+    const y = b.max[1];
+    if (b.nose === 's') strip(b.min[0], b.max[0], b.max[2] - 0.1, b.max[2], y); else if (b.nose === 'n') strip(b.min[0], b.max[0], b.min[2], b.min[2] + 0.1, y);
+    else if (b.nose === 'w') strip(b.min[0], b.min[0] + 0.1, b.min[2], b.max[2], y); else strip(b.max[0] - 0.1, b.max[0], b.min[2], b.max[2], y);
+  }
 }
-{ // the hubba: a solid concrete block from the ground up to a top that runs down beside the stairs
-  const xl = HUBBA.x - HUBBA.w / 2, xr = HUBBA.x + HUBBA.w / 2, z0 = HUBBA.top0.z, z1 = HUBBA.top1.z, y0 = HUBBA.top0.y, y1 = HUBBA.top1.y;
-  const c = [[xl, 0, z0], [xr, 0, z0], [xr, 0, z1], [xl, 0, z1], [xl, y0, z0], [xr, y0, z0], [xr, y1, z1], [xl, y1, z1]];
+for (const h of HUBBAS) { // sloped ledges: a solid concrete block from the ground up to the sloped top
+  const hw = h.w / 2, P = (u, v, y) => [h.a.x + h.dir.x * u + h.side.x * v, y, h.a.z + h.dir.z * u + h.side.z * v];
+  const c = [P(0, -hw, 0), P(0, hw, 0), P(h.len, hw, 0), P(h.len, -hw, 0), P(0, -hw, h.a.y), P(0, hw, h.a.y), P(h.len, hw, h.b.y), P(h.len, -hw, h.b.y)];
   const quads = [[4, 7, 6, 5], [0, 1, 2, 3], [0, 4, 5, 1], [3, 2, 6, 7], [0, 3, 7, 4], [1, 5, 6, 2]];
   const pts = []; for (const [a, b, d, e] of quads) for (const i of [a, b, d, a, d, e]) pts.push(...c[i]);
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x9a9ea3, roughness: 0.9, side: THREE.DoubleSide }));
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: h.noRails ? 0xb48a5a : 0x9a9ea3, roughness: 0.9, side: THREE.DoubleSide }));
   m.castShadow = m.receiveShadow = true; scene.add(m);
 }
 function tube(a, b, r, mat) {
@@ -727,7 +806,7 @@ const pose = { push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide:
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
    ============================================================ */
-const SPAWN = { pos: V(0, 0, 6), yaw: 0 };
+const SPAWN = { pos: V(2, 0, 8), yaw: 0 };
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
@@ -1306,7 +1385,7 @@ const cam = { yaw: 0, pivot: S.pos.clone(), dist: 3.6 };
 function solidAt(q) {
   if (q.y < terrainH(q.x, q.z) + 0.1) return true;
   for (const b of BOXES) if (q.x > b.min[0] - 0.15 && q.x < b.max[0] + 0.15 && q.z > b.min[2] - 0.15 && q.z < b.max[2] + 0.15 && q.y < b.max[1] + 0.1 && q.y > b.min[1] - 0.1) return true;
-  return inHubba(q.x, q.z, 0.15) && q.y < hubbaTop(q.z) + 0.1;
+  const hb = hubbaAt(q.x, q.z, 0.15); return !!hb && q.y < hubbaTopAt(hb.h, hb.u) + 0.1;
 }
 function updateCamera(dt) {
   cam.pivot.x = damp(cam.pivot.x, S.pos.x, T.camLag * 1.6, dt);
@@ -1820,7 +1899,8 @@ function frame(now) {
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
-  updateCamera(dt);
+  const co = window.__camOverride; // test hook: a fixed camera for screenshots
+  if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
   updateHud(dt);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);

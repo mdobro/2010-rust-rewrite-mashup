@@ -250,25 +250,44 @@ Safety yellow paint marks the plaza lip and the nosing of each step so the
 edges read from a distance, and the sides of ledges and boxes are darker than
 their tops.
 
-## The street
+## The map
 
-A block of street spots inside a ring of buildings:
+A city block of street spots in three zones, inside a ring of buildings:
 
-- **The plaza**: a raised plaza to the north with a three-step stair set down
-  its front. A handrail runs down the right of the stairs and a hubba ledge
-  down the left; the plaza lip either side of the stairs grinds. On top: a
-  bench and a flat rail. Ride up the bank on its east side to get back on.
-- **Ledges**: a long street ledge and a bench to the west, and a low manual
-  pad.
-- **Rails**: a long flat rail and a low flatbar to the east.
-- **The road**: a long red curb you can grind, the road, and a street bank
-  against the south buildings.
+- **The plaza (north)**: a raised plaza.
+  - The main four-drop stair set down its front, with a handrail on the right
+    and a hubba on the left.
+  - A long seven-stair off the west end, with a handrail on one side and a
+    long hubba on the other.
+  - An upper tier at the back, reached by a bank from the plaza. It has its
+    own stair set with a centre handrail.
+  - On top: a bench, a flat rail and a manual pad.
+  - The plaza and tier lips grind (yellow edges).
+  - A bank on the east side gets you up from the street, with a rail running
+    down it.
+- **The street (middle)**:
+  - a long ledge, a bench, two planters and a bus-stop bench;
+  - a low pad, a gap, then a higher pad;
+  - a flat rail and a flatbar;
+  - a flat rail that runs into a bank against the east wall;
+  - a quarter pipe with grindable coping along the west wall (about 2.1 m,
+    nearly vertical at the top). The pipe's ends fade into banks.
+- **The schoolyard (south)**, past a grindable curb and the road:
+  - a pyramid funbox with a ledge running down its east bank;
+  - a kicker;
+  - two benches;
+  - a two-tier manual pad;
+  - a bank up to the south wall.
+
+Every slope fades out into banks rather than ending in a drop, and banks run
+right up to the walls, so there's nowhere to get stuck.
 
 ## Things to try
 
 1. Push to full speed and carve S-turns. Does turning feel weighty or twitchy?
    (*Turn rate*, *Grip*, *Speed kept when carving*)
-2. Roll off the plaza and kickflip down the stairs.
+2. Roll off the plaza and kickflip down the stairs, or take on the seven off
+   the west end.
 3. Ollie onto the handrail or the hubba from the top of the stairs, holding a
    direction on the trick stick to pick the grind. On the handrail, pop about
    two to four metres before the top of the rail.
