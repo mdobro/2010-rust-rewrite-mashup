@@ -160,7 +160,7 @@
     <ul class="touch-list touch-only">
       <li><b>Left thumb steers.</b> A stick appears wherever you touch the left side. You roll on your own; push up to go faster, pull down to brake, hold left or right in the air to spin.</li>
       <li><b>Right thumb does tricks</b>, also wherever you touch. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
-      <li>In the air the same motions are late flips. Hold the right stick in a direction to grab. Tap the right side for a quick ollie.</li>
+      <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail. Tap the right side for a quick ollie.</li>
     </ul>
     <div class="table-wrap desk-only">
     <table class="controls">
@@ -168,7 +168,7 @@
       <tr><td>Carve / spin in air</td><td>Left stick ← →</td><td><kbd>A</kbd> <kbd>D</kbd></td></tr>
       <tr><td>Push / brake</td><td>A, or left stick ↑ / ↓</td><td><kbd>W</kbd> <kbd>S</kbd></td></tr>
       <tr><td>Ollie and flip tricks</td><td>Right stick: down, flick up (Skate's flick-it)</td><td><kbd>Space</kbd> (hold, release), then <kbd>Q</kbd> + WASD in the air</td></tr>
-      <tr><td>Grab</td><td>LT / RT, or hold right stick in the air</td><td><kbd>E</kbd></td></tr>
+      <tr><td>Set the board up for a grind</td><td>Hold the right stick in the air</td><td>Arrow keys</td></tr>
       <tr><td>Grind (auto near rails; or hold)</td><td>LB</td><td><kbd>Shift</kbd></td></tr>
       <tr><td>Respawn</td><td>Menu</td><td><kbd>R</kbd></td></tr>
       <tr><td>Tuning sliders</td><td>View</td><td><kbd>Tab</kbd></td></tr>
@@ -215,7 +215,7 @@ const DEFAULTS = {
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   autoPush: true, autoPushSpeed: 6.5, stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, crouchSettle: 0.2, swingTime: 0.16, grabHold: 0.25, tapOllie: true, holdReleasePops: false,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, shuv360: 120, tapOllie: true, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -245,10 +245,12 @@ const SPEC = [
   ['Trick stick', [
     ['flickRim', 'How far counts as a direction', 0.3, 0.95, 0.01],
     ['flickTime', 'Max time from pull to flick (s)', 0.08, 0.6, 0.01],
-    ['crouchSettle', 'Held this long, the crouch counts as plain down (s)', 0.05, 0.6, 0.01],
-    ['swingTime', 'Down-diagonal-up counts as a swing within (s)', 0.06, 0.4, 0.01],
+    ['nudge', 'Hardflip / inward heel: sideways nudge (°)', 5, 60, 1],
+    ['swingTime', 'Nudge counts if the flick follows within (s)', 0.06, 0.5, 0.01],
+    ['sweepVarial', 'Varials: swing in from the side (°)', 10, 60, 1],
+    ['sweep360', '360 flips: swing in from the side (°)', 40, 120, 1],
+    ['shuv360', '360 shuvits: sweep round the bottom (°)', 80, 200, 1],
     ['flickSettle', 'Ignore stick after a trick (s)', 0, 0.5, 0.01],
-    ['grabHold', 'Hold a direction in the air to grab (s)', 0.05, 0.8, 0.01],
     ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
   ]],
   ['Touch', [
@@ -256,7 +258,7 @@ const SPEC = [
     ['stickRadius', 'Stick size (px)', 30, 100, 1], ['tapOllie', 'Tap the right side to ollie', 'bool'],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v2';
+const STORE_KEY = 'skate-feel-toy-v3';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -431,9 +433,7 @@ function sampleInput() {
   FL.cancelPop = false;
   if (FL.popNow) { FL.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
   IN.ollie = ollie;
-  const trig = pb(6) || pb(7);
-  IN.grab = keys.has('KeyE') || trig || FL.grab;
-  if (trig && !FL.grab) FL.grabName = pb(7) ? 'Backside Grab' : 'Frontside Grab';
+  IN.grab = false; // no grabs: in the air the trick stick sets the board up for a grind instead
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
 }
 function trickDir() {
@@ -999,7 +999,8 @@ function updateVisuals(dt, time) {
   mBasis.makeBasis(r, bu, f.clone().negate());
   boardOrient.quaternion.setFromRotationMatrix(mBasis);
   // grind stance: turn and tip the board about the point that rides the rail
-  const gk = S.rail ? GRINDS[S.grindKey] : GRINDS.C;
+  const setup = !S.rail && !S.grounded && !S.trick && S.bail <= 0;
+  const gk = S.rail ? GRINDS[S.grindKey] : setup ? GRINDS[grindKey()] : GRINDS.C;
   pose.gYaw = dampAngle(pose.gYaw, gk.yaw, 18, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, 18, dt);
   pose.gPivot = damp(pose.gPivot, gk.pivot, 18, dt); pose.gDrop = damp(pose.gDrop, gk.drop, 18, dt);
   boardOrient.position.set(0, 0, 0);
@@ -1020,53 +1021,59 @@ function updateVisuals(dt, time) {
   // ---- the rider ----
   S.steerVis = damp(S.steerVis, S.grounded || S.rail ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
   const air = !S.grounded && !S.rail;
-  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.grabT > 0 ? 1 : 0, S.rail ? 0.3 : 0, air ? 0.25 : 0) + S.landDip * 2.5, 0, 1);
+  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? 0.3 : 0, air ? 0.25 : 0) + S.landDip * 2.5, 0, 1);
   pose.crouch = damp(pose.crouch, crouchTarget, S.landDip > 0.05 ? 25 : 14, dt);
   const crouchAmt = pose.crouch;
   const boardLift = boardFlip.position.y;
-  // push cycle: front foot turns to the nose, hips open up, back foot steps down beside
-  // the board, sweeps back along the ground as the board rolls, then returns to the tail
+  // push: the hips turn to face the nose, the back foot reaches forward and plants beside
+  // the front foot, drives back along the ground like a stride, then the knee lifts and it returns
   const pushDur = clamp(T.pushInterval * 0.95, 0.25, 0.6);
   pose.push = Math.max(0, pose.push - dt);
-  pose.pushBlend = damp(pose.pushBlend, pose.push > 0 && S.grounded ? 1 : 0, pose.push > 0 ? 12 : 5, dt);
+  if (pose.freezePP != null) pose.push = pushDur * (1 - pose.freezePP); // test hook: hold one phase of the push
+  pose.pushBlend = damp(pose.pushBlend, pose.push > 0 && S.grounded ? 1 : 0, pose.push > 0 ? 14 : 5, dt);
   const pb = pose.pushBlend, pp = pose.push > 0 ? 1 - pose.push / pushDur : 1;
-  // feet over the bolts; during flips and grabs they follow the board up, so the knees tuck
   const baseY = DECK_TOP + 0.075, ankleY = baseY + (S.bail > 0 ? 0 : boardLift);
-  const frontFoot = V(0.02, ankleY, lerp(-0.22, -0.1, pb)), backFoot = V(0.02, ankleY, 0.24);
+  const frontFoot = V(lerp(0.02, 0.0, pb), ankleY, lerp(-0.22, -0.13, pb)), backFoot = V(0.02, ankleY, 0.24);
+  let standDip = 0;
   if (pose.push > 0 && S.grounded) {
-    const groundY = 0.075, onGroundZ0 = -0.02, onGroundZ1 = 0.55;
-    if (pp < 0.25) { const k = pp / 0.25; backFoot.set(lerp(0.02, 0.2, k), lerp(ankleY, groundY, k) + Math.sin(k * Math.PI) * 0.08, lerp(0.24, onGroundZ0, k)); }
-    else if (pp < 0.72) { const k = (pp - 0.25) / 0.47; backFoot.set(0.2, groundY, lerp(onGroundZ0, onGroundZ1, k)); }
-    else { const k = (pp - 0.72) / 0.28; backFoot.set(lerp(0.2, 0.02, k), lerp(groundY, ankleY, k) + Math.sin(k * Math.PI) * 0.12, lerp(onGroundZ1, 0.24, k)); }
+    const gY = 0.075, plant = V(0.2, gY, -0.3), drive = V(0.22, gY, 0.68), tail = V(0.02, ankleY, 0.24);
+    if (pp < 0.22) {          // reach: knee up, foot swings forward past the front foot
+      const k = pp / 0.22; backFoot.lerpVectors(tail, plant, k); backFoot.y += Math.sin(k * Math.PI) * 0.24;
+    } else if (pp < 0.68) {   // drive: foot on the ground, pushing back as the leg straightens
+      const k = (pp - 0.22) / 0.46; backFoot.lerpVectors(plant, drive, k * k * (3 - 2 * k)); standDip = Math.sin(k * Math.PI) * 0.09;
+    } else {                  // recover: lift the knee and bring the foot back to the tail
+      const k = (pp - 0.68) / 0.32; backFoot.lerpVectors(drive, tail, k); backFoot.y += Math.sin(k * Math.PI) * 0.2;
+    }
   }
   // hips: lower in a crouch (and on the standing leg while pushing), upper body leans over the
-  // toes and into carves, opens toward the nose to push, and stays partly upright on steep ramps
+  // toes and into carves, turns to face the nose to push, and stays partly upright on steep ramps
   const worldUpLocal = UP.clone().applyQuaternion(boardOrient.quaternion.clone().invert());
   qA.setFromUnitVectors(UP, UP.clone().lerp(worldUpLocal, S.rail ? 0.6 : S.grounded ? 0.45 : 0.2).normalize());
-  const grabLean = S.grabT > 0 ? 0.45 : 0;
-  qB.setFromAxisAngle(UP, 0.85 * pb);
-  qA.multiply(qB);
-  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt + grabLean) * (1 - 0.5 * pb) - S.steerVis * 0.3);
+  qB.setFromAxisAngle(V(1, 0, 0), -0.22 * pb); qA.multiply(qB);            // lean toward the nose while pushing
+  qB.setFromAxisAngle(UP, 1.35 * pb); qA.multiply(qB);                     // hips square up to the nose
+  qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt) * (1 - pb) - S.steerVis * 0.3);
   pelvis.quaternion.copy(qA).multiply(qB);
   // the hips don't follow the board up: when it rises the knees tuck instead
-  pelvis.position.set(-0.05 - 0.07 * crouchAmt, baseY + lerp(0.7, 0.46, crouchAmt) - 0.1 * pb, lerp(0.01, -0.1, pb));
+  pelvis.position.set(lerp(-0.05 - 0.07 * crouchAmt, 0.04, pb), baseY + lerp(0.7, 0.46, crouchAmt) - 0.06 * pb - standDip, lerp(0.01, -0.12, pb));
   // head turns to look where you're going (back over the other shoulder when fakie)
   pose.lookFwd = damp(pose.lookFwd, fakie() ? -1 : 1, 6, dt);
-  head.rotation.set(0, 1.15 * pose.lookFwd - 0.85 * pb * Math.max(0, pose.lookFwd), 0);
-  // legs: knees bend out over the toes (the front knee points at the nose while pushing)
-  const frontPole = V(lerp(1, 0.3, pb), 0.1, lerp(-0.35, -1, pb)), backPole = V(lerp(1, 0.4, pb), 0.1, 0.35);
+  head.rotation.set(0, 1.15 * pose.lookFwd - 1.35 * pb * Math.max(0, pose.lookFwd), 0);
+  // legs: knees bend out over the toes; while pushing both knees point at the nose
+  const frontPole = V(lerp(1, 0.15, pb), 0.1, lerp(-0.35, -1, pb)), backPole = V(lerp(1, 0.15, pb), lerp(0.1, 0.3, pb), lerp(0.35, -1, pb));
   for (const [side, foot, hz, pole] of [['front', frontFoot, -0.09, frontPole], ['back', backFoot, 0.09, backPole]]) {
     const L = LIMBS[side];
     limbIK(L.thigh, L.shin, toRig(V(0, -0.04, hz)), foot, pole, THIGH, SHIN);
-    L.shoe.position.set(foot.x + 0.03, foot.y - 0.04, foot.z);
-    L.shoe.rotation.set(0, side === 'front' ? lerp(0.25, 1.35, pb) : lerp(-0.15, 1.2, pb * (pose.push > 0 ? 1 : 0)), 0);
+    L.shoe.position.set(foot.x + 0.03 * (1 - pb), foot.y - 0.04, foot.z - 0.03 * pb);
+    L.shoe.rotation.set(0, side === 'front' ? lerp(0.25, 1.5, pb) : lerp(-0.15, 1.5, pb * (pose.push > 0 ? 1 : 0)), 0);
   }
-  // arms out along the board for balance (swinging with the push); on a grab the back hand reaches the toe edge
-  const sway = Math.sin(time * 1.7) * 0.03, swing = pose.push > 0 ? Math.sin(pp * Math.PI * 2) * 0.18 * pb : 0;
-  const frontHand = toRig(V(0.14 + 0.1 * pb, 0.12 + sway - S.steerVis * 0.12, -0.52 + swing));
-  const backHand = S.grabT > 0 ? V(0.13, DECK_TOP + boardLift + 0.02, 0.04) : toRig(V(0.08 + 0.1 * pb, 0.1 - sway + S.steerVis * 0.12, 0.5 - swing));
-  limbIK(LIMBS.front.upper, LIMBS.front.fore, toRig(V(0, 0.5, -0.19)), frontHand, V(-0.3, -1, -0.4), UPPER_ARM, FOREARM);
-  limbIK(LIMBS.back.upper, LIMBS.back.fore, toRig(V(0, 0.5, 0.19)), backHand, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
+  // arms: out along the board for balance; while pushing they hang and swing like walking
+  const sway = Math.sin(time * 1.7) * 0.03;
+  const stride = pose.push > 0 ? Math.sin(pp * Math.PI * 2 - Math.PI / 2) : 0; // back leg behind -> back arm forward
+  const shF = toRig(V(0, 0.5, -0.19)), shB = toRig(V(0, 0.5, 0.19));
+  const frontHand = toRig(V(0.14, 0.12 + sway - S.steerVis * 0.12, -0.52)).lerp(shF.clone().add(V(-0.08, -0.5, 0.22 * stride)), pb);
+  const backHand = toRig(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5)).lerp(shB.clone().add(V(0.08, -0.5, -0.22 * stride)), pb);
+  limbIK(LIMBS.front.upper, LIMBS.front.fore, shF, frontHand, V(lerp(-0.3, 0, pb), -1, lerp(-0.4, 0.6, pb)), UPPER_ARM, FOREARM);
+  limbIK(LIMBS.back.upper, LIMBS.back.fore, shB, backHand, V(lerp(-0.3, 0, pb), -1, lerp(0.4, 0.6, pb)), UPPER_ARM, FOREARM);
   // bail: topple off the heel side
   rig.rotation.set(0, 0, S.bail > 0 ? clamp((1.2 - S.bail) * 3, 0, 1.35) : 0);
   rig.position.set(S.bail > 0 ? -clamp((1.2 - S.bail) * 0.6, 0, 0.4) : 0, 0, 0);
@@ -1147,31 +1154,29 @@ $('intro').addEventListener('click', () => hideIntro());
 
 /* ============================================================
    Flick-it: Skate's right-stick trick motions, regular stance.
-   The stick's path is read as the 8 directions it reaches near its rim:
-     Ollie            down, up                Nollie tricks: the same paths upside down
-     Kickflip         down, up-right          (push up first, flick down)
-     Heelflip         down, up-left
-     FS / BS Shuvit   down, left / right
-     Hardflip         down, down-right, up
-     Inward Heelflip  down, down-left, up
-     Varial Kickflip  down-left, down, up-right
-     Varial Heelflip  down-right, down, up-left
-     360 Flip         left, down, up-right
-     Laserflip        right, down, up-left
-     360 Hardflip     right, down, up
-     360 Inward Heel  left, down, up
-     FS / BS 360 Shuv down-right … left / down-left … right (sweep round the bottom)
-   On the ground the pull loads a crouch and the flick pops; in the air the same
-   motions are late flips; holding the stick in one direction in the air grabs.
-   One recogniser per stick: the touch right stick and the controller right stick.
+   The stick's path round its rim is measured as an angle, so moves are judged by how far
+   you swing, not by exact boxes:
+     Ollie              pull down, flick up              Nollie anything: the same, upside down
+     Kickflip/Heelflip  pull down, flick up-right / up-left
+     FS / BS Shuvit     pull down, flick (or sweep) left / right
+     Hardflip           pull down, nudge right (≥ ~20°), flick up
+     Inward Heelflip    pull down, nudge left, flick up
+     Varial Kick/Heel   swing in from the left / right (≥ ~25°) to the bottom, flick up-right / up-left
+     360 Flip           swing in from the left (≥ ~70°), flick up-right
+     Laserflip          swing in from the right (≥ ~70°), flick up-left
+     360 Hardflip       swing in from the right (≥ ~70°), flick up
+     360 Inward Heel    swing in from the left (≥ ~70°), flick up
+     FS / BS 360 Shuv   sweep round the bottom (≥ ~120°) onto the left / right
+   On the ground the pull loads a crouch and the flick pops; in the air the same motions
+   are late flips. One recogniser per stick: the touch right stick and the controller's.
    ============================================================ */
 const SECT = ['R', 'UR', 'U', 'UL', 'L', 'DL', 'D', 'DR'];
-const LOWER = new Set(['D', 'DL', 'DR']), UPPER = new Set(['U', 'UL', 'UR']);
-const MIRROR = { R: 'R', L: 'L', U: 'D', D: 'U', UR: 'DR', DR: 'UR', UL: 'DL', DL: 'UL' };
-const GRAB_NAMES = { U: 'Nosegrab', D: 'Tailgrab', L: 'Melon', R: 'Indy', UL: 'Crail', UR: 'Nosegrab', DL: 'Stalefish', DR: 'Tailgrab' };
+const DEGS = 180 / Math.PI;
 const canPop = () => S.grounded || !!S.rail || (S.coyoteOk && S.sinceGround < T.coyoteTime);
+const angOf = (nx, ny) => Math.atan2(-ny, nx) * DEGS;           // 0 right, 90 up, ±180 left, -90 down
+const norm180 = a => ((a + 180) % 360 + 360) % 360 - 180;
 function makeFlick(opts) {
-  return { toks: [], loaded: false, loadT: 0, settleUntil: 0, needCenter: false, holdS: null, holdT: 0, active: false, ...opts };
+  return { rim: [], windup: null, leftT: 0, loaded: false, loadT: 0, settleUntil: 0, needCenter: false, active: false, pending: null, ...opts };
 }
 function flickLoad(f, on) {
   if (on && !f.loaded && canPop()) { f.loaded = true; f.loadT = performance.now(); FL.ollie = true; }
@@ -1179,100 +1184,98 @@ function flickLoad(f, on) {
   f.onLoaded && f.onLoaded(f.loaded);
 }
 function flickCancel(f) { if (f.loaded) { FL.cancelPop = true; flickLoad(f, false); } }
-// Read a finished path (already flipped for nollies) into a trick name.
-function readPath(toks) {
-  const F = toks[toks.length - 1];
-  let iL = -1; for (let i = toks.length - 2; i >= 0; i--) if (LOWER.has(toks[i].s)) { iL = i; break; }
-  if (iL < 0) return null;
-  let iD = iL; for (let i = iL; i >= 0; i--) if (toks[i].s === 'D') { iD = i; break; }
-  // a diagonal only counts as part of the swing when the whole swing out of the crouch is quick;
-  // drifting onto it while crouched and then flicking is just an ollie
-  const quickSwing = (F.t0 ?? F.t) - toks[iD].t < T.swingTime * 1000;
-  let mid = null; if (quickSwing) for (let i = iD + 1; i < toks.length - 1; i++) if (toks[i].s === 'DR' || toks[i].s === 'DL') mid = toks[i].s;
-  // walk back round the rim from the pull to find where the swing started
-  let pre = null, k = SECT.indexOf(toks[iD].s);
-  for (let i = iD - 1; i >= 0; i--) {
-    const si = SECT.indexOf(toks[i].s), step = (si - k + 8) % 8;
-    if (step !== 1 && step !== 7) break;
-    if (toks[i + 1].t - toks[i].t > 300) break;
-    pre = toks[i].s; k = si;
-  }
-  if (toks[iD].s !== 'D' && !pre && (F.t0 ?? F.t) - (toks[iD].t0 ?? toks[iD].t) < T.swingTime * 1500) pre = toks[iD].s;
-  const fs = F.s;
-  if (fs === 'U') return pre === 'L' ? '360 Inward Heelflip' : pre === 'R' ? '360 Hardflip' : mid === 'DR' ? 'Hardflip' : mid === 'DL' ? 'Inward Heelflip' : 'Ollie';
-  if (fs === 'UR') return pre === 'L' ? '360 Flip' : pre === 'DL' ? 'Varial Kickflip' : 'Kickflip';
-  if (fs === 'UL') return pre === 'R' ? 'Laserflip' : pre === 'DR' ? 'Varial Heelflip' : 'Heelflip';
-  if (fs === 'L') return pre === 'DR' || pre === 'R' ? 'FS 360 Pop Shuvit' : 'FS Pop Shuvit';
-  if (fs === 'R') return pre === 'DL' || pre === 'L' ? 'BS 360 Pop Shuvit' : 'BS Pop Shuvit';
-  return null;
+// Name a flick: w = the rim path before the stick crossed the middle, arrival = where it landed.
+function nameFlick(w, arrival, quickMs) {
+  // pull down (or nollie push up): whichever extreme the stick reached last
+  let iLo = -1, iHi = -1;
+  for (let i = 0; i < w.length; i++) { if (w[i].sin < -0.7) iLo = i; if (w[i].sin > 0.7) iHi = i; }
+  if (iLo < 0 && iHi < 0) return null;                             // never pulled: not a flick
+  const nollie = iHi > iLo;
+  const m = a => nollie ? -a : a;                                  // mirror nollies into regular space
+  const W = w.map(s => ({ a: m(s.a), t: s.t, sin: nollie ? -s.sin : s.sin }));
+  let iE = 0; for (let i = 1; i < W.length; i++) if (W[i].sin <= W[iE].sin + 0.02) iE = i; // the (latest) bottom of the pull
+  const pre = W[iE].a - W[0].a;                                    // + swung in from the left, - from the right
+  const post = W[W.length - 1].a - W[iE].a;                        // + nudged right, - nudged left (before the flick)
+  const quick = quickMs <= T.swingTime * 1000;
+  const fa = norm180(m(arrival));
+  let name = null;
+  if (fa > 65 && fa < 115) {
+    name = pre >= T.sweep360 ? '360 Inward Heelflip' : pre <= -T.sweep360 ? '360 Hardflip'
+      : quick && post >= T.nudge ? 'Hardflip' : quick && post <= -T.nudge ? 'Inward Heelflip' : 'Ollie';
+  } else if (fa >= 15 && fa <= 65) {
+    name = pre >= T.sweep360 ? '360 Flip' : pre >= T.sweepVarial ? 'Varial Kickflip' : 'Kickflip';
+  } else if (fa >= 115 && fa <= 165) {
+    name = pre <= -T.sweep360 ? 'Laserflip' : pre <= -T.sweepVarial ? 'Varial Heelflip' : 'Heelflip';
+  } else if (fa > -30 && fa < 15) name = pre <= -T.sweep360 ? 'BS 360 Pop Shuvit' : 'BS Pop Shuvit';
+  else if (fa > 165 || fa < -150) name = pre >= T.sweep360 ? 'FS 360 Pop Shuvit' : 'FS Pop Shuvit';
+  if (!name) return null;
+  return nollie ? (name === 'Ollie' ? 'Nollie' : 'Nollie ' + name) : name;
 }
-function flickTry(f, now, final) {
-  const toks = f.toks; if (toks.length < 2) return false;
-  const F = toks[toks.length - 1];
-  const first = toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
-  if (!first) return false;
-  const nollie = UPPER.has(first.s);
-  const path = nollie ? toks.map(t => ({ s: MIRROR[t.s], t: t.t, t0: t.t0 })) : toks;
-  const fs = path[path.length - 1].s;
-  if (!(UPPER.has(fs) || fs === 'L' || fs === 'R')) return false;
-  // sideways finishes wait a moment in case the swing carries on (e.g. round to up)
-  if ((fs === 'L' || fs === 'R') && !final && now - F.t < 70) return false;
-  let iL = -1; for (let i = path.length - 2; i >= 0; i--) if (LOWER.has(path[i].s)) { iL = i; break; }
-  if (iL < 0 || F.t - path[iL].t > T.flickTime * 1000) return false;
-  const name = readPath(path);
-  if (!name) return false;
-  flickFire(f, nollie ? (name === 'Ollie' ? 'Nollie' : 'Nollie ' + name) : name, now, F.t - path[iL].t);
-  return true;
+// Shuvits can also be a sweep round the bottom (or top) onto a side without crossing the middle.
+function sideSweep(f, now) {
+  const r = f.rim; if (r.length < 3) return null;
+  const cur = r[r.length - 1];
+  if (Math.abs(cur.sin) > 0.4) return null;
+  let iB = -1; for (let i = r.length - 2; i >= 0; i--) if (Math.abs(r[i].sin) > 0.85) { iB = i; break; }
+  if (iB < 0 || cur.t - r[iB].t > T.flickTime * 1000 || Math.abs(cur.a - r[iB].a) < 55) return null;
+  const nollie = r[iB].sin > 0;
+  const total = Math.abs(cur.a - r[0].a), toLeft = Math.abs(norm180(cur.a)) > 90;
+  const name = (toLeft ? 'FS' : 'BS') + (total >= T.shuv360 ? ' 360' : '') + ' Pop Shuvit';
+  return nollie ? 'Nollie ' + name : name;
 }
 function flickFire(f, name, now, flickMs) {
+  f.pending = null;
   if (canPop()) {
     const speed = clamp(1 - (flickMs - 40) / (T.flickTime * 1000), 0, 1); // faster flick, higher pop
     S.crouch = Math.max(S.crouch, 0.45 + 0.55 * speed);
     f.loaded = false; FL.ollie = false; FL.popNow = true;
-  } else if (S.trick || name === 'Ollie' || name === 'Nollie') { f.toks = []; return; } // late flips only, one at a time
+  } else if (S.trick || name === 'Ollie' || name === 'Nollie') { f.rim = []; f.windup = null; return; } // late flips only, one at a time
   if (TRICKS[name]) { FL.flipName = name; EDGE_IN.flip = true; }
-  FL.grab = false;
   f.onTrick && f.onTrick(name);
-  f.toks = []; f.settleUntil = now + T.flickSettle * 1000; f.needCenter = true;
+  f.rim = []; f.windup = null; f.settleUntil = now + T.flickSettle * 1000; f.needCenter = true;
   f.onLoaded && f.onLoaded(false);
 }
 // Feed the stick position (x right, y down, magnitude 0..1).
 function flickFeed(f, nx, ny, now) {
   const m = Math.min(1, Math.hypot(nx, ny));
   f.active = m > 0.05;
-  if (f.needCenter) { if (m < 0.35) f.needCenter = false; else { f.holdS = null; return; } }
-  if (now < f.settleUntil) { f.holdS = null; return; }
-  if (m < T.flickRim) { f.holdS = null; return; }
-  const sct = SECT[((Math.round(Math.atan2(-ny, nx) / (Math.PI / 4)) % 8) + 8) % 8];
-  const last = f.toks[f.toks.length - 1];
-  if (last && last.s === sct) {
-    last.t = now; // still there: a flick is timed from when you leave it
-    // resting in a crouch: forget the wobble that got you there, it's a plain crouch now
-    if (LOWER.has(sct) && f.loaded && now - last.t0 > T.crouchSettle * 1000 && (f.toks.length > 1 || sct !== 'D')) f.toks = [{ s: 'D', t: now, t0: last.t0 }];
-  } else {
-    f.toks.push({ s: sct, t: now, t0: now }); while (f.toks.length > 10) f.toks.shift();
-    if (LOWER.has(sct) || UPPER.has(sct)) {
-      const first = f.toks.find(t => LOWER.has(t.s) || UPPER.has(t.s));
-      if (first === f.toks[f.toks.length - 1]) flickLoad(f, true); // the pull (or nollie push) loads the crouch
+  if (f.needCenter) { if (m < 0.35) f.needCenter = false; else return; }
+  if (now < f.settleUntil) return;
+  if (m >= T.flickRim) {
+    const raw = angOf(nx, ny);
+    if (!f.rim.length && f.windup) {                               // arriving after crossing the middle
+      const w = f.windup; f.windup = null;
+      if (now - f.leftT <= T.flickTime * 1000) {
+        let iLo = -1, iHi = -1; for (let i = 0; i < w.length; i++) { if (w[i].sin < -0.7) iLo = i; if (w[i].sin > 0.7) iHi = i; }
+        const up = iHi > iLo;                                        // nollie: the extreme is the top
+        let iE = 0; for (let i = 1; i < w.length; i++) if (up ? w[i].sin >= w[iE].sin - 0.02 : w[i].sin <= w[iE].sin + 0.02) iE = i;
+        const name = nameFlick(w, raw, now - w[iE].t);
+        if (name) { flickFire(f, name, now, now - f.leftT); return; }
+      }
     }
-    if (flickTry(f, now, false)) return;
+    const a = f.rim.length ? f.rim[f.rim.length - 1].a + norm180(raw - f.rim[f.rim.length - 1].a) : raw;
+    const sn = Math.sin(a / DEGS);
+    f.rim.push({ a, t: now, sin: sn }); if (f.rim.length > 80) f.rim.shift();
+    if (Math.abs(sn) > 0.7) flickLoad(f, true);                     // the pull (or nollie push) loads the crouch
+    const sw = sideSweep(f, now);
+    if (sw) { if (!f.pending || f.pending.name !== sw) f.pending = { name: sw, at: now }; }
+    else if (f.pending && Math.abs(sn) > 0.5) f.pending = null;     // kept swinging past the side
+  } else if (f.rim.length) {                                         // left the rim: maybe a flick on its way across
+    f.windup = f.rim; f.leftT = f.rim[f.rim.length - 1].t; f.rim = [];
   }
-  if (f.holdS !== sct) { f.holdS = sct; f.holdT = now; }
 }
 function flickRelease(f, now) {
-  if (f.toks.length >= 2) flickTry(f, now, true);
+  if (f.pending) flickFire(f, f.pending.name, now, 60);
   if (f.loaded) { if (T.holdReleasePops) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f); }
-  f.toks = []; f.holdS = null; f.active = false; f.onLoaded && f.onLoaded(false);
+  f.rim = []; f.windup = null; f.pending = null; f.active = false; f.onLoaded && f.onLoaded(false);
 }
 function flickTick(f, now) {
-  if (f.toks.length >= 2 && now >= f.settleUntil) flickTry(f, now, false); // sideways finishes that settled
-  if (f.loaded && !canPop()) { flickCancel(f); f.onLoaded && f.onLoaded(false); } // rolled off something mid-crouch
-  // hold a direction in the air to grab
-  const air = !S.grounded && !S.rail;
-  const g = air && f.active && f.holdS && now - f.holdT > T.grabHold * 1000 && now > f.settleUntil && !S.trick && !railNearby();
-  if (g && !f.grabbing) { FL.grabName = GRAB_NAMES[f.holdS]; f.onTrick && f.onTrick(FL.grabName); }
-  if (g || f.grabbing) FL.grab = !!g;
-  f.grabbing = !!g;
+  // a sweep that settled on a side is a shuvit
+  // (unless the stick has left the rim, which may be a flick on its way across)
+  if (f.pending && (f.rim.length ? now - f.pending.at >= 70 : now - f.leftT > T.flickTime * 1000)) flickFire(f, f.pending.name, now, 60);
+  if (f.loaded && !canPop()) { flickCancel(f); f.onLoaded && f.onLoaded(false); }  // rolled off something mid-crouch
+  // stick let back to the middle without a flick: stand back up
+  if (f.loaded && !f.rim.length && now - f.leftT > T.flickTime * 1000) { if (T.holdReleasePops) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f); f.onLoaded && f.onLoaded(false); }
 }
 padFlick = makeFlick({ onTrick: name => { if (device === 'pad') showTrickName(name); } });
 // controller: if the right stick goes idle, treat it like letting go
@@ -1341,16 +1344,17 @@ canvas.addEventListener('pointerdown', e => {
   const now = performance.now();
   if (e.clientX < innerWidth * 0.5 && touch.stickId === null) {
     touch.stickId = e.pointerId; stickBase.classList.remove('idle');
+    touch.ox = e.clientX; touch.oy = e.clientY; // steering reads from where the thumb lands, so a tap never turns
     moveSteerStick(e.clientX, e.clientY);
   } else if (e.clientX >= innerWidth * 0.5 && ts.id === null) {
     Object.assign(ts, { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now, moved: 0, trail: [[e.clientX, e.clientY, now]] });
-    touchFlick.toks = []; touchFlick.holdS = null;
+    touchFlick.rim = []; touchFlick.windup = null; touchFlick.pending = null;
     tBase.classList.remove('idle');
     moveTrickStick(e.clientX, e.clientY, now);
   }
 });
 function moveSteerStick(x, y) {
-  const c = stickCentres().left, [nx, ny] = deflect(c, x, y);
+  const c = stickCentres().left, [nx, ny] = deflect({ x: touch.ox, y: touch.oy }, x, y);
   touch.sx = nx; touch.sy = ny;
   if (Math.hypot(nx, ny) < 0.12) touch.sx = touch.sy = 0;
   placeKnob(stickKnob, c, nx, ny);
@@ -1375,7 +1379,7 @@ function endCanvasPointer(e) {
   if (e.pointerId === ts.id) {
     if (e.type === 'pointerup') moveTrickStick(e.clientX, e.clientY, now); // a fast flick can end on the lift
     const tap = now - ts.t0 < 200 && ts.moved < 12;
-    if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); FL.popNow = true; sayAt('Ollie', ts.x, ts.y); touchFlick.toks = []; }
+    if (tap && T.tapOllie && canPop()) { S.crouch = Math.max(S.crouch, 0.35); FL.popNow = true; sayAt('Ollie', ts.x, ts.y); touchFlick.rim = []; touchFlick.windup = null; }
     flickRelease(touchFlick, now);
     GS.touchX = GS.touchY = 0;
     ts.id = null; placeIdleTrickStick();
@@ -1431,7 +1435,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

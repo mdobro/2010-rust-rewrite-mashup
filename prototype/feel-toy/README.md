@@ -30,7 +30,7 @@ does tricks** with Skate's flick-it motions.
 | Carve / spin in air | Left stick ← → | A / D |
 | Push / brake | A, or left stick ↑ / ↓ | W / S |
 | Ollie and flip tricks | Right stick flick-it (below) | Space (hold, release), then Q + WASD in the air |
-| Grab | LT / RT, or hold the right stick in the air | E |
+| Set the board up for a grind | Hold the right stick in the air | Arrow keys |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
 | Pick the grind (hold while landing on a rail) | Right stick direction | Arrow keys |
 | Respawn | Menu | R |
@@ -40,8 +40,9 @@ does tricks** with Skate's flick-it motions.
 ### On a phone
 
 The touch layout turns on by itself on phones and tablets. Landscape works
-best. Two fixed sticks sit in the bottom corners. They don't move: a thumb
-anywhere on that half of the screen drives the stick from its centre.
+best. Two fixed sticks sit in the bottom corners and never move. The steering
+stick reads from wherever your left thumb lands, so a tap never starts a turn.
+The trick stick reads from its own centre, like a real stick.
 
 - **Left thumb steers.** You roll on your own (auto-push); push up to go
   faster, pull down to brake, hold left or right in the air to spin.
@@ -50,48 +51,45 @@ anywhere on that half of the screen drives the stick from its centre.
 
 ### Flick-it tricks (right stick, regular stance)
 
-A trick is a path: where the stick starts, which way it swings round the
-bottom, and where you flick it to.
+Pull the stick down to crouch, then flick. The stick's path round its rim is
+measured as an angle, so a move is judged by how far you swing, not by hitting
+exact boxes:
 
 | Trick | Motion |
 | --- | --- |
-| Ollie | Down, then flick up |
-| Kickflip / Heelflip | Down, then flick up-right / up-left |
-| FS / BS Pop Shuvit | Down, then left / right |
-| Hardflip | Down, down-right, flick up |
-| Inward Heelflip | Down, down-left, flick up |
-| Varial Kickflip / Varial Heelflip | Down-left, down, flick up-right / down-right, down, flick up-left |
-| 360 Flip | Left, swing down, flick up-right |
-| Laserflip | Right, swing down, flick up-left |
-| 360 Hardflip / 360 Inward Heelflip | Right / left, swing down, flick up |
-| FS / BS 360 Pop Shuvit | Down-right, sweep round the bottom to left / down-left round to right |
-| Nollie anything | The same path upside down: push up first, flick down |
+| Ollie | Pull down, flick up |
+| Kickflip / Heelflip | Pull down, flick up-right / up-left |
+| FS / BS Pop Shuvit | Pull down, flick (or sweep) left / right |
+| Hardflip / Inward Heelflip | Pull down, nudge right / left (about 20°), flick up |
+| Varial Kickflip / Varial Heelflip | Swing in from the left / right (about 25°) to the bottom, flick up-right / up-left |
+| 360 Flip / Laserflip | Swing in from the left / right (about 70°), flick up-right / up-left |
+| 360 Inward Heelflip / 360 Hardflip | Swing in from the left / right (about 70°), flick up |
+| FS / BS 360 Pop Shuvit | Sweep round the bottom (about 120°) onto the left / right |
+| Nollie anything | The same, upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
-| Grab | In the air, hold the stick in one direction (up nosegrab, down tailgrab, left melon, right indy) |
+| Small ollie | Tap the right side |
 
 The motions follow the Skate flick-it chart as published in GameSpot's trick
-list for EA's current *skate.* (kickflip up-right, 360 flip left → down →
-up-right, hardflip down → down-right → up, and so on). The varial paths aren't
-in that list, so they're filled in by the same pattern: where you start round
-the rim sets the shuvit, where you flick sets the flip.
+list for EA's current *skate.*. The swing angles are all on sliders in the
+**Trick stick** tuning section.
 
-Pulling down crouches (on touch, the ring turns yellow), and you can hold the
-crouch as long as you like: flick straight up whenever you're ready and it's
-an ollie, up-right a kickflip, and so on. A faster flick pops higher. Letting
-go without flicking just stands you back up. While you're holding the crouch,
-drifting onto a diagonal doesn't count; a diagonal only changes the trick
-(hardflip, inward heelflip) when the whole swing out of the crouch is quick.
+You can hold the crouch as long as you like and flick whenever you're ready.
+Letting the stick back to the middle without flicking stands you back up.
+A sideways nudge only turns an ollie into a hardflip or inward heelflip when
+the flick follows it quickly, so drifting while you hold a crouch doesn't
+change the trick, and overshooting the nudge doesn't turn it into a 360.
+Slow stick movement never fires a trick. After a trick the stick has to come
+back to the centre before the next one.
 
-Slow stick movement never fires a trick: the flick has to land within the *max
-time from pull to flick* after it leaves the crouch. After a trick the stick has
-to come back to the centre before the next one, so the follow-through doesn't
-fire another trick. The trick name pops up and, on touch, the path you drew fades behind your
-thumb.
+There are no grabs. In the air, holding the trick stick in a direction lines
+the board up for the grind it will land in (see below), so you can set up a
+boardslide or a 5-0 before you reach the rail.
 
 ## Grinds
 
 Like Skate, where you hold the trick stick as you land on a rail or ledge
-lines the board up. Hold it the whole way; move it mid-grind to switch.
+lines the board up. Hold it in the air and the board is already set up in that
+position before you reach the rail; move it mid-grind to switch.
 
 | Hold | Grind |
 | --- | --- |
@@ -103,9 +101,8 @@ lines the board up. Hold it the whole way; move it mid-grind to switch.
 | Left / Right | Boardslide / Lipslide (board across the rail) |
 | Up-left / Down-left | Noseslide / Tailslide |
 
-Slides drag more than truck grinds and score a little more. Near a rail,
-holding the stick picks a grind instead of grabbing. Down then a flick up pops
-you off, as on the ground.
+Slides drag more than truck grinds and score a little more. Down then a flick
+up pops you off, as on the ground.
 
 Steering is the same riding regular or fakie: stick right always turns the
 board the same way.
@@ -154,8 +151,8 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   knees bend out over the toes, the hips drop as you crouch, the upper body
   leans into carves and stays partly upright on steep ramps, the knees tuck
   when the board rises in a flip or grab, the back hand reaches the toe edge
-  on a grab, and the head looks where you're going. Each push is a full
-  cycle: the front foot turns to the nose, the hips open up, the back foot
-  steps down beside the board, sweeps back along the ground and returns to
-  the tail. Poses blend smoothly and landings compress the knees.
+  on a grab, and the head looks where you're going. Each push is a stride:
+  the hips square up to the nose, the back foot reaches forward with the knee
+  up, plants beside the front foot, drives back along the ground, then lifts
+  and returns to the tail while the arms swing like walking. Poses blend smoothly and landings compress the knees.
 - Sounds are synthesized with WebAudio; nothing is loaded.
