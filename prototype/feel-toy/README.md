@@ -168,6 +168,12 @@ to the rail as it lands: how you approached, plus any set-up from the stick.
 Both thresholds are sliders (*Board angled this much keeps its angle*, *Board
 this far across the rail slides*).
 
+**Near a rail the trick stick is for grinds.** In the air within about
+4.5 m of a rail or ledge, it only sets up the grind and doesn't fire late
+flips or shuvits. Otherwise rolling down then left (a tailslide) would be
+read as a late shuvit, turn the board round and land you in something else
+(*In the air this close to a rail the trick stick only sets up grinds*).
+
 **Riding fakie** turns the stick round for grinds and for lining up in the
 air. The camera then looks at the board from its nose end, so up still means
 the leading truck (the tail, when fakie) and right still turns the board to
@@ -249,8 +255,8 @@ them.
   combo is multiplied by its number of tricks.
 - Tricks started riding fakie are named **Fakie** and are worth a bit more.
 - Dropping 0.6 m or more during a combo adds a **Drop** bonus for the height.
-- Carving as you pop doesn't spin you. A spin only starts once you hold
-  left or right after the pop (or let go and press again).
+- Hold left or right any time in the air to spin, including straight from
+  a carve. Spins wind up over a fraction of a second rather than snapping.
 
 ## Camera
 
