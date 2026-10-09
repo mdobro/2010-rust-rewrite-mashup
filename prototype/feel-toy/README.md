@@ -108,7 +108,11 @@ boardslide or a 5-0 before you reach the rail.
 
 Like Skate, where you hold the trick stick as you land on a rail or ledge
 lines the board up. Hold it in the air and the board is already set up in that
-position before you reach the rail. Once you're on, the grind is locked until you pop off.
+position before you reach the rail. You can see it turn, even in the middle
+of a flip, so a kickflip into a lipslide is already sideways when it lands
+on the rail. When you touch down, the rider swings round and settles onto the
+rail over a fraction of a second instead of snapping. Once you're on, the
+grind is locked until you pop off.
 
 | Hold | Grind |
 | --- | --- |

@@ -166,7 +166,7 @@
       <li><b>Left thumb steers:</b> move from where you touched, pull down to powerslide to a stop, hold left or right in the air to spin.</li>
       <li><b>Manuals:</b> tip the right stick about halfway down (or halfway up for a nose manual). Manuals keep a combo going.</li>
       <li><b>Walk</b> gets you off the board to walk anywhere, including up stairs; <b>Skate</b> gets you back on.</li>
-      <li><b>Right thumb does tricks</b>, also wherever you touch. <b>Tap it to push</b> (each tap is a kick). Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
+      <li><b>Right thumb does tricks</b>, also wherever you touch. <b>Tap it to push</b> (each tap is a kick). Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-left: kickflip. Down, then up-right: heelflip. Down, then <b>arc</b> round the bottom onto the right or left: pop shuvit. Swing in from the right side to the bottom, flick up-left: 360 flip. Push up and flick down for nollies.</li>
       <li><b>Set spot</b> drops a marker where you are, facing the way you're going; <b>Return</b> puts you back there, standing, to try the line again.</li>
       <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail.</li>
     </ul>
@@ -722,7 +722,7 @@ function walkPose(dt, time) {
   limbIK(LIMBS.front.upper, LIMBS.front.fore, shF, shF.clone().add(V(0, -0.52, 0.22 * Math.sin(ph) * amp)), V(0, -1, 0.6), UPPER_ARM, FOREARM);
   limbIK(LIMBS.back.upper, LIMBS.back.fore, shB, V(0.33, 0.62, 0.02), V(0.3, -1, 0.3), UPPER_ARM, FOREARM);
 }
-const pose = { push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0 };
+const pose = { push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, yawLag: 0, posLag: new THREE.Vector3() };
 
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
@@ -832,6 +832,7 @@ function setSpot() {
   showTrickName('Spot set'); sfx.click();
 }
 function returnToSpot() {
+  pose.yawLag = 0; pose.posLag.set(0, 0, 0);
   if (!spot) { respawn(); return; }
   const g = groundAt(spot.pos.x, spot.pos.z, spot.pos.y + 0.05);
   Object.assign(S, { pos: spot.pos.clone(), vel: V(), yaw: spot.yaw, grounded: true, n: g.n.clone(), rail: null, railCool: 0.3,
@@ -841,6 +842,7 @@ function returnToSpot() {
   cam.yaw = S.yaw; cam.pivot.copy(S.pos);
 }
 function respawn() {
+  pose.yawLag = 0; pose.posLag.set(0, 0, 0);
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0,
     walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0, pushLeft: 0, manHold: 0 });
   if (typeof updateWalkButton === 'function') updateWalkButton();
@@ -1157,7 +1159,11 @@ function tryRail() {
   if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(GRINDS[S.grindKey].name);
   const dir = r.dir.clone().multiplyScalar(Math.sign(s));
   const keepFakie = Math.cos(wrap(yawOf(V(dir.x, 0, dir.z)) - S.yaw)) < 0;
+  const yaw0 = S.yaw;
   S.yaw = keepFakie ? wrap(yawOf(V(dir.x, 0, dir.z)) + Math.PI) : yawOf(V(dir.x, 0, dir.z));
+  pose.yawLag += wrap(yaw0 - S.yaw); // the rider swings round onto the rail instead of snapping
+  const onRail = r.a.clone().addScaledVector(r.dir, t * r.len); onRail.y += 0.035;
+  pose.posLag.add(S.pos.clone().sub(onRail)); S.pos.copy(onRail); // ...and settles onto it
   const halfTurns = Math.round(Math.abs(S.spin) / Math.PI); if (halfTurns) addTrick(`${halfTurns * 180} Spin`, 60 * halfTurns, halfTurns);
   S.spin = 0; sfx.land(0.25);
 }
@@ -1257,21 +1263,25 @@ function updateCamera(dt) {
    ============================================================ */
 const qA = new THREE.Quaternion(), qB = new THREE.Quaternion(), mBasis = new THREE.Matrix4();
 function updateVisuals(dt, time) {
-  skater.position.copy(S.pos);
+  pose.posLag.multiplyScalar(S.bail > 0 || S.walking ? 0 : Math.exp(-16 * dt));
+  skater.position.copy(S.pos).add(pose.posLag);
   const upTarget = S.walking || S.rail ? UP : S.grounded ? S.n : UP;
   S.boardUp.lerp(upTarget, 1 - Math.exp(-(S.grounded ? 25 : 3) * dt)).normalize();
   const bu = S.boardUp;
-  const fl = fwdOf(S.yaw); const f = fl.addScaledVector(bu, -fl.dot(bu)).normalize();
+  pose.yawLag = S.bail > 0 || S.walking ? 0 : damp(pose.yawLag, 0, 9, dt);
+  const fl = fwdOf(S.yaw + pose.yawLag); const f = fl.addScaledVector(bu, -fl.dot(bu)).normalize();
   const r = V().crossVectors(f, bu).normalize();
   mBasis.makeBasis(r, bu, f.clone().negate());
   boardOrient.quaternion.setFromRotationMatrix(mBasis);
   // grind stance: turn and tip the board about the point that rides the rail
-  const setup = !S.rail && !S.grounded && !S.trick && S.bail <= 0;
+  // in the air the board turns into the grind you're holding, even mid-flip, so you see it lined up before the rail
+  const setup = !S.rail && !S.grounded && S.bail <= 0;
   const gk = S.walking ? GRINDS.C : S.rail ? GRINDS[S.grindKey] : setup ? GRINDS[grindKey()]
     : S.manual && S.grounded ? { ...MANUAL_POSE[S.manual], pitch: MANUAL_POSE[S.manual].pitch * (1 + 0.45 * S.manBal) } : GRINDS.C;
   pose.slide = damp(pose.slide, S.sliding && S.grounded && S.bail <= 0 ? 1 : 0, S.sliding ? 10 : 6, dt);
-  pose.gYaw = dampAngle(pose.gYaw, gk.yaw + pose.slide * T.slideAngle * DEG, 18, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, 18, dt);
-  pose.gPivot = damp(pose.gPivot, gk.pivot, 18, dt); pose.gDrop = damp(pose.gDrop, gk.drop, 18, dt);
+  const gRate = setup ? 11 : 18; // a touch slower in the air so the turn reads
+  pose.gYaw = dampAngle(pose.gYaw, gk.yaw + pose.slide * T.slideAngle * DEG, gRate, dt); pose.gPitch = damp(pose.gPitch, gk.pitch, gRate, dt);
+  pose.gPivot = damp(pose.gPivot, gk.pivot, gRate, dt); pose.gDrop = damp(pose.gDrop, gk.drop, gRate, dt);
   boardOrient.position.set(0, 0, 0);
   if (Math.abs(pose.gYaw) + Math.abs(pose.gPitch) + pose.gDrop > 1e-3) {
     const piv = V(0, 0, pose.gPivot), p0 = piv.clone().applyQuaternion(boardOrient.quaternion);
