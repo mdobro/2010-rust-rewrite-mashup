@@ -160,7 +160,7 @@
     <ul class="touch-list touch-only">
       <li><b>Left thumb steers.</b> Touch anywhere on the left and move from there. While your thumb is down you push along; let go to coast. Push up to go faster, pull down to powerslide to a stop, hold left or right in the air to spin.</li>
       <li><b>Right thumb does tricks</b>, also wherever you touch. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-right: kickflip. Down, then up-left: heelflip. Down, then left or right: pop shuvit. Start left, swing down, flick up-right: 360 flip. Push up and flick down for nollies.</li>
-      <li><b>Set spot</b> saves where you are and how fast you're going; <b>Return</b> puts you back there to try the line again.</li>
+      <li><b>Set spot</b> drops a marker where you are, facing the way you're going; <b>Return</b> puts you back there, standing, to try the line again.</li>
       <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail. Tap the right side for a quick ollie.</li>
     </ul>
     <div class="table-wrap desk-only">
@@ -672,20 +672,22 @@ for (const k of Object.keys(TRICKS)) TRICKS['Nollie ' + k] = { ...TRICKS[k], pts
 // keyboard and controller: flip button + a direction
 const DIR_TRICK = { left: 'Kickflip', right: 'Heelflip', down: '360 Flip', up: 'Hardflip' };
 
-// a saved spot: where you were, which way you faced and how fast you were going
+// a saved spot: a marker on the ground and the way you were facing (no speed: you start from a stand)
 let spot = null;
 function setSpot() {
-  spot = { pos: S.pos.clone(), vel: S.vel.clone(), yaw: S.yaw, grounded: S.grounded && !S.rail, n: S.n.clone() };
-  spotMarker.position.copy(S.pos); spotMarker.visible = true;
+  const g = groundAt(S.pos.x, S.pos.z, S.pos.y + 0.05);
+  const hv = Math.hypot(S.vel.x, S.vel.z);
+  spot = { pos: V(S.pos.x, g.h, S.pos.z), yaw: hv > 0.5 && !fakie() ? yawOf(V(S.vel.x, 0, S.vel.z)) : S.yaw };
+  spotMarker.position.copy(spot.pos); spotMarker.rotation.y = spot.yaw; spotMarker.visible = true;
   showTrickName('Spot set'); sfx.click();
 }
 function returnToSpot() {
   if (!spot) { respawn(); return; }
-  Object.assign(S, { pos: spot.pos.clone(), vel: spot.vel.clone(), yaw: spot.yaw, grounded: spot.grounded, n: spot.n.clone(), rail: null, railCool: 0.3,
+  const g = groundAt(spot.pos.x, spot.pos.z, spot.pos.y + 0.05);
+  Object.assign(S, { pos: spot.pos.clone(), vel: V(), yaw: spot.yaw, grounded: true, n: g.n.clone(), rail: null, railCool: 0.3,
     trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0, sinceGround: 0, airTime: 0, coyoteOk: false, popped: false });
   combo.parts = []; combo.pts = 0; combo.ammo = 0;
-  const hv = Math.hypot(S.vel.x, S.vel.z);
-  cam.yaw = hv > 1 ? yawOf(V(S.vel.x, 0, S.vel.z)) : S.yaw; cam.pivot.copy(S.pos);
+  cam.yaw = S.yaw; cam.pivot.copy(S.pos);
 }
 function respawn() {
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0 });

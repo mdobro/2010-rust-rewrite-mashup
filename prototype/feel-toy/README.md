@@ -47,8 +47,8 @@ The trick stick reads from its own centre, like a real stick.
 - **Left thumb steers.** While your thumb is down you push along
   (auto-push); let go to coast. Push up to go faster, pull down to powerslide
   to a stop, hold left or right in the air to spin.
-- **Set spot / Return** buttons save where you are, which way you're facing
-  and how fast you're going, and put you back there to try the line again.
+- **Set spot / Return** buttons drop a marker where you are, facing the way
+  you're going, and put you back there standing still to try the line again.
 - **Right thumb is the flick-it stick**, with the same motions as a
   controller's right stick. A quick tap is a small ollie.
 
