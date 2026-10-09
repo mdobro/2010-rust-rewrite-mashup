@@ -49,6 +49,8 @@ drawn on the fixed stick), so a touch that lands off-centre is still a clean
 ollie.
 
 - **Left thumb: tap to push**, one kick per tap (two quick taps queue two).
+  Each kick's speed comes on over the drive of the stride, so the camera
+  doesn't jolt.
   Hold and move from where you touched to steer; holding never pushes. Pull
   down to powerslide to a stop, hold left or right in the air to spin.
 - **Manuals:** tip the right stick about halfway down (manual) or halfway up
@@ -129,12 +131,16 @@ can ollie or flip out of a manual into the next trick. Push all the way down
 and it's the ollie crouch instead. *Manual: trick stick tip from* sets where
 halfway starts.
 
-Manuals have to be balanced. The meter above the rider drifts towards the
-nose or the tail and keeps speeding up (*Manual: how fast balance tips away*). Tip the stick
-further into the halfway band to lean back, or less far to lean forward
-(*Manual: how much the stick corrects it*). Let it reach the end and you drop to the tail or the
-nose and the manual ends. Uncorrected, a manual lasts about a second and a
-half. With the keyboard (M / N) the balance looks after itself.
+Manuals have to be balanced, but gently. A manual only starts once the stick
+has sat still in the halfway band for a moment (*Manual: hold the stick steady
+this long first*), so pulling down to crouch for an ollie, or letting the
+crouch back out, never starts one. There's a gap between the top of the band
+and the crouch, so a pull that's nearly all the way doesn't start one either.
+Once you're on it, the meter above the rider drifts slowly towards the nose or
+the tail. The middle of the band is neutral. Tip further in to lean back, or
+ease off to lean forward. Let it reach the end and you drop to the tail or the
+nose and the manual ends. Held steady in the middle, a manual lasts until
+you run out of speed. With the keyboard (M / N) the balance looks after itself.
 
 ## Walking
 

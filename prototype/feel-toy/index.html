@@ -218,7 +218,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, slideDecel: 5, slideAngle: 80, manualMin: 0.22, manualDrag: 0.9, manualTip: 0.9, manualControl: 1.8, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 2.6, runSpeed: 4.2, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 5, slideAngle: 80, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.6, manualControl: 1.3, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 2.6, runSpeed: 4.2, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
@@ -233,7 +233,7 @@ const SPEC = [
     ['pushInterval', 'Push interval (s)', 0.15, 1, 0.01], ['pushMax', 'Push top speed (m/s)', 3, 16, 0.25],
     ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength (slow)', 1, 20, 0.5],
     ['slideDecel', 'Powerslide stopping power', 2, 30, 0.5],
-    ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
+    ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDelay', 'Manual: hold the stick steady this long first (s)', 0, 0.6, 0.02], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
     ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
     ['slamBail', 'Bail when hitting a wall faster than (m/s)', 2, 15, 0.25], ['curbBail', 'Bail when catching a curb faster than (m/s)', 0.5, 10, 0.25],
     ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
@@ -274,7 +274,7 @@ const SPEC = [
     ['stickRadius', 'Stick size (px)', 30, 100, 1], ['tapOllie', 'Tap the right side to ollie', 'bool'],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v6';
+const STORE_KEY = 'skate-feel-toy-v7';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -733,7 +733,7 @@ const SPAWN = { pos: V(0, 0, 6), yaw: 0 };
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
-  trick: null, flipBuf: 0, flipName: null, sliding: false, pushQueue: 0, manual: null, manualT: 0, manBal: 0, manualLock: false, bankT: 0, spinLock: 0, spinRamp: 0, fakieTakeoff: false, takeoffY: 0, walking: false, walkPhase: 0, grindKey: 'C', grindSeg: 0, grindSwitchT: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
+  trick: null, flipBuf: 0, flipName: null, sliding: false, pushQueue: 0, pushLeft: 0, pushDir: 1, manual: null, manualT: 0, manHold: 0, manPrevM: 0, manBal: 0, manualLock: false, bankT: 0, spinLock: 0, spinRamp: 0, fakieTakeoff: false, takeoffY: 0, walking: false, walkPhase: 0, grindKey: 'C', grindSeg: 0, grindSwitchT: 0, grabT: 0, spin: 0, bail: 0, bailVel: V(), steerVis: 0, landDip: 0, popped: false,
 };
 const stats = { score: 0, best: 0 };
 const combo = { parts: [], pts: 0, ammo: 0 };
@@ -761,8 +761,9 @@ function manualInput() {
   if (keys.has('KeyM')) return 'Manual';
   if (keys.has('KeyN')) return 'Nose Manual';
   const m = Math.hypot(GS.x, GS.y);
-  if (m < T.manualMin || m >= T.flickRim - 0.02) return null;
-  manualDepth = (m - T.manualMin) / (T.flickRim - 0.02 - T.manualMin); // 0 just tipped .. 1 nearly the crouch
+  const top = Math.max(T.manualMin + 0.1, T.flickRim - 0.08); // a gap below the crouch so a short pull isn't a manual
+  if (m < T.manualMin || m >= top) return null;
+  manualDepth = (m - T.manualMin) / (top - T.manualMin); // 0 just tipped .. 1 top of the band
   const sn = -GS.y / m;
   return sn < -0.7 ? 'Manual' : sn > 0.7 ? 'Nose Manual' : null;
 }
@@ -785,7 +786,7 @@ function toggleWalk() {
   if (!S.walking) {
     if (!S.grounded || S.rail || S.bail > 0) return;
     endManual(false); bankCombo();
-    S.walking = true; S.crouch = 0; S.sliding = false; S.pushQueue = 0; S.trick = null;
+    S.walking = true; S.crouch = 0; S.sliding = false; S.pushQueue = 0; S.pushLeft = 0; S.trick = null;
     S.vel.multiplyScalar(0.3); S.n.copy(UP);
     if (device !== 'kbm') showTrickName('Walking');
   } else {
@@ -837,13 +838,13 @@ function returnToSpot() {
   const g = groundAt(spot.pos.x, spot.pos.z, spot.pos.y + 0.05);
   Object.assign(S, { pos: spot.pos.clone(), vel: V(), yaw: spot.yaw, grounded: true, n: g.n.clone(), rail: null, railCool: 0.3,
     trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0, sinceGround: 0, airTime: 0, coyoteOk: false, popped: false,
-    walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0 });
+    walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0, pushLeft: 0, manHold: 0 });
   combo.parts = []; combo.pts = 0; combo.ammo = 0; updateWalkButton();
   cam.yaw = S.yaw; cam.pivot.copy(S.pos);
 }
 function respawn() {
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0,
-    walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0 });
+    walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0, pushLeft: 0, manHold: 0 });
   if (typeof updateWalkButton === 'function') updateWalkButton();
   S.pos.y = terrainH(S.pos.x, S.pos.z);
   combo.parts = []; combo.pts = 0; combo.ammo = 0;
@@ -939,9 +940,11 @@ function stepGround(dt) {
     if (S.pushQueue > 0 && Math.abs(vf) >= T.pushMax) S.pushQueue = 0;
     if ((IN.push || S.pushQueue > 0) && !IN.ollie && !S.manual && S.pushT <= 0 && Math.abs(vf) < T.pushMax) {
       if (S.pushQueue > 0) S.pushQueue--;
-      vf += dir * Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushT = T.pushInterval; sfx.push();
+      S.pushLeft = Math.min(T.pushImpulse, T.pushMax - Math.abs(vf)); S.pushDir = dir; S.pushT = T.pushInterval; sfx.push();
       pose.push = clamp(T.pushInterval * 0.95, 0.25, 0.6); pose.pushSign = dir; // riding fakie pushes the other way round
     }
+    // the kick's speed comes on over the drive phase, not in one frame, so the camera doesn't jolt
+    if (S.pushLeft > 0) { const add = Math.min(S.pushLeft, T.pushImpulse * dt / 0.22); vf += S.pushDir * add; S.pushLeft -= add; }
     // pulling back powerslides: the board swings sideways and scrubs the speed off
     S.sliding = IN.brake && Math.abs(vf) > 0.8;
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), (S.sliding ? T.slideDecel : T.brakeDecel) * dt);
@@ -950,13 +953,18 @@ function stepGround(dt) {
   // manuals: hold the trick stick halfway; they keep a combo alive until you roll out of them
   const mk = S.bail <= 0 ? manualInput() : null;
   if (!mk) S.manualLock = false;
+  // only start once the stick has sat still in the halfway band for a moment: passing through it
+  // on the way to the ollie crouch (or back out of it) never starts a manual
+  const mNow = Math.hypot(GS.x, GS.y), mSpeed = Math.abs(mNow - S.manPrevM) / dt; S.manPrevM = mNow;
+  S.manHold = mk && !IN.ollie && (manualDepth === null || mSpeed < 2.5) ? S.manHold + dt : 0;
   if (S.manual && (mk !== S.manual || Math.abs(vf) < 0.8)) endManual(true);
-  if (!S.manual && mk && !S.manualLock && Math.abs(vf) > 1) startManual(mk);
+  if (!S.manual && mk && !S.manualLock && Math.abs(vf) > 1 && (manualDepth === null || S.manHold >= T.manualDelay)) startManual(mk);
   if (S.manual) {
     S.manualT += dt; vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.manualDrag * dt);
     // balance: it tips away on its own; tip the stick deeper to lean back, shallower to bring the nose down
-    const ctrl = manualDepth === null ? -S.manBal : (manualDepth - 0.5) * 2;
-    const wobble = Math.sin(S.manualT * 2.3 + S.manPhase) * 0.6 + Math.sin(S.manualT * 5.7) * 0.35;
+    // the middle of the band is neutral, so a steady thumb isn't fighting the stick
+    const dz = (manualDepth ?? 0.5) - 0.5, ctrl = manualDepth === null ? -S.manBal : Math.sign(dz) * Math.max(0, Math.abs(dz) - 0.15) / 0.35;
+    const wobble = Math.sin(S.manualT * 2.3 + S.manPhase) * 0.4 + Math.sin(S.manualT * 5.7) * 0.2;
     S.manBal += dt * (T.manualTip * S.manBal + T.manualControl * ctrl + wobble);
     if (Math.abs(S.manBal) > 1) { if (device !== 'kbm') showTrickName(S.manBal > 0 ? 'Tail drag' : 'Nose down'); endManual(true); S.manualLock = true; }
   }
@@ -1242,7 +1250,7 @@ function updateCamera(dt) {
   if (pos.y < floor) pos.y = floor;
   camera.position.copy(pos);
   camera.lookAt(pivot.clone().addScaledVector(fwd, 2));
-  camera.fov = T.camFov + T.fovKick * clamp((S.vel.length() - 3) / 9, 0, 1);
+  camera.fov = damp(camera.fov, T.camFov + T.fovKick * clamp((S.vel.length() - 3) / 9, 0, 1), 2.5, dt);
   camera.updateProjectionMatrix();
 }
 
@@ -1535,7 +1543,8 @@ function flickFeed(f, nx, ny, now) {
     if (sw) { if (!f.pending || f.pending.name !== sw) f.pending = { name: sw, at: now }; }
     else if (f.pending && Math.abs(sn) > 0.5) f.pending = null;     // kept swinging past the side
   } else if (f.rim.length) {                                         // left the rim: maybe a flick on its way across
-    f.windup = f.rim; f.leftT = f.rim[f.rim.length - 1].t; f.rim = [];
+    // a thumb held dead still sends no events, so the stick was on the rim until the last frame that saw it there
+    f.windup = f.rim; f.leftT = Math.max(f.rim[f.rim.length - 1].t, f.heldT || 0); f.rim = [];
   }
 }
 function flickRelease(f, now) {
@@ -1544,6 +1553,7 @@ function flickRelease(f, now) {
   f.rim = []; f.windup = null; f.pending = null; f.active = false; f.onLoaded && f.onLoaded(false);
 }
 function flickTick(f, now) {
+  if (f.rim.length) f.heldT = now;
   // a sweep that settled on a side is a shuvit
   // (unless the stick has left the rim, which may be a flick on its way across)
   if (f.pending && (f.rim.length ? now - f.pending.at >= 70 : now - f.leftT > T.flickTime * 1000)) flickFire(f, f.pending.name, now, 60);
@@ -1719,7 +1729,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
