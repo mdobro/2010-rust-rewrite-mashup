@@ -218,7 +218,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.6, manualControl: 1.3, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 2.6, runSpeed: 4.2, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 2.6, runSpeed: 4.2, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
@@ -234,7 +234,7 @@ const SPEC = [
     ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength (slow)', 1, 20, 0.5],
     ['slideDecel', 'Powerslide stopping power', 2, 30, 0.5],
     ['revertWindow', 'Revert: time after landing to keep the combo (s)', 0, 1.5, 0.05], ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDelay', 'Manual: hold the stick steady this long first (s)', 0, 0.6, 0.02], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
-    ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
+    ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualAssist', 'Manual: self-righting with a steady thumb', 0, 3, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
     ['slamBail', 'Bail when hitting a wall faster than (m/s)', 2, 15, 0.25], ['curbBail', 'Bail when catching a curb faster than (m/s)', 0.5, 10, 0.25],
     ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
     ['turnRate', 'Turn rate, slow', 0.5, 6, 0.05], ['turnRateFast', 'Turn rate, fast', 0.3, 5, 0.05],
@@ -272,7 +272,7 @@ const SPEC = [
     ['stickRadius', 'Stick size (px)', 30, 100, 1], ['doubleTap', 'Double tap: second tap within (s)', 0.15, 0.6, 0.01],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v9';
+const STORE_KEY = 'skate-feel-toy-v10';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -759,11 +759,13 @@ function manualInput() {
   if (keys.has('KeyM')) return 'Manual';
   if (keys.has('KeyN')) return 'Nose Manual';
   const m = Math.hypot(GS.x, GS.y);
-  const top = Math.max(T.manualMin + 0.1, T.flickRim - 0.08); // a gap below the crouch so a short pull isn't a manual
-  if (m < T.manualMin || m >= top) return null;
-  manualDepth = (m - T.manualMin) / (top - T.manualMin); // 0 just tipped .. 1 top of the band
-  const sn = -GS.y / m;
-  return sn < -0.7 ? 'Manual' : sn > 0.7 ? 'Nose Manual' : null;
+  const top = Math.max(T.manualMin + 0.1, T.flickRim - 0.05); // a gap below the crouch so a short pull isn't a manual
+  // once you're on a manual it's forgiving: anywhere short of the crouch, and well off straight down, keeps it
+  const on = !!S.manual, lo = on ? Math.min(0.1, T.manualMin) : T.manualMin, hi = on ? T.flickRim : top;
+  if (m < lo || m >= hi) return null;
+  manualDepth = clamp((m - T.manualMin) / (top - T.manualMin), 0, 1); // 0 just tipped .. 1 top of the band
+  const sn = -GS.y / m, cone = on ? 0.45 : 0.7;
+  return sn < -cone ? 'Manual' : sn > cone ? 'Nose Manual' : null;
 }
 function startManual(mk) {
   S.manual = mk; S.manualT = 0; S.bankT = 0; S.manBal = (Math.random() - 0.5) * 0.2; S.manPhase = Math.random() * 6;
@@ -970,21 +972,25 @@ function stepGround(dt) {
   if (!mk) S.manualLock = false;
   // only start once the stick has sat still in the halfway band for a moment: passing through it
   // on the way to the ollie crouch (or back out of it) never starts a manual
-  const mNow = Math.hypot(GS.x, GS.y), mSpeed = Math.abs(mNow - S.manPrevM) / dt; S.manPrevM = mNow;
-  S.manHold = mk && !IN.ollie && (manualDepth === null || mSpeed < 2.5) ? S.manHold + dt : 0;
+  // "still" means staying within a small distance of where the thumb settled, so normal thumb shake and
+  // the phone's touch rate don't matter
+  const mNow = Math.hypot(GS.x, GS.y);
+  if (!mk || IN.ollie || Math.abs(mNow - S.manPrevM) > 0.12) { S.manPrevM = mNow; S.manHold = 0; } else S.manHold += dt;
   if (S.manual && (mk !== S.manual || Math.abs(vf) < 0.8)) endManual(true);
   if (!S.manual && mk && !S.manualLock && Math.abs(vf) > 1 && (manualDepth === null || S.manHold >= T.manualDelay)) startManual(mk);
   if (S.manual) {
     S.manualT += dt; vf -= Math.sign(vf) * Math.min(Math.abs(vf), T.manualDrag * dt);
     // balance: it tips away on its own; tip the stick deeper to lean back, shallower to bring the nose down
     // the middle of the band is neutral, so a steady thumb isn't fighting the stick
-    const dz = (manualDepth ?? 0.5) - 0.5, ctrl = manualDepth === null ? -S.manBal : Math.sign(dz) * Math.max(0, Math.abs(dz) - 0.15) / 0.35;
-    const wobble = Math.sin(S.manualT * 2.3 + S.manPhase) * 0.4 + Math.sin(S.manualT * 5.7) * 0.2;
-    S.manBal += dt * (T.manualTip * S.manBal + T.manualControl * ctrl + wobble);
+    // in the neutral middle the rider rights itself (manualAssist), so a steady thumb holds the manual
+    const dz = (manualDepth ?? 0.5) - 0.5, ctrl = manualDepth === null ? -S.manBal : Math.sign(dz) * Math.max(0, Math.abs(dz) - 0.28) / 0.22;
+    const assist = manualDepth === null || ctrl === 0 ? T.manualAssist : 0;
+    const wobble = Math.sin(S.manualT * 2.3 + S.manPhase) * 0.22 + Math.sin(S.manualT * 5.7) * 0.1;
+    S.manBal += dt * ((T.manualTip - assist) * S.manBal + T.manualControl * ctrl + wobble);
     if (Math.abs(S.manBal) > 1) { if (device !== 'kbm') showTrickName(S.manBal > 0 ? 'Tail drag' : 'Nose down'); endManual(true); S.manualLock = true; }
   }
   else if (S.bankT > 0 && !IN.ollie) { S.bankT -= dt; if (S.bankT <= 0) bankCombo(); }
-  if (S.revertT > 0) { S.revertT -= dt; if (S.revertT <= 0) bankCombo(); } // holding the crouch keeps the combo open
+  if (S.revertT > 0) { S.revertT -= dt; if (S.revertT <= 0) bankCombo(); }
   S.vel.copy(f).multiplyScalar(vf).addScaledVector(r, newVl);
 
   if (S.bail <= 0) {
