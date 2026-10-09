@@ -250,49 +250,85 @@ Safety yellow paint marks the plaza lip and the nosing of each step so the
 edges read from a distance, and the sides of ledges and boxes are darker than
 their tops.
 
-## The map
+## Levels
 
-A city block of street spots in three zones, inside a ring of buildings:
+Pick a level on the intro screen, or in the **Level** section of the tuning
+panel. Switching reloads the page into that level and remembers it. A link
+with `?level=park` or `?level=city` opens one directly.
 
-- **The plaza (north)**: a raised plaza.
-  - The main four-drop stair set down its front, with a handrail on the right
-    and a hubba on the left.
-  - A long seven-stair off the west end, with a handrail on one side and a
-    long hubba on the other.
-  - An upper tier at the back, reached by a bank from the plaza. It has its
-    own stair set with a centre handrail.
-  - On top: a bench, a flat rail and a manual pad.
-  - The plaza and tier lips grind (yellow edges).
-  - A bank on the east side gets you up from the street, with a rail running
-    down it.
-- **The street (middle)**:
-  - a long ledge, a bench, two planters and a bus-stop bench;
-  - a low pad, a gap, then a higher pad;
-  - a flat rail and a flatbar;
-  - a flat rail that runs into a bank against the east wall;
-  - a quarter pipe with grindable coping along the west wall (about 2.1 m,
-    nearly vertical at the top). The pipe's ends fade into banks.
-- **The schoolyard (south)**, past a grindable curb and the road:
-  - a pyramid funbox with a ledge running down its east bank;
-  - a kicker;
-  - two benches;
-  - a two-tier manual pad;
-  - a bank up to the south wall.
+### Beach Park
 
-Every slope fades out into banks rather than ending in a drop, and banks run
-right up to the walls, so there's nowhere to get stuck.
+Laid out after **Venice Beach Skatepark** in Los Angeles: a concrete pad on
+the sand beside the boardwalk. About a third of it is transition and the rest
+is an L-shaped street plaza. The layout follows public descriptions of the
+real park, which is about 16,000–17,000 sq ft. The exact shapes and sizes are
+approximations, not survey data.
+
+- **Clover bowl**: a deep end about 2.75 m (9 ft) deep with two 1.8 m (6 ft)
+  pockets. Hips where the lobes meet, blue tile, and steel coping.
+- **Flow bowl**: shallower, two lobes and a rounded extension.
+- **Snake run**: starts in a 0.9 m (3 ft) square basin, winds and deepens, and
+  ends in a 2.1 m (7 ft) kidney bowl.
+- **Street plaza**:
+  - a platform in the corner with a bank down one side, and a hubba and stairs
+    with a rail down the other;
+  - ledges, a manual pad, a flat rail and a funbox with banks;
+  - a curved "clamshell" quarter pipe in the far corner.
+- **Surroundings**: seat walls along the edges, palms, the boardwalk and the
+  ocean. **The sand slows you right down.**
+
+Rolling over the coping drops you into a bowl rather than grabbing it as a
+grind. Coping grinds need a pop or some air first.
+
+### Downtown
+
+A hillside section of a city.
+
+**Streets**
+- Two avenues run down the hill, crossed by three flat cross streets.
+- Sidewalks are real 15 cm curbs. You can grind them, and riding into one
+  fast bails you.
+- Curb ramps are at every zebra crossing.
+- Lane lines, street lamps, trees and parked cars line the streets.
+
+**Blocks, top of the hill to the bottom**
+- **Museum plaza** (spawn, at the top of the east avenue): a plinth with a
+  stair set and rail, benches and a planter. Bomb the hill from here: two
+  4 m drops, and you can pass 14 m/s by the bottom.
+- **Hillside Steps**: five terraces down the hill, each with a stair set, a
+  handrail, a hubba, grindable lips, planters and benches.
+- **Civic Plaza**:
+  - an office tower, a fountain plaza with marble ledges and a planter;
+  - grand stairs with two rails down to a lower plaza;
+  - a wide bank back down to the street.
+- **Schoolyard**: a huge 4 m bank from the cross street down into the yard.
+  There are benches, a rail, and a 3-stair with a handrail up to the school
+  door.
+- **Garage and rooftops**:
+  - push or walk up the parking-garage ramp to the top deck (4.5 m);
+  - ollie the 3 m gap to a roof, roll across the next gap to a lower roof;
+  - drop to the loading dock and take its stairs and rail down.
+  - The roofs have AC units and a skylight to grind.
+- **Transit plaza**: a bus shelter, benches and a bike-rack rail.
+
+Riding across any slope (a bank, a bowl wall, a hill) the trucks steer you
+down the fall line, so you carve back down instead of stalling.
+
+The old practice block still loads with `?level=block`. The automated tests
+use it.
 
 ## Things to try
 
 1. Push to full speed and carve S-turns. Does turning feel weighty or twitchy?
+   Then drop into the clover bowl (Beach Park), or bomb the hill (Downtown).
    (*Turn rate*, *Grip*, *Speed kept when carving*)
-2. Roll off the plaza and kickflip down the stairs, or take on the seven off
-   the west end.
-3. Ollie onto the handrail or the hubba from the top of the stairs, holding a
-   direction on the trick stick to pick the grind. On the handrail, pop about
-   two to four metres before the top of the rail.
-4. Set a spot at the top of a line, then use Return to retry it.
-5. Pull back to powerslide before the buildings.
+2. Kickflip down the Hillside Steps or the grand stairs (Downtown).
+3. Ollie onto a handrail or a hubba from the top of the stairs, holding a
+   direction on the trick stick to pick the grind. Pop about two to four
+   metres before the top of the rail.
+4. Take the rooftop line off the parking garage.
+5. Set a spot at the top of a line, then use Return to retry it.
+6. Pull back to powerslide before the buildings.
 
 ## Sharing a setup
 
