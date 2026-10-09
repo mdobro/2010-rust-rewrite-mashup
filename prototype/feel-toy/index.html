@@ -200,6 +200,7 @@
   <fieldset>
     <legend>Level</legend>
     <div class="levels" id="levels-panel"></div>
+    <div class="btns" id="districts" hidden></div>
   </fieldset>
   <div id="panel-groups"></div>
   <fieldset>
@@ -339,6 +340,7 @@ const box = (x0, y0, z0, x1, y1, z1, mat, extra) => ({ min: [x0, y0, z0], max: [
 /* ---------------- levels ---------------- */
 const LEVELS = [
   { id: 'park', name: 'Beach Park', blurb: 'A Venice Beach style skatepark on the sand: clover bowl, flow bowl, snake run and an L-shaped street plaza' },
+  { id: 'mega', name: 'Port City', blurb: 'A whole city in nine districts: hills, a stadium, a university, suburbs with backyard pools, downtown plazas, docks, a dam spillway, the river and the port' },
   { id: 'city', name: 'Downtown', blurb: 'A hillside neighbourhood to explore: bomb the hill through the roadworks, a storm channel, stoops and plazas, a construction site, a sunken car park and a rooftop line' },
 ];
 const LEVEL_ID = (() => {
@@ -766,8 +768,577 @@ function levelCity() {
   };
 }
 
+/* Port City: a whole city, about 880 m square, in nine districts round a downtown core.
+     north   Residential Hills (steep streets, crests, stoops, public stairways), the Stadium (ramped
+             concourses over huge car parks), the University (a raised campus with big stair sets and banks)
+     middle  the Suburbs (drained backyard pools, a school, a strip mall), Downtown (sixteen plaza blocks),
+             the Industrial park (loading docks, a ditch, pipe racks, gravel)
+     south   the Dam (a reservoir up a long hill, a spillway with a flip-bucket lip, dirt jumps), the
+             Waterfront (river promenade, rail over the river, a road bridge), the Port (container yard,
+             an unfinished freeway ramp that ends in mid-air, a dry dock)
+   A concrete river runs across the south from the dam to the port. */
+function levelMega() {
+  let seed = 20240607; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const R = (a, b) => a + (b - a) * rnd(), pick = arr => arr[Math.floor(rnd() * arr.length)];
+  const boxes = [], hubbas = [], rails = [], hazards = [], fine = [], decorFns = [], districts = [];
+  const COLORS = [0x9b5a46, 0xb9a88f, 0x7f8a92, 0xa7744f, 0xcfc4ad, 0x8c6a5d, 0x6e7b86, 0xb58b67, 0xc98f6b, 0x8d9a7c, 0xd8d2c4, 0x6f8fa8];
+  const col = () => pick(COLORS);
+  const sm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+
+  /* ---------- the land ---------- */
+  // Residential Hills: up the hill to the north, flat at each cross street
+  const NW_LEVELS = [[-150, 0], [-190, 7], [-210, 7], [-260, 14], [-280, 14], [-330, 21], [-350, 21], [-400, 28], [-440, 28]];
+  const hillNW = z => { if (z >= -150) return 0; for (let i = 1; i < NW_LEVELS.length; i++) { const [za, ha] = NW_LEVELS[i - 1], [zb, hb] = NW_LEVELS[i]; if (z >= zb) return lerp(ha, hb, (za - z) / (za - zb)); } return 28; };
+  // the river: a concrete channel 6 m deep across the south
+  const RIV = { z0: 290, z1: 320, bank: 6, D: 6 };
+  const riverH = z => z <= RIV.z0 || z >= RIV.z1 ? 0 : -RIV.D * Math.min(1, (z - RIV.z0) / RIV.bank, (RIV.z1 - z) / RIV.bank);
+  // local features: depressions (pools, bowls, ditches, docks) take the lowest; humps add
+  const feats = [], FG = 32, fgrid = new Map();
+  function feat(x0, x1, z0, z1, h, op = 'min') {
+    const f = { x0, x1, z0, z1, h, op }; feats.push(f);
+    for (let i = Math.floor(x0 / FG); i <= Math.floor(x1 / FG); i++) for (let j = Math.floor(z0 / FG); j <= Math.floor(z1 / FG); j++) { const k = i * 1000 + j; if (!fgrid.has(k)) fgrid.set(k, []); fgrid.get(k).push(f); }
+    return f;
+  }
+  function baseH(x, z) {
+    if (x < -142 && z < -138) return hillNW(z) * sm((-142 - x) / 60);              // the hill's east face falls to the boulevard
+    if (x < -130 && z > 130) {                                                       // the dam country
+      if (x < -350) return 24;                                                       // the reservoir heights
+      if (z > 286 && z < 324 && x < -311) {                                          // the spillway and its flip-bucket lip
+        if (x <= -318) return lerp(24, -5.4, (x + 350) / 32);
+        const t = (x + 318) / 7; return -5.4 + 1.6 * Math.sin(Math.min(t, 1) * Math.PI * 0.62);
+      }
+      if (z < RIV.z0) return 24 * sm((-x - 160) / 190) * sm((z - 130) / 30) * sm((280 - z) / 50); // the big hill up to the heights
+      return riverH(z);
+    }
+    if (z > RIV.z0 && z < RIV.z1) return riverH(z);
+    return 0;
+  }
+  function terrainH(x, z) {
+    let h = baseH(x, z);
+    const list = fgrid.get(Math.floor(x / FG) * 1000 + Math.floor(z / FG));
+    if (list) for (const f of list) if (x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1) { const v = f.h(x, z, h); h = f.op === 'min' ? Math.min(h, v) : f.op === 'add' ? h + v : v; }
+    return h;
+  }
+  // shapes for features
+  const poolS = { circle: (cx, cz, r) => (x, z) => r - Math.hypot(x - cx, z - cz),
+    rect: (cx, cz, hx, hz, rr) => (x, z) => { const qx = Math.abs(x - cx) - hx + rr, qz = Math.abs(z - cz) - hz + rr; return -(Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - rr); } };
+  // a pool or bowl: lobes [[shapeFn, depth]], all at ground level y0
+  function pool(x0, x1, z0, z1, lobes, y0 = 0, res = 0.25) {
+    feat(x0, x1, z0, z1, (x, z, h) => { let d = 0; for (const [s, D] of lobes) { const v = s(x, z); if (v > 0) d = Math.min(d, poolDepth(v, D)); } return y0 + d; });
+    fine.push({ x0, x1, z0, z1, res, kind: 'pool' });
+  }
+  const hump = (cx, cz, r, hgt) => { feat(cx - r, cx + r, cz - r, cz + r, (x, z) => { const d = Math.hypot(x - cx, z - cz) / r; return d < 1 ? hgt * (1 - d * d) ** 1.5 : 0; }, 'add'); };
+  /* ---------- building blocks ---------- */
+  const groundMin = (x0, z0, x1, z1) => Math.min(terrainH(x0, z0), terrainH(x1, z1), terrainH(x0, z1), terrainH(x1, z0), terrainH((x0 + x1) / 2, (z0 + z1) / 2));
+  const groundMax = (x0, z0, x1, z1) => Math.max(terrainH(x0, z0), terrainH(x1, z1), terrainH(x0, z1), terrainH(x1, z0));
+  const B = (x0, y0, z0, x1, y1, z1, mat, extra) => { const b = box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), mat, extra); boxes.push(b); return b; };
+  const Bg = (x0, z0, x1, z1, hgt, mat, extra) => B(x0, groundMin(x0, z0, x1, z1) - 0.4, z0, x1, groundMax(x0, z0, x1, z1) + hgt, z1, mat, extra);  // sits on the ground
+  const building = (x0, z0, x1, z1, floors, color = col(), tex = pick(['brick', 'brick', 'stone', 'office'])) =>
+    B(x0, groundMin(x0, z0, x1, z1) - 1, z0, x1, groundMax(x0, z0, x1, z1) + floors * 3.4, z1, 'building', { color, tex });
+  const rail = (ax, ay, az, bx, by, bz, kind = 'Rail', post = true) => rails.push({ a: V(ax, ay, az), b: V(bx, by, bz), kind, post });
+  const cone = (x, z) => hazards.push({ kind: 'cone', x, z, r: 0.22, h: 0.72 });
+  const pothole = (x, z, r = 0.7) => { hazards.push({ kind: 'pothole', x, z, r, h: 0.12 }); };
+  const kicker = (x, z, dirx, dirz, len = 2.4, hgt = 0.6, w = 1.3, color = 0xc49a5c) => { // a sheet of ply or a plate, rising along dir
+    const g = terrainH(x, z); hubbas.push({ a: V(x + dirx * len, g + hgt, z + dirz * len), b: V(x, g + 0.02, z), w, noRails: true, color }); };
+  const SET = (axis, at, dir, a0, a1, top, bottom, n, tread) => { boxes.push(...stairs(axis, at, dir, a0, a1, top, bottom, n, tread, Math.min(bottom, top) - 1)); };
+  // a stair set with whatever goes with it: rails / a hubba / a bank beside it, and painted lips either side
+  function stairSpot(axis, at, dir, a0, a1, top, bottom, n, tread, opt = {}) {
+    SET(axis, at, dir, a0, a1, top, bottom, n, tread);
+    for (const r of opt.rails || []) rails.push(handrail(axis, at, dir, r, top, bottom, n, tread));
+    for (const hb of opt.hubbas || []) hubbas.push(stairHubba(axis, at, dir, hb, top, bottom, n, tread));
+    if (opt.bank) { const [b0, b1] = opt.bank, len = tread * (n - 1) + 1.2, m = (b0 + b1) / 2;
+      hubbas.push(axis === 'z' ? { a: V(m, top, at), b: V(m, bottom + 0.02, at + dir * len), w: Math.abs(b1 - b0), noRails: true, color: 0xc4bfb3 }
+                             : { a: V(at, top, m), b: V(at + dir * len, bottom + 0.02, m), w: Math.abs(b1 - b0), noRails: true, color: 0xc4bfb3 }); }
+  }
+  const lip = (ax, az, bx, bz, y) => rails.push({ a: V(ax, y, az), b: V(bx, y, bz), kind: 'Ledge', paint: true });
+  const ledge = (x0, z0, x1, z1, hgt = 0.45, mat = 'ledge') => Bg(x0, z0, x1, z1, hgt, mat, { edges: Math.abs(x1 - x0) > Math.abs(z1 - z0) ? 'ns' : 'ew' });
+  const planter = (x0, z0, x1, z1, hgt = 0.55) => Bg(x0, z0, x1, z1, hgt, 'ledge', { edges: 'nswe' });
+  const pad = (x0, z0, x1, z1, hgt = 0.18) => Bg(x0, z0, x1, z1, hgt, 'pad', { edges: 'nswe' });
+  const bench = (x0, z0, x1, z1) => Bg(x0, z0, x1, z1, 0.45, 'wood', { edges: Math.abs(x1 - x0) > Math.abs(z1 - z0) ? 'ns' : 'ew' });
+  const tree = (x, z) => decorFns.push(D => D.tree(x, terrainH(x, z), z));
+  const lamp = (x, z, side = 1) => decorFns.push(D => D.lamp(x, terrainH(x, z), z, side));
+  const paintRect = (x0, z0, x1, z1, color, y) => decorFns.push(D => D.plane(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y ?? terrainH((x0 + x1) / 2, (z0 + z1) / 2) + 0.01, color, false));
+  const dash = (x0, z0, x1, z1, color = 0xe2c044, w) => decorFns.push(D => D.dash(x0, z0, x1, z1, color, w));
+  // a flat street along an axis: asphalt, centre line, and curbed sidewalks with curb ramps at each crossing
+  function street(axis, c, from, to, y, crossings = [], opt = {}) {
+    const RW = opt.rw ?? 6, SW = opt.sw ?? 4;
+    const R = (u0, u1, v0, v1, ...rest) => axis === 'z' ? [v0, u0, v1, u1, ...rest] : [u0, v0, u1, v1, ...rest];
+    paintRect(...R(from, to, c - RW, c + RW), 0x56585d, y + 0.006);
+    for (let u = from + 2; u < to - 4; u += 6) if (!crossings.some(k => u + 3 > k - RW - SW - 1 && u < k + RW + SW + 1)) dash(...R(u, u + 3, c, c));
+    if (opt.noCurb) return;
+    const cuts = [from, ...crossings.flatMap(k => [k - RW - SW, k + RW + SW]).filter(v => v > from && v < to), to].sort((a, b) => a - b);
+    for (const side of [-1, 1]) for (let i = 0; i < cuts.length - 1; i += 2) {
+      const u0 = cuts[i], u1 = cuts[i + 1]; if (u1 - u0 < 2) continue;
+      const v0 = c + side * RW, v1 = c + side * (RW + SW);
+      const edge = axis === 'z' ? (side < 0 ? 'e' : 'w') : (side < 0 ? 's' : 'n');
+      const bx = axis === 'z' ? box(Math.min(v0, v1), y - 0.6, u0, Math.max(v0, v1), y + 0.15, u1, 'sidewalk', { edges: edge }) : box(u0, y - 0.6, Math.min(v0, v1), u1, y + 0.15, Math.max(v0, v1), 'sidewalk', { edges: edge });
+      boxes.push(bx);
+      for (const [end, d] of [[u0, -1], [u1, 1]]) if (end > from + 0.5 && end < to - 0.5) {  // a curb ramp out into the crossing
+        const vm = c + side * (RW + SW / 2);
+        hubbas.push(axis === 'z' ? { a: V(vm, y + 0.15, end), b: V(vm, y + 0.01, end + d * 1.4), w: 2.6, noRails: true, color: 0xb9b5ab }
+                                 : { a: V(end, y + 0.15, vm), b: V(end + d * 1.4, y + 0.01, vm), w: 2.6, noRails: true, color: 0xb9b5ab });
+      }
+      if (opt.lamps !== false) for (let u = u0 + 6; u < u1 - 3; u += 16) {
+        const vl = c + side * (RW + 0.6); axis === 'z' ? lamp(vl, u, side) : decorFns.push(D => D.lamp(u, y, vl, side));
+        const vt = c + side * (RW + SW - 0.9); axis === 'z' ? tree(vt, u + 8) : tree(u + 8, vt);
+      }
+    }
+  }
+  const zebra = (x, z, axis, n = 8) => { for (let i = -n / 2; i <= n / 2; i++) axis === 'x' ? dash(x + i * 1.25, z - 1.4, x + i * 1.25, z + 1.4, 0xf0ece2, 0.6) : dash(x - 1.4, z + i * 1.25, x + 1.4, z + i * 1.25, 0xf0ece2, 0.6); };
+  const car = (x, z, alongX = true, y = terrainH(x, z)) => B(x - (alongX ? 2.2 : 0.9), y, z - (alongX ? 0.9 : 2.2), x + (alongX ? 2.2 : 0.9), y + 1.45, z + (alongX ? 0.9 : 2.2), 'car', { color: pick([0xb23a32, 0x2f5d8a, 0xdedad2, 0x2b2b2e, 0x9aa3a8, 0x3f6b46, 0xd4a017]) });
+
+  /* ---------- spot templates (each is the kind of place you'd actually find) ---------- */
+  // a raised plaza with stairs (rails, a hubba) down one side, ledges and planters on top
+  function raisedPlaza(x0, z0, x1, z1, hgt, side = 's') {
+    Bg(x0, z0, x1, z1, hgt, 'marble', { edges: side === 's' || side === 'n' ? 'ew' : 'ns' });
+    const g = terrainH((x0 + x1) / 2, (z0 + z1) / 2), top = g + hgt, n = Math.max(3, Math.round(hgt / 0.3)), tr = 0.42;
+    const zEdge = side === 's' ? z1 : z0, d = side === 's' ? 1 : -1, xm = (x0 + x1) / 2, w = Math.min(10, (x1 - x0) * 0.4);
+    stairSpot('z', zEdge, d, xm - w / 2, xm + w / 2, top, g, n, tr, { rails: [xm - w / 2 - 0.45, xm], hubbas: [xm + w / 2 + 0.4] });
+    lip(x0, zEdge, xm - w / 2 - 0.05, zEdge, top); lip(xm + w / 2 + 0.75, zEdge, x1, zEdge, top);
+    ledge(x0 + 2, z0 + 3, x0 + 2 + (x1 - x0) * 0.4, z0 + 3.6, 0.45, 'marble'); planter(x1 - 7, z0 + 2.5, x1 - 2.5, z0 + 6);
+  }
+  // a sunken plaza: stairs down on two sides, a fountain ledge and benches in the pit
+  function sunkenPlaza(cx, cz, hw, hd, depth) {
+    pool(cx - hw - 1, cx + hw + 1, cz - hd - 1, cz + hd + 1, [[poolS.rect(cx, cz, hw, hd, 0.2), depth]], terrainH(cx, cz), 0.5);
+    const g = terrainH(cx, cz);
+    feats[feats.length - 1].h = (x, z) => (Math.abs(x - cx) < hw && Math.abs(z - cz) < hd) ? g - depth : g; // straight walls
+    for (const s of [-1, 1]) { const n = Math.round(depth / 0.3); stairSpot('z', cz + s * hd, -s, cx - 4, cx + 4, g, g - depth, n, 0.4, { rails: [cx - 4.45, cx + 4.45] }); }
+    lip(cx - hw, cz - hd, cx - 4.5, cz - hd, g); lip(cx + 4.5, cz - hd, cx + hw, cz - hd, g); lip(cx - hw, cz + hd, cx - 4.5, cz + hd, g); lip(cx + 4.5, cz + hd, cx + hw, cz + hd, g);
+    B(cx - hw + 3, g - depth - 0.2, cz - 2, cx - hw + 8, g - depth + 0.5, cz + 2, 'ledge', { edges: 'nswe' });
+    B(cx + hw - 8, g - depth - 0.2, cz - 0.3, cx + hw - 3, g - depth + 0.45, cz + 0.3, 'marble', { edges: 'ns' });
+  }
+  // a drained fountain: a round bowl in a plaza, ledge rim to drop in from
+  function fountainBowl(cx, cz, r, depth) {
+    const g = terrainH(cx, cz);
+    pool(cx - r - 1, cx + r + 1, cz - r - 1, cz + r + 1, [[poolS.circle(cx, cz, r), depth]], g, 0.25);
+    const n = Math.round(r * 5); for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+      rails.push({ a: V(cx + Math.cos(a0) * r, g, cz + Math.sin(a0) * r), b: V(cx + Math.cos(a1) * r, g, cz + Math.sin(a1) * r), kind: 'Coping', coping: true }); }
+  }
+  // a bank up to a wall with a ledge on top (bank-to-wall), and a hubba down beside it
+  function bankToWall(x0, z, x1, hgt = 1.4, depth = 4) {
+    const g = terrainH((x0 + x1) / 2, z);
+    hubbas.push({ a: V((x0 + x1) / 2, g + hgt, z), b: V((x0 + x1) / 2, g + 0.02, z + depth), w: Math.abs(x1 - x0), noRails: true, color: 0xc4bfb3 });
+    B(x0, g - 0.5, z - 2.5, x1, g + hgt + 0.9, z, 'plaza', { edges: 's' });
+  }
+  // a parking garage with a ramp to the top deck, and roofs to gap to
+  function garage(x0, z0, x1, z1, hgt, dir = 1) {
+    const g = groundMin(x0, z0, x1, z1);
+    B(x0 + 7, g - 0.5, z0, x1, g + hgt, z1, 'garage', { edges: 'nswe' });
+    hubbas.push({ a: V(x0 + 3.5, g + hgt, dir > 0 ? z0 + 3 : z1 - 3), b: V(x0 + 3.5, g + 0.02, dir > 0 ? z1 - 0.5 : z0 + 0.5), w: 7, color: 0x9b9a95 });
+    B(x0, g - 0.5, dir > 0 ? z0 : z1 - 3, x0 + 7, g + hgt, dir > 0 ? z0 + 3 : z1, 'garage');
+    return g + hgt;
+  }
+  // a loading dock: a raised platform along a warehouse with a ramp and a sunken truck well
+  function loadingDock(x0, z, x1, side = 1) {
+    const g = terrainH((x0 + x1) / 2, z);
+    B(x0, g - 0.5, z, x1, g + 1.3, z + side * 3, 'plaza', { edges: side > 0 ? 'n' : 's' });
+    hubbas.push({ a: V(x1, g + 1.3, z + side * 1.5), b: V(x1 + 6, g + 0.02, z + side * 1.5), w: 3, noRails: true, color: 0xb9b5ab }); // ramp off the end
+    rail(x1 + 0.2, g + 1.3 + 0.9, z + side * 3.15, x1 + 6, g + 0.9, z + side * 3.15, 'Handrail');
+  }
+  // a row of shipping containers, stacked
+  function containers(x0, z, n, stack, alongX = true, gap = 0) {
+    const cols = [0x2f6b8a, 0xb23a32, 0x3f6b46, 0xd4a017, 0x8a5a3a, 0x6b6f75];
+    for (let i = 0; i < n; i++) { const x = x0 + i * (12.2 + gap), h = stack[i % stack.length];
+      for (let k = 0; k < h; k++) alongX ? B(x, k * 2.6, z, x + 12.2, (k + 1) * 2.6, z + 2.45, 'car', { color: pick(cols), edges: k === h - 1 ? 'ns' : '' })
+                                       : B(z, k * 2.6, x, z + 2.45, (k + 1) * 2.6, x + 12.2, 'car', { color: pick(cols), edges: k === h - 1 ? 'ew' : '' }); }
+  }
+  // a backyard pool, drained, with a fence and a gap in it
+  function backyardPool(cx, cz, rot = 0) {
+    const lobes = rot ? [[poolS.circle(cx - 2.2, cz, 2.6), 2.2], [poolS.circle(cx + 2, cz, 3.2), 2.8]] : [[poolS.circle(cx, cz - 2.2, 2.6), 2.2], [poolS.circle(cx, cz + 2, 3.2), 2.8]];
+    pool(cx - 6, cx + 6, cz - 6, cz + 6, lobes, terrainH(cx, cz));
+    for (const [px, pz, r] of rot ? [[cx - 2.2, cz, 2.6], [cx + 2, cz, 3.2]] : [[cx, cz - 2.2, 2.6], [cx, cz + 2, 3.2]]) {
+      const n = 16; for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, q0 = V(px + Math.cos(a0) * r, terrainH(cx, cz), pz + Math.sin(a0) * r), q1 = V(px + Math.cos(a1) * r, terrainH(cx, cz), pz + Math.sin(a1) * r);
+        if (lobes.some(([s]) => s(q0.x, q0.z) > 0.05 || s(q1.x, q1.z) > 0.05)) continue; rails.push({ a: q0, b: q1, kind: 'Coping', coping: true }); }
+    }
+  }
+  /* ================= DOWNTOWN (x, z -120..120): a grid of sixteen blocks, each its own spot ================= */
+  const DT = [-60, 0, 60], BL = [[-120, -69], [-51, -9], [9, 51], [69, 120]];
+  for (const c of DT) { street('z', c, -120, 120, 0, DT); street('x', c, -120, 120, 0, DT); }
+  for (const a of DT) for (const c of DT) for (const s of [-1, 1]) { zebra(a, c + s * 7, 'x'); zebra(a + s * 7, c, 'z'); }
+  const blk = (i, j) => ({ x0: BL[i][0], x1: BL[i][1], z0: BL[j][0], z1: BL[j][1], cx: (BL[i][0] + BL[i][1]) / 2, cz: (BL[j][0] + BL[j][1]) / 2 });
+  { // library: a podium with a big set, three rails and a hubba; the library behind
+    const b = blk(0, 0); building(b.x0, b.z0, b.x1, b.z0 + 22, 6, 0xd8d2c4, 'stone');
+    B(b.x0, -1, b.z0 + 22, b.x1, 2.4, b.z0 + 32, 'marble', { edges: 'ew' });
+    stairSpot('z', b.z0 + 32, 1, b.cx - 8, b.cx + 8, 2.4, 0, 8, 0.42, { rails: [b.cx - 8.45, b.cx - 2.7, b.cx + 2.7], hubbas: [b.cx + 8.4] });
+    lip(b.x0, b.z0 + 32, b.cx - 8.95, b.z0 + 32, 2.4); lip(b.cx + 8.75, b.z0 + 32, b.x1, b.z0 + 32, 2.4);
+    ledge(b.x0 + 3, b.z1 - 8, b.x0 + 17, b.z1 - 7.4, 0.45, 'marble'); bench(b.x1 - 16, b.z1 - 6, b.x1 - 4, b.z1 - 5.4); planter(b.cx - 3, b.z1 - 12, b.cx + 3, b.z1 - 8);
+  }
+  { // office plaza: the tower at the back, three long marble ledges and planters out front
+    const b = blk(1, 0); building(b.x0, b.z0, b.x1, b.z0 + 20, 14, 0x6f8fa8, 'office');
+    for (let k = 0; k < 3; k++) ledge(b.x0 + 4, b.z0 + 26 + k * 7, b.x1 - 4 - k * 6, b.z0 + 26.6 + k * 7, 0.42 + k * 0.08, 'marble');
+    planter(b.x1 - 9, b.z0 + 24, b.x1 - 3, b.z0 + 29); planter(b.x0 + 3, b.z1 - 6, b.x0 + 9, b.z1 - 2);
+  }
+  { // parking garage, with two roofs to gap to
+    const b = blk(2, 0), top = garage(b.x0, b.z0, b.x0 + 24, b.z1, 7.5, -1);
+    B(b.x0 + 27, -1, b.z0 + 4, b.x0 + 36, top - 0.6, b.z1 - 6, 'building', { color: 0x9b5a46, tex: 'brick', edges: 'we' });
+    B(b.x0 + 38.5, -1, b.z0 + 8, b.x1, top - 1.4, b.z1 - 10, 'building', { color: 0xb9a88f, tex: 'brick', edges: 'we' });
+    B(b.x0 + 29, top - 0.6, b.z0 + 12, b.x0 + 31, top + 0.6, b.z0 + 14, 'metal');
+  }
+  { // church: steps with rails up to the doors and a bank beside them
+    const b = blk(3, 0); building(b.cx - 12, b.z0, b.cx + 12, b.z0 + 26, 5, 0xcfc4ad, 'stone');
+    B(b.cx - 12, -1, b.z0 + 26, b.cx + 12, 1.5, b.z0 + 30, 'marble', { edges: 'ew' });
+    stairSpot('z', b.z0 + 30, 1, b.cx - 4, b.cx + 4, 1.5, 0, 5, 0.42, { rails: [b.cx - 4.45, b.cx + 4.45], bank: [b.cx + 5, b.cx + 11] });
+    lip(b.cx - 12, b.z0 + 30, b.cx - 4.95, b.z0 + 30, 1.5);
+    building(b.x0, b.z0, b.cx - 14, b.z1, 4); building(b.cx + 14, b.z0, b.x1, b.z0 + 30, 3);
+  }
+  sunkenPlaza(blk(0, 1).cx, blk(0, 1).cz, 18, 12, 2.4);
+  { // city hall: a big podium, grand stairs with rails and hubbas, ledges either side
+    const b = blk(1, 1); building(b.x0 + 4, b.z0, b.x1 - 4, b.z0 + 18, 8, 0xd8d2c4, 'stone');
+    B(b.x0, -1, b.z0 + 18, b.x1, 3, b.z0 + 28, 'marble', { edges: 'ew' });
+    stairSpot('z', b.z0 + 28, 1, b.cx - 9, b.cx + 9, 3, 0, 10, 0.42, { rails: [b.cx - 3, b.cx + 3], hubbas: [b.cx - 9.4, b.cx + 9.4] });
+    lip(b.x0, b.z0 + 28, b.cx - 9.75, b.z0 + 28, 3); lip(b.cx + 9.75, b.z0 + 28, b.x1, b.z0 + 28, 3);
+    ledge(b.x0 + 2, b.z1 - 3.6, b.x0 + 16, b.z1 - 3, 0.5, 'marble'); ledge(b.x1 - 16, b.z1 - 3.6, b.x1 - 2, b.z1 - 3, 0.5, 'marble');
+  }
+  { // the drained fountain
+    const b = blk(2, 1); fountainBowl(b.cx, b.cz, 7.5, 2.2);
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; bench(b.cx + Math.cos(a) * 12 - 2, b.cz + Math.sin(a) * 12 - 0.3, b.cx + Math.cos(a) * 12 + 2, b.cz + Math.sin(a) * 12 + 0.3); }
+    building(b.x0, b.z0, b.x1, b.z0 + 6, 9);
+  }
+  { // hubba hideout: bank to wall, hubbas down a short set, a ledge
+    const b = blk(3, 1); building(b.x0, b.z0, b.x1, b.z0 + 14, 6);
+    bankToWall(b.x0 + 4, b.z0 + 16.5, b.x0 + 20, 1.5, 4.5);
+    B(b.x0 + 26, -1, b.z0 + 14, b.x1 - 4, 1.6, b.z0 + 24, 'plaza', { edges: 'ew' });
+    stairSpot('z', b.z0 + 24, 1, b.x0 + 32, b.x0 + 40, 1.6, 0, 5, 0.42, { hubbas: [b.x0 + 31.6, b.x0 + 40.4] });
+    lip(b.x0 + 26, b.z0 + 24, b.x0 + 31.25, b.z0 + 24, 1.6); lip(b.x0 + 40.75, b.z0 + 24, b.x1 - 4, b.z0 + 24, 1.6);
+    ledge(b.x0 + 6, b.z1 - 8, b.x1 - 6, b.z1 - 7.4, 0.5);
+  }
+  { // manual-pad park: pads of different heights, benches, a flat rail
+    const b = blk(0, 2);
+    for (let k = 0; k < 4; k++) pad(b.x0 + 4 + k * 11, b.z0 + 6, b.x0 + 12 + k * 11, b.z0 + 10, 0.15 + k * 0.1);
+    for (let k = 0; k < 3; k++) bench(b.x0 + 6 + k * 14, b.z0 + 20, b.x0 + 14 + k * 14, b.z0 + 20.6);
+    rail(b.x0 + 10, 0.4, b.z0 + 30, b.x0 + 30, 0.4, b.z0 + 30, 'Rail'); pad(b.x0 + 34, b.z0 + 26, b.x1 - 4, b.z0 + 34, 0.25);
+  }
+  { // the museum: a tall podium, a long set with rails, a bank, and a gap off the side
+    const b = blk(1, 2); building(b.x0, b.z1 - 18, b.x1, b.z1, 7, 0xe2ddd0, 'stone');
+    B(b.x0, -1, b.z0 + 12, b.x1, 4.5, b.z1 - 18, 'marble', { edges: 'ewn' });
+    stairSpot('z', b.z0 + 12, -1, b.cx - 6, b.cx + 6, 4.5, 0, 14, 0.42, { rails: [b.cx - 6.45, b.cx + 6.45], bank: [b.cx + 7, b.cx + 14] });
+    lip(b.x0, b.z0 + 12, b.cx - 6.95, b.z0 + 12, 4.5);
+    planter(b.x0 + 4, b.z0 + 2, b.x0 + 9, b.z0 + 5);
+  }
+  { // transit plaza: shelters, benches, bike racks, and a gap from a raised deck over a planter to a ledge
+    const b = blk(2, 2);
+    B(b.x0 + 2, -1, b.z0 + 2, b.x0 + 16, 1.2, b.z0 + 14, 'plaza', { edges: 'nswe' });
+    hubbas.push({ a: V(b.x0 + 9, 1.2, b.z0 + 14), b: V(b.x0 + 9, 0.02, b.z0 + 19), w: 6, noRails: true, color: 0xc4bfb3 });
+    planter(b.x0 + 18, b.z0 + 4, b.x0 + 21, b.z0 + 12, 0.8); ledge(b.x0 + 24, b.z0 + 4, b.x0 + 24.6, b.z0 + 14, 0.55);
+    for (const z of [b.z0 + 24, b.z0 + 34]) { bench(b.x0 + 26, z, b.x0 + 34, z + 0.6); decorFns.push(D => D.shelter(b.x0 + 25, z - 1.5, b.x0 + 35, z + 1, 2.6)); }
+    rail(b.x1 - 10, 0.42, b.z1 - 6, b.x1 - 2, 0.42, b.z1 - 6, 'Rail');
+  }
+  { // office double set: two flights with a landing, rails all the way
+    const b = blk(3, 2); building(b.x0, b.z0, b.x1, b.z0 + 16, 10, 0x7f8a92, 'office');
+    B(b.x0, -1, b.z0 + 16, b.x1, 3.6, b.z0 + 22, 'marble', { edges: 'ew' });
+    stairSpot('z', b.z0 + 22, 1, b.cx - 5, b.cx + 5, 3.6, 1.8, 6, 0.42, { rails: [b.cx - 5.45, b.cx + 5.45] });
+    B(b.cx - 8, -1, b.z0 + 24.1, b.cx + 8, 1.8, b.z0 + 28, 'marble');
+    stairSpot('z', b.z0 + 28, 1, b.cx - 5, b.cx + 5, 1.8, 0, 6, 0.42, { rails: [b.cx - 5.45, b.cx + 5.45] });
+    lip(b.x0, b.z0 + 22, b.cx - 5.95, b.z0 + 22, 3.6);
+  }
+  { // hotel: a driveway ramp up to the entrance, a rail down the ramp, ledges
+    const b = blk(0, 3); building(b.x0, b.z1 - 22, b.x1, b.z1, 12, 0xb58b67);
+    B(b.x0 + 6, -1, b.z1 - 30, b.x1 - 6, 1.2, b.z1 - 22, 'marble', { edges: 'ew' });
+    hubbas.push({ a: V(b.x0 + 10, 1.2, b.z1 - 30), b: V(b.x0 + 10, 0.02, b.z1 - 40), w: 8, noRails: true, color: 0xb9b5ab });
+    rail(b.x0 + 14.3, 2.1, b.z1 - 30.2, b.x0 + 14.3, 0.92, b.z1 - 39.6, 'Handrail');
+    stairSpot('z', b.z1 - 30, -1, b.cx, b.cx + 10, 1.2, 0, 4, 0.42, { rails: [b.cx + 5] });
+    ledge(b.x0 + 4, b.z0 + 4, b.x0 + 24, b.z0 + 4.6, 0.48, 'marble');
+  }
+  raisedPlaza(blk(1, 3).x0 + 2, blk(1, 3).z0 + 4, blk(1, 3).x1 - 2, blk(1, 3).z0 + 26, 1.5, 's');
+  building(blk(1, 3).x0, blk(1, 3).z1 - 14, blk(1, 3).x1, blk(1, 3).z1, 5);
+  { // mall entrance: long low steps, banks either end, planters
+    const b = blk(2, 3); building(b.x0, b.z1 - 20, b.x1, b.z1, 4, 0xcfc4ad);
+    B(b.x0 + 4, -1, b.z1 - 30, b.x1 - 4, 1.0, b.z1 - 20, 'marble', { edges: '' });
+    stairSpot('z', b.z1 - 30, -1, b.x0 + 10, b.x1 - 10, 1.0, 0, 3, 0.6, {});
+    for (const x of [b.x0 + 7, b.x1 - 7]) hubbas.push({ a: V(x, 1.0, b.z1 - 30), b: V(x, 0.02, b.z1 - 34), w: 6, noRails: true, color: 0xc4bfb3 });
+    for (let k = 0; k < 3; k++) planter(b.x0 + 8 + k * 10, b.z0 + 4, b.x0 + 13 + k * 10, b.z0 + 8);
+  }
+  { // car park with a garage
+    const b = blk(3, 3); garage(b.x0 + 4, b.z0 + 4, b.x0 + 30, b.z1 - 4, 5, 1);
+    for (let z = b.z0 + 6; z < b.z1 - 4; z += 3) dash(b.x0 + 34, z, b.x0 + 42, z, 0xf0ece2, 0.12);
+    for (let z = b.z0 + 8; z < b.z1 - 6; z += 9) car(b.x0 + 38, z + 1.5, true);
+    pothole(b.x1 - 4, b.cz); cone(b.x1 - 5, b.cz + 4); cone(b.x1 - 5, b.cz - 4);
+  }
+  for (const [x, z] of [[-30, -60.5], [62, 20], [-62, -35], [0, 48], [33, 61.5]]) pothole(x, z);
+  for (const [x, z] of [[2.5, -30], [2.5, -26], [2.5, -22], [2.5, -18]]) cone(x, z);   // a lane closure
+
+  /* ================= THE STADIUM (x -120..120, z -440..-140) ================= */
+  {
+    const cx = 0, cz = -300, W = 70, Dd = 50, CH = 6;
+    building(cx - W, cz - Dd, cx + W, cz + Dd, 7, 0xb9b5ab, 'stone');                       // the stands
+    for (const [x0, z0, x1, z1] of [[cx - W - 10, cz - Dd - 10, cx + W + 10, cz - Dd], [cx - W - 10, cz + Dd, cx + W + 10, cz + Dd + 10], [cx - W - 10, cz - Dd, cx - W, cz + Dd], [cx + W, cz - Dd, cx + W + 10, cz + Dd]])
+      B(x0, -1, z0, x1, CH, z1, 'plaza', { edges: 'nswe' });                                // the concourse round it, 6 m up
+    // long switchback ramps up to the concourse on the long sides, and big sets at the ends
+    for (const s of [-1, 1]) {
+      const zr = cz + s * (Dd + 10), xs = [cx - 60, cx + 20];
+      for (const x of xs) hubbas.push({ a: V(x, CH, zr + s * 2.5), b: V(x + 34, 0.02, zr + s * 2.5), w: 5, color: 0xc4bfb3 });
+      for (const x of xs) B(x - 6, -1, Math.min(zr, zr + s * 5), x, CH, Math.max(zr, zr + s * 5), 'plaza', { edges: s < 0 ? 'nw' : 'sw' });   // the landing at the top of each ramp
+      for (const x of xs) rail(x + 0.3, CH + 0.95, zr + s * 5.15, x + 33.6, 0.97, zr + s * 5.15, 'Handrail');
+      B(cx - 8, -1, zr, cx + 8, CH / 2, zr + s * 6, 'plaza');                                  // a landing halfway down the middle set
+      SET('z', zr, s, cx - 6, cx + 6, CH, CH / 2, 8, 0.4); rails.push(handrail('z', zr, s, cx, CH, CH / 2, 8, 0.4));
+      SET('z', zr + s * 6, s, cx - 6, cx + 6, CH / 2, 0, 8, 0.4); rails.push(handrail('z', zr + s * 6, s, cx, CH / 2, 0, 8, 0.4));
+    }
+    for (const s of [-1, 1]) { const xr = cx + s * (W + 10);
+      stairSpot('x', xr, s, cz - 8, cz + 8, CH, 0, 20, 0.42, { rails: [cz - 8.45, cz + 8.45], hubbas: [cz] }); }
+    // the car parks: bays, curb islands, light-pole bases, cart rails, speed bumps
+    for (const zc of [-395, -175]) {
+      paintRect(-112, zc - 22, 112, zc + 22, 0x5d5f63, 0.006);
+      for (let x = -108; x < 108; x += 3) { dash(x, zc - 20, x, zc - 14, 0xf0ece2, 0.1); dash(x, zc + 14, x, zc + 20, 0xf0ece2, 0.1); }
+      for (let x = -96; x <= 96; x += 32) { pad(x - 8, zc - 1.5, x + 8, zc + 1.5, 0.15); planter(x - 0.6, zc - 0.6, x + 0.6, zc + 0.6, 0.75); }
+      for (let x = -80; x <= 80; x += 40) rail(x, 0.45, zc + 9, x + 6, 0.45, zc + 9, 'Rail');
+      for (let k = 0; k < 6; k++) car(R(-100, 100), zc + pick([-17, 17]), false);
+      pothole(R(-90, 90), zc + R(-8, 8)); pothole(R(-90, 90), zc + R(-8, 8));
+    }
+    // the park north of it: hills and a drained pond
+    hump(-60, -430, 9, 2.6); hump(-25, -431, 7, 1.8); hump(80, -430, 9, 3);
+    fine.push({ x0: -70, x1: -50, z0: -440, z1: -420, res: 1 }, { x0: -33, x1: -17, z0: -439, z1: -423, res: 1 }, { x0: 70, x1: 90, z0: -440, z1: -420, res: 1 });
+    pool(12, 44, -438, -422, [[poolS.rect(28, -430, 15, 7, 3), 1.6]], 0, 0.4);
+    for (const x of [-100, 0, 100]) bench(x, -420, x + 5, -419.4);
+  }
+
+  /* ================= THE UNIVERSITY (x 150..440, z -440..-150): a raised campus ================= */
+  {
+    const U = 6, ux0 = 172, uz1 = -172;                                                        // the campus is 6 m up
+    B(ux0, -1, -438, 438, U, uz1, 'plaza', { edges: '' });
+    // big sets down the south and west edges, in three flights, with banks beside them
+    for (const x of [210, 300, 390]) {
+      let top = U, z = uz1;
+      for (let f = 0; f < 3; f++) { const bot = top - 2; SET('z', z, 1, x - 6, x + 6, top, bot, 8, 0.4); rails.push(handrail('z', z, 1, x - 2, top, bot, 8, 0.4), handrail('z', z, 1, x + 2, top, bot, 8, 0.4));
+        hubbas.push(stairHubba('z', z, 1, x + 6.4, top, bot, 8, 0.4)); z += 7 * 0.4; if (f < 2) { B(x - 7, -1, z, x + 7, bot, z + 2.5, 'plaza'); z += 2.5; } top = bot; }
+      hubbas.push({ a: V(x - 13, U, uz1), b: V(x - 13, 0.02, uz1 + 16), w: 10, noRails: true, color: 0xc4bfb3 });   // the bank beside
+    }
+    for (const z of [-390, -290]) { let top = U, x = ux0;
+      for (let f = 0; f < 3; f++) { const bot = top - 2; SET('x', x, -1, z - 6, z + 6, top, bot, 8, 0.4); rails.push(handrail('x', x, -1, z, top, bot, 8, 0.4)); x -= 7 * 0.4; if (f < 2) { B(x - 2.5, -1, z - 7, x, bot, z + 7, 'plaza'); x -= 2.5; } top = bot; } }
+    lip(ux0, uz1, 202.95, uz1, U); lip(217.05, uz1, 292.95, uz1, U); lip(307.05, uz1, 382.95, uz1, U); lip(397.05, uz1, 438, uz1, U);
+    // the quad: lawns, lecture halls, long ledges along the walks
+    for (const [x0, z0, x1, z1] of [[190, -420, 260, -360], [290, -420, 360, -360], [190, -330, 260, -260], [290, -330, 360, -260]]) {
+      paintRect(x0, z0, x1, z1, 0x7d9a5b, U + 0.01);
+      for (const z of [z0 - 3, z1 + 2.4]) B(x0 + 4, U - 0.2, z, x1 - 4, U + 0.45, z + 0.6, 'marble', { edges: 'ns' });
+    }
+    for (const [x0, z0, x1, z1, f] of [[180, -438, 270, -428, 4], [280, -438, 370, -428, 4], [380, -438, 436, -380, 6], [380, -340, 436, -290, 5], [380, -250, 436, -200, 3]])
+      B(x0, U - 1, z0, x1, U + f * 3.4, z1, 'building', { color: col(), tex: pick(['brick', 'stone']) });
+    // the library on its podium, with a long set and rails
+    B(270, U - 1, -250, 360, U + 3.2, -230, 'marble', { edges: 'ew' }); B(280, U + 3.2, -250, 350, U + 20, -240, 'building', { color: 0xd8d2c4, tex: 'stone' });
+    stairSpot('z', -230, 1, 305, 325, U + 3.2, U, 8, 0.42, { rails: [310, 315, 320], hubbas: [304.6, 325.4] });
+    lip(270, -230, 304.25, -230, U + 3.2); lip(325.75, -230, 360, -230, U + 3.2);
+    // the amphitheatre: tiers of seating down to a stage
+    for (let k = 0; k < 6; k++) B(196 + k * 1.6, U - 0.2, -250, 197.6 + k * 1.6, U + 2.7 - k * 0.45, -210, 'ledge', { edges: 'e' });
+    B(206, U - 0.2, -246, 214, U + 0.6, -214, 'wood', { edges: 'ew' });
+    // a sculpture plaza: a big bank up to a wall, and a hubba
+    bankToWall(380, -186, 420, U + 2.2 - U, 5); for (const b of boxes.slice(-1)) { b.min[1] = U - 0.5; b.max[1] = U + 2.2 + 0.9; } hubbas.at(-1).a.y = U + 2.2; hubbas.at(-1).b.y = U + 0.02;
+  }
+  /* ================= RESIDENTIAL HILLS (x -440..-142, z -440..-150) ================= */
+  const NWAVE = [-400, -320, -240], NWX = [-410, -340, -270, -200];
+  {
+    // the avenues climb the hill; sidewalks follow it, flat at each cross street
+    const kinks = NW_LEVELS.map(l => l[0]);
+    for (const a of NWAVE) {
+      for (let z = -440; z < -150; z += 6) if (!NWX.some(c => z + 3 > c - 10 && z < c + 10)) dash(a, z, a, z + 3);
+      for (const side of [-1, 1]) {
+        const lo = Math.min(a + side * 6, a + side * 10), hi = Math.max(a + side * 6, a + side * 10);
+        const segs = [[-440, -420], [-400, -350], [-330, -280], [-260, -210], [-190, -150]];
+        for (const [z0, z1] of segs) { const cz = [z0, ...kinks.filter(k => k > z0 && k < z1), z1];
+          for (let i = 0; i < cz.length - 1; i++) { const za = cz[i], zb = cz[i + 1];
+            if (Math.abs(hillNW(za) - hillNW(zb)) < 1e-6) boxes.push(box(lo, hillNW(za) - 0.6, za, hi, hillNW(za) + 0.15, zb, 'sidewalk', { edges: side < 0 ? 'e' : 'w' }));
+            else hubbas.push({ a: V((lo + hi) / 2, hillNW(za) + 0.15, za), b: V((lo + hi) / 2, hillNW(zb) + 0.15, zb), w: 4, color: 0xc4c0b6, kind: 'Curb' }); } }
+      }
+      for (let z = -430; z < -150; z += 18) if (!NWX.some(c => Math.abs(z - c) < 14)) { lamp(a - 6.6, z, -1); tree(a + 9, z + 9); }
+    }
+    for (const c of NWX) { const y = hillNW(c); street('x', c, -440, -202, y, NWAVE, { rw: 6, sw: 4 }); for (const a of NWAVE) { zebra(a, c - 8, 'x'); zebra(a, c + 8, 'x'); } }
+    // houses along the avenues, stoops on some, driveways that kick you off the curb
+    for (const a of NWAVE) for (const side of [-1, 1]) for (const [z0, z1] of [[-400, -350], [-330, -280], [-260, -210], [-190, -152]]) for (let z = z0 + 4; z < z1 - 6; z += 11) {
+      const xf = a + side * 10, x0 = xf + side * 3, x1 = xf + side * 15, g = hillNW(z + 4.5);
+      building(Math.min(x0, x1), z, Math.max(x0, x1), z + 9, pick([2, 2, 3]), col(), 'brick');
+      if (rnd() < 0.5) { // a stoop: a platform at the door, a few steps and a rail down to the sidewalk
+        boxes.push(box(Math.min(xf + side * 1.8, xf + side * 3), g - 0.5, z + 3.2, Math.max(xf + side * 1.8, xf + side * 3), g + 1.0, z + 5.8, 'step'));
+        SET('x', xf + side * 1.8, -side, z + 3.2, z + 5.8, g + 1.0, g + 0.15, 3, 0.45); rails.push(handrail('x', xf + side * 1.8, -side, z + 6.2, g + 1.0, g + 0.15, 3, 0.45));
+      } else if (rnd() < 0.5) hubbas.push({ a: V(a + side * 6, g + 0.15, z + 4.5), b: V(a + side * 4.6, g + 0.01, z + 4.5), w: 3, noRails: true, color: 0xb9b5ab }); // a driveway cut: a little kicker off the road
+    }
+    // public stairways up the middle of each hill block: flights and landings with rails, straight up the hill
+    for (const xm of [-360, -280]) for (const [zLow, zHigh] of [[-210, -260], [-280, -330], [-350, -400]]) {
+      const yLow = hillNW(zLow), yHigh = hillNW(zHigh), flights = Math.round((yHigh - yLow) / 1.75), step = (zLow - zHigh) / flights;
+      for (let f = 0; f < flights; f++) {
+        const zTop = zHigh + f * step, top = yHigh - f * 1.75, bot = f === flights - 1 ? yLow + 0.15 : top - 1.75;
+        SET('z', zTop, 1, xm - 2, xm + 2, top, bot, 7, 0.4);
+        B(xm - 2.6, bot - 1, zTop + 2.4, xm + 2.6, bot, zTop + step, 'plaza', { edges: 'ew' });   // the landing / path to the next flight
+        rails.push(handrail('z', zTop, 1, xm - 2.45, top, bot, 7, 0.4), handrail('z', zTop, 1, xm + 2.45, top, bot, 7, 0.4));
+      }
+    }
+    // the hilltop park: an overlook wall, benches, and the long grass bank down the east face
+    B(-440, 26, -440, -202, 28.5, -438, 'ledge');
+    for (const x of [-380, -300, -230]) bench(x, -432, x + 5, -431.4);
+    B(-215, 27, -436, -205, 28.45, -435.4, 'marble', { edges: 'ns' });
+    // the east face: stairways down to the boulevard at each cross street, rails both sides
+    for (const c of NWX) {
+      let x = -202, top = hillNW(c) * sm(1);
+      while (top > 0.3) { const face = (xx) => hillNW(c) * sm((-142 - xx) / 60);
+        const run = 9 * 0.45, bot = Math.max(0.15, face(x + run + 3)); if (top - bot < 0.5) break;
+        SET('x', x, 1, c - 2, c + 2, top, bot, 9, 0.45); rails.push(handrail('x', x, 1, c - 2.45, top, bot, 9, 0.45), handrail('x', x, 1, c + 2.45, top, bot, 9, 0.45));
+        x += run; B(x - 0.4, Math.min(bot, face(x + 3)) - 1, c - 2.6, x + 3, bot, c + 2.6, 'plaza'); x += 3; top = bot; }
+      if (x < -140) B(x - 0.4, -1, c - 2.6, -140, 0.15, c + 2.6, 'plaza');                 // the path on to the sidewalk
+    }
+  }
+
+  /* ================= THE SUBURBS (x -440..-142, z -120..120) ================= */
+  {
+    const AV = [-380, -300, -220], ST = [-60, 0, 60];
+    for (const a of AV) street('z', a, -120, 120, 0, ST); for (const c of ST) street('x', c, -440, -142, 0, AV);
+    // houses with backyards; some backyards have a drained pool behind a fence with a gap in it
+    let k = 0;
+    for (const a of AV) for (const side of [-1, 1]) for (const [z0, z1] of [[-120, -69], [-51, -9], [9, 51], [69, 120]]) {
+      if (a === -380 && side < 0 && (z0 === -120 || z0 === 69)) continue;               // the school and the mall go here
+      for (let z = z0 + 3; z < z1 - 12; z += 16) {
+        const x0 = a + side * 12, x1 = a + side * 24; building(Math.min(x0, x1), z, Math.max(x0, x1), z + 11, 2, col(), 'brick');
+        if ((k++ % 3) === 0) { const px = a + side * 32, pz = z + 6; backyardPool(px, pz, 0);
+          for (const [fx0, fz0, fx1, fz1] of [[px - 7, pz - 7, px + 7, pz - 6.92], [px - 7, pz + 6.92, px + 7, pz + 7], [px + side * 7, pz - 7, px + side * 7.08, pz + 7]]) B(fx0, -0.1, fz0, fx1, 1.6, fz1, 'wood');
+          bench(px - 3, pz + 7.8, px + 3, pz + 8.3); }
+      }
+    }
+    // the school: its yard sunk below the street with banks down into it, a 3-stair and rail from the doors
+    building(-440, -120, -420, -70, 3, 0xc79b77);
+    const Y = [-416, -394, -116, -73];
+    feat(Y[0], Y[1], Y[2], Y[3], (x, z) => -1.6 * Math.min(1, Math.min(x - Y[0], Y[1] - x, z - Y[2], Y[3] - z) / 5));
+    fine.push({ x0: Y[0], x1: Y[1], z0: Y[2], z1: Y[3], res: 0.5 });
+    B(-420, -2, -100, -416, 0, -90, 'plaza'); SET('x', -416, 1, -99, -91, 0, -1.6, 5, 0.4); rails.push(handrail('x', -416, 1, -98.55, 0, -1.6, 5, 0.4));
+    for (const z of [-110, -84]) B(-406, -1.8, z, -398, -1.15, z + 0.6, 'wood', { edges: 'ns' });
+    // the strip mall: a raised walkway along the shops, a ramp with a rail, stairs, a car park with curb islands
+    building(-440, 70, -420, 120, 2, 0xd9c7a2);
+    B(-420, -0.5, 70, -414, 0.6, 120, 'sidewalk', { edges: 'e' });
+    hubbas.push({ a: V(-417, 0.6, 70), b: V(-417, 0.02, 64), w: 3, noRails: true, color: 0xc4c0b6 }); rail(-415.35, 1.5, 70, -415.35, 0.92, 64.4, 'Handrail');
+    SET('x', -414, 1, 90, 98, 0.6, 0, 3, 0.4); rails.push(handrail('x', -414, 1, 94, 0.6, 0, 3, 0.4));
+    paintRect(-412, 70, -392, 120, 0x5d5f63, 0.006); for (let z = 72; z < 118; z += 3) dash(-412, z, -406, z, 0xf0ece2, 0.1);
+    pad(-402, 82, -396, 108, 0.15); planter(-399.6, 94, -398.4, 95.2, 0.8);
+    for (let i = 0; i < 5; i++) car(-409, 74 + i * 9, true); cone(-404, 112); cone(-402, 113); pothole(-395, 76);
+  }
+
+  /* ================= THE INDUSTRIAL PARK (x 142..440, z -120..120) ================= */
+  {
+    for (const c of [-50, 40]) street('x', c, 142, 440, 0, [], { noCurb: true }); street('z', 260, -120, 120, 0, [], { noCurb: true });
+    // warehouses with loading docks and truck ramps
+    for (const [x0, z0, x1, z1] of [[150, -118, 230, -64], [280, -118, 370, -64], [150, -36, 230, 26], [280, -36, 370, 26], [150, 54, 230, 118]]) {
+      building(x0, z0, x1, z1, 3, pick([0x8a8f94, 0x9b8f7f, 0x7a8590]), 'stone');
+      loadingDock(x0 + 6, z1, x1 - 14, 1);
+    }
+    // the ditch: a long concrete V-ditch to roll in and out of
+    feat(392, 412, -120, 120, (x, z) => -2.6 * Math.max(0, 1 - Math.abs(x - 402) / 10));
+    fine.push({ x0: 392, x1: 412, z0: -120, z1: 120, res: 1 });
+    for (const z of [-80, 0, 80]) kicker(398, z, 1, 0, 2.2, 0.55);     // ply someone left at the bottom
+    // pipe racks along the road, low rails of the rail spur, gravel and pallets
+    for (const z of [-56, 46]) rail(150, 1.1, z, 380, 1.1, z, 'Pipe');
+    rail(380, 0.15, -118, 380, 0.15, 118, 'Rail', false); rail(382.2, 0.15, -118, 382.2, 0.15, 118, 'Rail', false);
+    hump(320, 82, 12, 3.2); hump(345, 100, 9, 2.2); fine.push({ x0: 300, x1: 360, z0: 66, z1: 112, res: 1 });
+    for (const x of [234, 236, 238]) B(x, 0, 28, x + 1.2, 0.3, x === 238 ? 29.2 : 29.2, 'wood');
+    kicker(226, 28.6, 1, 0, 2.4, 0.6); for (const x of [222, 224]) cone(x, 25);
+  }
+
+  /* ================= THE DAM (x -440..-142, z 130..440) ================= */
+  {
+    // the dam wall all along the reservoir heights, and walls either side of the spillway
+    for (const [z0, z1] of [[128, 286], [324, 440]]) B(-352, -7, z0, -350, 24.5, z1, 'plaza', { edges: 'e' });
+    B(-440, -1, 128, -352, 24.5, 130, 'plaza', { edges: 's' });
+    for (const s of [286, 324]) { B(-350, -7, s - (s === 286 ? 2 : 0), -330, 25, s + (s === 286 ? 0 : 2), 'plaza'); B(-330, -7, s - (s === 286 ? 2 : 0), -311, 6, s + (s === 286 ? 0 : 2), 'plaza'); }
+    fine.push({ x0: -352, x1: -305, z0: 286, z1: 324, res: 0.5 });
+    // the reservoir, drained: a huge bowl in the heights
+    feat(-440, -356, 250, 362, (x, z, h) => { const d = Math.hypot((x + 400) / 38, (z - 306) / 52); return d < 1 ? 24 - 8 * sm((1 - d) * 3) : h; });
+    fine.push({ x0: -440, x1: -356, z0: 250, z1: 362, res: 1 });
+    // the lookout on the heights: ledges and benches, a rail along the top of the hill road
+    for (const z of [180, 220]) B(-345, 23, z, -338, 24.5, z + 0.6, 'marble', { edges: 'ns' });
+    bench(-372, 200, -366, 200.6);
+    for (let x = -340; x < -170; x += 12) { const y0 = terrainH(x, 166), y1 = terrainH(x + 12, 166); rail(x, y0 + 0.75, 166, x + 12, y1 + 0.75, 166, 'Rail'); }
+    for (let x = -340; x < -165; x += 6) dash(x, 160, x + 3, 160);
+    // across the river: the dirt jumps, lines of takeoffs and landings
+    // a dirt start hill at the west end of each line to roll in from; the gaps get longer line by line
+    for (const [zl, G, dip] of [[352, 2, 0.3], [382, 2.6, 0.6], [412, 3.2, 0.9]]) {
+      feat(-350, -334, zl - 6, zl + 6, (xx, zz) => 4.5 * sm((-334 - xx) / 15) * sm((6 - Math.abs(zz - zl)) / 3), 'add');
+      for (let x = -326; x < -180; x += 22) feat(x, x + 11 + G, zl - 3, zl + 3, (xx) => { const t = xx - x;
+        return t < 4 ? 1.0 * (t / 4) ** 1.5 : t < 4 + G ? 1.0 - dip * Math.sin(Math.PI * (t - 4) / G) : 1.0 * Math.max(0, 1 - (t - 4 - G) / 7); }, 'add');
+      fine.push({ x0: -352, x1: -160, z0: zl - 6, z1: zl + 6, res: 0.4 });
+    }
+  }
+
+  /* ================= THE WATERFRONT (x -120..120, z 140..440) ================= */
+  {
+    // the promenade: a rail along the river wall, benches, long ledges, river steps down to the water
+    for (const [x0, x1] of [[-120, -96], [-84, -76], [-64, -12], [12, 36], [48, 120]]) rail(x0, 0.95, 289.4, x1, 0.95, 289.4, 'Handrail');
+    for (const x of [-90, 42]) { B(x - 6, -1, 286, x + 6, 0, 290, 'plaza'); SET('z', 290, 1, x - 5, x + 5, 0, -6, 16, 0.4); rails.push(handrail('z', 290, 1, x, 0, -6, 16, 0.4)); }
+    for (let x = -110; x < 110; x += 24) { bench(x, 278, x + 6, 278.6); ledge(x + 10, 270, x + 20, 270.6, 0.5, 'marble'); }
+    // the river steps: tiers of seating facing the water
+    for (let k = 0; k < 5; k++) B(-40, -1, 250 + k * 1.2, 30, 2.25 - k * 0.45, 251.2 + k * 1.2, 'ledge', { edges: 's' });
+    raisedPlaza(-110, 160, -60, 200, 1.4, 's'); bankToWall(60, 172, 100, 1.6, 5);
+    fountainBowl(10, 190, 6, 1.8);
+    // the road bridge, with banks under it on the south side; the footbridge, railed both sides
+    B(-10, -1.4, 286, 10, 0, 324, 'garage', { edges: '' });
+    rail(-10.4, 1.0, 286, -10.4, 1.0, 324, 'Handrail'); rail(10.4, 1.0, 286, 10.4, 1.0, 324, 'Handrail');
+    B(-73, -0.6, 286, -67, 0.02, 324, 'wood', { edges: '' }); rail(-73.3, 0.95, 286, -73.3, 0.95, 324, 'Handrail'); rail(-66.7, 0.95, 286, -66.7, 0.95, 324, 'Handrail');
+    for (let x = -100; x < 100; x += 30) tree(x, 230), tree(x + 15, 360);
+    raisedPlaza(-60, 360, -10, 400, 1.2, 'n'); for (let k = 0; k < 4; k++) pad(20 + k * 22, 380, 34 + k * 22, 384, 0.18 + k * 0.08);
+  }
+
+  /* ================= THE PORT (x 142..440, z 140..440) ================= */
+  {
+    street('z', 260, 140, 250, 0, [], { noCurb: true }); street('x', 250, 142, 440, 0, [], { noCurb: true });
+    // the container yard: rows with gaps between, stacks to climb, one leaning as a ramp
+    for (let r = 0; r < 4; r++) containers(160, 150 + r * 9, 5, [1, 2, 1, 3, 2, 1, 2], true, 1.8 + r);
+    hubbas.push({ a: V(166, 2.65, 179.3), b: V(166, 0.02, 188), w: 2.4, noRails: true, color: 0x2f6b8a });  // a plate leant up onto the last row
+    // the unfinished freeway ramp: a long embankment that ends in mid-air, a gravel pile to land on
+    hubbas.push({ a: V(340, 13, 270), b: V(196, 0.02, 270), w: 12, color: 0x9c9890 });
+    // the landing: a gravel pile tipped against the end of the deck, steep enough to land on from 13 m
+    hubbas.push({ a: V(340.05, 12.2, 270), b: V(370, 0.02, 270), w: 14, noRails: true, kind: 'Gravel', color: 0x8d8678 });
+    hump(392, 262, 10, 2); fine.push({ x0: 380, x1: 404, z0: 250, z1: 274, res: 1 });
+    for (const s of [-1, 1]) for (let x = 200; x < 338; x += 12) decorFns.push(D => D.lamp(x, 13 * (x - 196) / 144, 270 + s * 6.3, -s));
+    // warehouses and the quay
+    for (const [x0, z0, x1, z1] of [[380, 150, 438, 210], [300, 150, 360, 200]]) { building(x0, z0, x1, z1, 3, pick([0x8a8f94, 0x9b8f7f]), 'stone'); }
+    // across the river: the dry dock, a huge empty basin to drop into; bollards and a crane along the quay
+    pool(178, 342, 334, 426, [[poolS.rect(260, 380, 80, 44, 6), 9]], 0, 1);
+    for (let x = 180; x < 340; x += 10) B(x, 0, 332, x + 0.7, 0.55, 332.7, 'metal', { edges: 'nswe' });
+    for (const x of [200, 300]) { for (const z of [330, 430]) B(x, 0, z, x + 1.2, 18, z + 1.2, 'metal'); B(x, 18, 330, x + 1.2, 19.2, 431.2, 'metal'); }
+  }
+
+  /* ================= BOULEVARDS, BRIDGES, THE EDGE OF THE MAP ================= */
+  street('z', -130, -438, 286, 0, [-130, 130], { lamps: true }); street('z', -130, 324, 438, 0, [], {});
+  street('z', 130, -438, 286, 0, [-130, 130], {}); street('z', 130, 324, 438, 0, [], {});
+  street('x', -130, -142, 438, 0, [-130, 130], {}); street('x', 130, -345, 438, 0, [-130, 130], {});
+  for (const x of [-130, 130]) { B(x - 10, -1.4, 286, x + 10, 0, 324, 'garage'); rail(x - 10.4, 1.0, 286, x - 10.4, 1.0, 324, 'Handrail'); rail(x + 10.4, 1.0, 286, x + 10.4, 1.0, 324, 'Handrail'); }
+  for (const [x0, z0, x1, z1, h] of [[-470, -470, 470, -440, 40], [-470, 440, 470, 470, 30], [-470, -440, -440, 440, 34], [440, -440, 470, 440, 34]])
+    B(x0, -8, z0, x1, h, z1, 'building', { color: 0x7e7a75, tex: 'office' });
+  for (const [x, z] of [[-130, -60], [130, 40], [-60, -130], [80, 130], [-130, 200], [130, -300]]) pothole(x + 3, z);
+
+  for (const hz of hazards) hz.y = terrainH(hz.x, hz.z);
+  /* ---------- the ground: coarse where it's flat, finer on hills, finest round pools and jumps ---------- */
+  const C = c => new THREE.Color(c);
+  const concrete = C(0xb3afa6), grass = C(0x7d9a5b), asphalt = C(0x56585d), dirtC = C(0x8f7a5a), chanC = C(0xb7b3a9), plazaC = C(0xc4bfb5), poolC = C(0xb7b8b2), tile = C(0x3d7fae), lot = C(0x6a6c70);
+  const inNWRoad = (x, z) => NWAVE.some(a => Math.abs(x - a) < 6) || NWX.some(c => Math.abs(z - c) < 6 && x < -202);
+  const groundCol = (x, z, h) => {
+    if (z > RIV.z0 && z < RIV.z1 && x > -350) return chanC;
+    if (x < -142 && z < -150) return inNWRoad(x, z) ? asphalt : x > -202 ? grass : concrete;
+    if (x < -130 && z > 130) return x < -352 ? (h < 23.5 ? chanC : concrete) : z > 330 ? dirtC : grass;
+    if (x > -130 && x < 130 && z < -140) return z < -412 ? grass : concrete;
+    if (x > 140 && z > 140 && z < 290) return lot;
+    if (x > -130 && x < 130 && z > 140) return z > 230 && z < 262 ? grass : plazaC;
+    return concrete;
+  };
+  const poolCol = (x, z, h) => { const g = baseH(x, z); return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
+  // the ground: big coarse patches leave out the cells that finer patches cover (fine patches snap to an 8 m grid)
+  const snap = f => ({ ...f, x0: Math.floor(f.x0 / 8) * 8, x1: Math.ceil(f.x1 / 8) * 8, z0: Math.floor(f.z0 / 8) * 8, z1: Math.ceil(f.z1 / 8) * 8 });
+  const F = fine.map(snap);
+  const NWr = { x0: -440, x1: -144, z0: -440, z1: -152 }, SWr = { x0: -440, x1: -128, z0: 128, z1: 440 }, RVr = { x0: -352, x1: 440, z0: 280, z1: 328 };
+  const regions = [
+    { ...NWr, res: 2, col: groundCol, skip: F }, { ...SWr, res: 2, col: groundCol, skip: [...F, RVr] }, { ...RVr, res: 1, col: groundCol, skip: F },
+    { x0: -440, x1: 440, z0: -440, z1: 440, res: 8, col: groundCol, skip: [...F, NWr, SWr, RVr] },
+    ...F.map(f => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) })),
+  ];
+  districts.push(
+    { name: 'Downtown', pos: V(0, 0, 9), yaw: 0 }, { name: 'Residential Hills', pos: V(-320, 28, -415), yaw: Math.PI },
+    { name: 'Stadium', pos: V(0, 0, -215), yaw: 0 }, { name: 'University', pos: V(300, 0, -150), yaw: 0 },
+    { name: 'Suburbs', pos: V(-300, 0, 0), yaw: Math.PI / 2 }, { name: 'Industrial', pos: V(260, 0, 0), yaw: Math.PI },
+    { name: 'The Dam', pos: V(-345, 24, 200), yaw: -Math.PI / 2 }, { name: 'Waterfront', pos: V(0, 0, 230), yaw: Math.PI },
+    { name: 'Port', pos: V(190, 0, 270), yaw: -Math.PI / 2 });
+  return {
+    terrainH, regions, boxes, hubbas, rails, hazards, districts,
+    spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
+    decor(D) {
+      for (const f of decorFns) f(D);
+    },
+  };
+}
+
 /* ---------------- the chosen level ---------------- */
-const LV = ({ park: levelPark, city: levelCity, block: levelBlock })[LEVEL_ID]();
+const LV = ({ park: levelPark, city: levelCity, mega: levelMega, block: levelBlock })[LEVEL_ID]();
 const TERRAIN = LV.regions, BOXES = LV.boxes, HUBBAS = LV.hubbas, RAILS = LV.rails, terrainH = LV.terrainH;
 const [WX0, WX1, WZ0, WZ1] = LV.bounds;
 const HAZARDS = LV.hazards || [];
@@ -1026,7 +1597,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(LV.sky || 0x9fc4dc);
 scene.fog = new THREE.Fog(LV.sky || 0x9fc4dc, ...(LV.fog || [60, 140]));
-const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 400);
+const camera = new THREE.PerspectiveCamera(72, 1, 0.1, LV.far || 400);
 scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a5550, 1.1));
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
 sun.castShadow = true; sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
@@ -1046,16 +1617,20 @@ function gridTexture(base, line) {
   return t;
 }
 // Static scenery is queued per material and merged into one mesh each, so a city costs a few draw calls.
-const decorQ = new Map();
+// Static scenery is queued per material and per patch of the map, then merged into one mesh each:
+// a few draw calls per patch, and patches out of view are skipped
+const CHUNK = 96, decorQ = new Map();
 function decorAdd(geo, mat, matrix) {
   const g = geo.index ? geo.toNonIndexed() : geo.clone(); if (matrix) g.applyMatrix4(matrix);
-  if (!decorQ.has(mat)) decorQ.set(mat, []); decorQ.get(mat).push(g);
+  if (!g.attributes.normal) g.computeVertexNormals();
+  const a = g.attributes.position.array; const k = Math.floor(a[0] / CHUNK) * 1000 + Math.floor(a[2] / CHUNK);
+  if (!decorQ.has(mat)) decorQ.set(mat, new Map()); const m = decorQ.get(mat); if (!m.has(k)) m.set(k, []); m.get(k).push(g);
 }
 function decorFlush() {
-  for (const [mat, list] of decorQ) {
+  for (const [mat, chunks] of decorQ) for (const list of chunks.values()) {
     let n = 0; for (const g of list) n += g.attributes.position.count;
     const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-    for (const g of list) { if (!g.attributes.normal) g.computeVertexNormals(); pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
+    for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.userData.noShadow; m.receiveShadow = true; scene.add(m);
   }
@@ -1080,19 +1655,29 @@ function sandTexture() {
     flat.receiveShadow = true; scene.add(flat);
   }
   const rampCol = new THREE.Color(0xa7aeb3);
+  // one shared material; texture coordinates come from world position. A region can leave out the cells
+  // that a finer region covers (skip), so big coarse patches and small fine ones never overlap.
+  const gtex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)');
+  const groundMat = new THREE.MeshStandardMaterial({ map: gtex, vertexColors: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   for (const t of TERRAIN) {
-    const res = t.res || 0.15, sx = t.x1 - t.x0, sz = t.z1 - t.z0, nx = Math.ceil(sx / res), nz = Math.ceil(sz / res);
-    const geo = new THREE.PlaneGeometry(sx, sz, nx, nz).rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position, cols = [];
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i) + (t.x0 + t.x1) / 2, z = pos.getZ(i) + (t.z0 + t.z1) / 2, h = terrainH(x, z);
-      pos.setY(i, h); const c = t.col ? t.col(x, z, h) : rampCol; cols.push(c.r, c.g, c.b);
+    const res = t.res || 0.15, nx = Math.max(1, Math.round((t.x1 - t.x0) / res)), nz = Math.max(1, Math.round((t.z1 - t.z0) / res));
+    const dx = (t.x1 - t.x0) / nx, dz = (t.z1 - t.z0) / nz, skip = t.skip || [];
+    const pos = new Float32Array((nx + 1) * (nz + 1) * 3), cols = new Float32Array((nx + 1) * (nz + 1) * 3), uvs = new Float32Array((nx + 1) * (nz + 1) * 2);
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
+      const k = j * (nx + 1) + i, x = t.x0 + i * dx, z = t.z0 + j * dz, h = terrainH(x, z), c = t.col ? t.col(x, z, h) : rampCol;
+      pos[k * 3] = x; pos[k * 3 + 1] = h; pos[k * 3 + 2] = z; cols[k * 3] = c.r; cols[k * 3 + 1] = c.g; cols[k * 3 + 2] = c.b; uvs[k * 2] = x / 2; uvs[k * 2 + 1] = -z / 2;
     }
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    geo.computeVertexNormals();
-    const tex = gridTexture('#ffffff', 'rgba(40,46,56,0.35)'); tex.repeat.set(sx / 2, sz / 2);
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
-    m.position.set((t.x0 + t.x1) / 2, 0, (t.z0 + t.z1) / 2); m.receiveShadow = true; m.castShadow = res < 0.5; scene.add(m);
+    const idx = [];
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const cx = t.x0 + (i + 0.5) * dx, cz = t.z0 + (j + 0.5) * dz;
+      if (skip.length && skip.some(h => cx > h.x0 && cx < h.x1 && cz > h.z0 && cz < h.z1)) continue;
+      const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b, b, c, d);
+    }
+    if (!idx.length) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, groundMat); m.receiveShadow = true; m.castShadow = res < 0.5; scene.add(m);
   }
 }
 const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, metalness: 0.85, roughness: 0.3 });
@@ -1116,27 +1701,46 @@ const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gri
   curb: gridTexture('#b9423a', 'rgba(255,255,255,0.15)'), sidewalk: gridTexture('#c4c0b6', 'rgba(40,46,56,0.3)'),
   marble: gridTexture('#e4e0d6', 'rgba(60,60,70,0.18)'), garage: gridTexture('#a8a69f', 'rgba(30,30,35,0.25)'), wood: gridTexture('#b58a57', 'rgba(70,45,20,0.3)'),
   brick: windowTexture('brick'), office: windowTexture('office'), stone: windowTexture('stone') };
-const roofMat = flatMat(0x55575b);
-for (const b of BOXES) {
-  const sx = b.max[0] - b.min[0], sy = b.max[1] - b.min[1], sz = b.max[2] - b.min[2];
-  let top, side;
-  if (b.mat === 'car') { side = flatMat(b.color, { roughness: 0.35, metalness: 0.3 }); top = side; }
-  else if (b.mat === 'fence') { side = top = new THREE.MeshStandardMaterial({ color: 0xa3aab0, metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.32, depthWrite: false }); }
-  else if (b.mat === 'metal') { side = top = flatMat(0x9aa1a6, { metalness: 0.5, roughness: 0.45 }); }
-  else if (b.mat === 'building') {
-    const tex = boxTex[b.tex || 'brick'].clone(); tex.needsUpdate = true;
-    tex.repeat.set(Math.max(1, Math.round(Math.max(sx, sz) / 4)), Math.max(1, Math.round(sy / 3.4)));
-    side = new THREE.MeshStandardMaterial({ map: tex, color: b.color ?? 0x9b6a55, roughness: 0.95 });
-    top = b.edges ? new THREE.MeshStandardMaterial({ map: gridTexture('#8d8f92', 'rgba(30,30,35,0.25)'), roughness: 0.95 }) : roofMat; // skateable roofs get a grid
-  } else {
-    const tex = (boxTex[b.mat] || boxTex.plaza).clone(); tex.needsUpdate = true;
-    tex.repeat.set(Math.max(1, Math.round(Math.max(sx, sz) / 2)), Math.max(1, Math.round(Math.min(sx, sz) / 2)));
-    top = new THREE.MeshStandardMaterial({ map: tex, color: b.color ?? 0xffffff, roughness: 0.9 });
-    side = new THREE.MeshStandardMaterial({ map: tex, color: 0x9a958d, roughness: 0.9 }); // darker sides so edges read
+// Boxes are merged too: per material and per patch, with world-space texture coordinates so grids and
+// windows keep their size, and vertex colours for each box's tint (sides a little darker so edges read)
+{
+  const groups = new Map();
+  const mats = {};
+  const matFor = key => mats[key] || (mats[key] =
+    key === 'fence' ? new THREE.MeshStandardMaterial({ color: 0xa3aab0, metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.32, depthWrite: false })
+    : key === 'flat' ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.25 })
+    : key === 'roof' ? new THREE.MeshStandardMaterial({ color: 0x55575b, roughness: 0.95 })
+    : key === 'roofGrid' ? new THREE.MeshStandardMaterial({ map: gridTexture('#8d8f92', 'rgba(30,30,35,0.25)'), roughness: 0.95 })
+    : new THREE.MeshStandardMaterial({ map: boxTex[key] || boxTex.plaza, vertexColors: true, roughness: key === 'brick' || key === 'office' || key === 'stone' ? 0.95 : 0.9 }));
+  const grp = (key, cx, cz) => { const k = key + '|' + Math.floor(cx / CHUNK) + ',' + Math.floor(cz / CHUNK);
+    if (!groups.has(k)) groups.set(k, { key, pos: [], nor: [], uv: [], col: [] }); return groups.get(k); };
+  const tmpC = new THREE.Color();
+  // one face: corners in order, the normal, a function giving each corner's uv, and a colour
+  function face(g, pts, n, uvOf, c) {
+    for (const i of [0, 1, 2, 0, 2, 3]) { const p = pts[i]; g.pos.push(p[0], p[1], p[2]); g.nor.push(...n); const [u, v] = uvOf(p); g.uv.push(u, v); g.col.push(c.r, c.g, c.b); }
   }
-  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), [side, side, top, side, side, side]);
-  m.position.set((b.min[0] + b.max[0]) / 2, b.min[1] + sy / 2, (b.min[2] + b.max[2]) / 2);
-  m.castShadow = m.receiveShadow = true; scene.add(m);
+  for (const b of BOXES) {
+    const [x0, y0, z0] = b.min, [x1, y1, z1] = b.max, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const building = b.mat === 'building', flat = b.mat === 'car' || b.mat === 'metal';
+    const key = b.mat === 'fence' ? 'fence' : flat ? 'flat' : building ? (b.tex || 'brick') : (boxTex[b.mat] ? b.mat : 'plaza');
+    const sideG = grp(key, cx, cz), topG = building ? grp(b.edges ? 'roofGrid' : 'roof', cx, cz) : sideG;
+    const tint = tmpC.set(b.color ?? (building ? 0x9b6a55 : flat ? 0x9aa1a6 : 0xffffff)).clone();
+    const sideC = building || flat ? tint : tint.clone().multiplyScalar(0.62), topC = building ? new THREE.Color(1, 1, 1) : tint;
+    const hs = building ? 4 : 2, vs = building ? 3.4 : 2;
+    const top = [[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]];
+    face(topG, top, [0, 1, 0], p => [p[0] / 2, p[2] / 2], topC);
+    face(sideG, [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], [0, 0, 1], p => [p[0] / hs, (p[1] - y0) / vs], sideC);
+    face(sideG, [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]], [0, 0, -1], p => [-p[0] / hs, (p[1] - y0) / vs], sideC);
+    face(sideG, [[x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1]], [1, 0, 0], p => [-p[2] / hs, (p[1] - y0) / vs], sideC);
+    face(sideG, [[x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0]], [-1, 0, 0], p => [p[2] / hs, (p[1] - y0) / vs], sideC);
+    if (y0 > terrainH(cx, cz) + 0.05) face(sideG, [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], [0, -1, 0], p => [p[0] / 2, p[2] / 2], sideC); // undersides that can be seen
+  }
+  for (const g of groups.values()) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.nor, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(g.col, 3));
+    const m = new THREE.Mesh(geo, matFor(g.key)); m.castShadow = g.key !== 'fence'; m.receiveShadow = true; scene.add(m);
+  }
 }
 { // painted safety strips on the drop-off lips and the stair nosings, so edges read from a low camera
   const paint = paintOf(0xe3bf45);
@@ -1200,7 +1804,7 @@ for (const r of RAILS) {
     },
     plane(x0, z0, x1, z1, y, color, textured) {
       const mat = textured ? new THREE.MeshStandardMaterial({ map: (() => { const t = gridTexture('#ffffff', 'rgba(40,46,56,0.3)'); t.repeat.set((x1 - x0) / 2, (z1 - z0) / 2); return t; })(), color, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
-        : new THREE.MeshStandardMaterial({ color, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+        : new THREE.MeshStandardMaterial({ color, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
       const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), mat); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; scene.add(m);
     },
     palm(x, z) {
@@ -2189,6 +2793,13 @@ for (const host of [$('levels'), $('levels-panel')]) for (const l of LEVELS) {
   b.addEventListener('click', e => { e.stopPropagation(); if (l.id === LEVEL_ID) { if (host.id === 'levels') hideIntro(); } else goLevel(l.id); });
   host.appendChild(b);
 }
+// big levels: jump straight to a district
+function goTo(d) {
+  respawn(); S.pos.copy(d.pos); S.pos.y = groundAt(d.pos.x, d.pos.z, d.pos.y + 0.5).h; S.yaw = d.yaw;
+  cam.yaw = S.yaw; cam.pivot.copy(S.pos); spotMarker.visible = false;
+}
+if (LV.districts) { const host = $('districts'); host.hidden = false;
+  for (const d of LV.districts) { const b = document.createElement('button'); b.type = 'button'; b.textContent = d.name; b.addEventListener('click', () => { goTo(d); togglePanel(); }); host.appendChild(b); } }
 let introVisible = true;
 function hideIntro() { introVisible = false; $('intro').hidden = true; startAudio(); }
 function toggleIntro() { introVisible = !introVisible; $('intro').hidden = !introVisible; }
@@ -2502,7 +3113,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

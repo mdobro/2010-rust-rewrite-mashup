@@ -277,7 +277,7 @@ their tops.
 
 Pick a level on the intro screen, or in the **Level** section of the tuning
 panel. Switching reloads the page into that level and remembers it. A link
-with `?level=park` or `?level=city` opens one directly.
+with `?level=park`, `?level=city` or `?level=mega` opens one directly.
 
 ### Beach Park
 
@@ -364,6 +364,72 @@ hill. You start at the top of Bomb Hill.
   "Pothole Ollie". Each counts once per jump.
 - Both speeds are on sliders.
 
+### Port City
+
+A whole city, about 880 m on a side, around twenty times the size of
+Downtown. It has nine districts. To jump between them, open the tuning
+panel: under **Level** there is a button for each district.
+
+- **Downtown:** sixteen blocks on a street grid, each its own spot:
+  - a library podium with an 8-stair, three rails and a hubba;
+  - office ledges;
+  - a parking garage with roofs to gap between;
+  - church steps with a bank;
+  - a sunken plaza;
+  - City Hall;
+  - a fountain bowl;
+  - a hubba hideout;
+  - a museum on a 4.5 m podium with a 14-stair and a bank;
+  - a raised plaza;
+  - the mall and more.
+
+  There are potholes, and coned-off lanes to hop.
+- **Residential Hills (north-west):** a 28 m hill.
+  - The avenues bomb straight down it and flatten at each cross street.
+  - Houses have stoops with little sets and rails, and driveway kickers.
+  - Public stairways climb the middle of each block, flight after flight.
+  - Railed stairways run down the east face to the boulevard.
+  - The overlook park is on top.
+- **Stadium (north):** a concourse 6 m up all the way round.
+  - Long ramps run down the sides, each with a landing at the top.
+  - A two-flight set with a centre rail is in the middle of each long side.
+  - A 20-stair with rails and a hubba is at each end.
+  - The car parks below have curb islands, cart rails and speed bumps.
+  - A park with dirt humps and a drained pond is to the north.
+- **University (north-east):** a campus 6 m above the street.
+  - Three-flight sets with double rails and hubbas come down the south edge,
+    each with a big bank beside it.
+  - More sets come down the west edge.
+  - Inside are quads lined with ledges, the library set, an amphitheatre and a
+    sculpture bank.
+- **Suburbs (west):** streets of houses.
+  - Some backyards have a drained pool behind a fence with a gap in it.
+  - The school yard is sunk below the street, with banks in.
+  - The strip mall has a walkway ramp, a rail and a car park.
+- **Industrial (east):**
+  - warehouses with loading docks;
+  - a 240 m concrete V-ditch with plywood kickers at the bottom;
+  - pipe racks to grind and a rail spur;
+  - gravel humps and pallets.
+- **The Dam (south-west):** reservoir heights 24 m up.
+  - The drained reservoir is one huge bowl.
+  - The spillway is a 24 m concrete drop that ends in a flip-bucket lip
+    launching you into the river channel. It is the biggest air in the game.
+  - Across the river are three dirt-jump lines, each with a start hill to roll
+    in from. The gaps get longer line by line.
+- **Waterfront (south):**
+  - the river promenade with a long rail;
+  - stairs down into the 6 m concrete river channel;
+  - tiers of seating;
+  - a road bridge and a railed footbridge;
+  - plazas and a fountain bowl.
+- **Port (south-east):**
+  - A container yard with a plate leant up as a ramp.
+  - An unfinished freeway on-ramp. Push up it and it ends in mid-air 13 m up,
+    with a gravel pile tipped against the end to land on.
+  - Across the river is the dry dock, an 80 × 44 m basin 9 m deep to drop
+    into.
+
 The old practice block still loads with `?level=block`. The automated tests
 use it.
 
@@ -381,6 +447,9 @@ use it.
 5. Take the rooftop line off the parking garage.
 6. Set a spot at the top of a line, then use Return to retry it.
 7. Pull back to powerslide before the buildings.
+8. In Port City, drop the dam spillway, push up the unfinished freeway and
+   send it off the end, or roll in from the start hill and try the longest
+   dirt-jump line.
 
 ## Sharing a setup
 
