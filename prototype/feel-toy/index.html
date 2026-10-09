@@ -55,6 +55,23 @@
   #hitmarker.kill::before, #hitmarker.kill::after { background: var(--hit); }
 
   #combo { position: fixed; left: 0; right: 0; top: 62%; text-align: center; pointer-events: none; }
+  #chal-prompt { position: fixed; left: 50%; transform: translateX(-50%); top: calc(52px + env(safe-area-inset-top, 0px)); max-width: min(92vw, 520px); text-align: center; pointer-events: none;
+    font: 13px/1.3 var(--font-mono); color: var(--ink); background: rgba(12,15,20,.55); border: 1px solid rgba(255,200,61,.45); border-radius: 4px; padding: 6px 10px; }
+  #chal-prompt b { color: #ffc83d; font-weight: 700; } #chal-prompt.done { border-color: rgba(111,220,140,.5); } #chal-prompt.done b { color: var(--good); }
+  #chal-prompt small { display: block; color: var(--ink-dim); font-size: 11px; }
+  #banner { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; }
+  #banner.on { opacity: 1; }
+  #banner .t { font: 13px var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: #ffc83d; }
+  #banner .s { font: 30px/1.1 var(--font-display); color: var(--ink); text-shadow: 0 3px 0 rgba(0,0,0,.6); margin-top: 4px; }
+  #chal-list .c { display: grid; grid-template-columns: 18px 1fr auto; gap: 2px 6px; align-items: center; font-size: 11px; margin: 6px 0; }
+  #chal-list .c i { font-style: normal; color: #ffc83d; } #chal-list .c.done i { color: var(--good); } #chal-list .c small { grid-column: 2; color: var(--ink-dim); }
+  #chal-list .c button { grid-row: 1 / span 2; grid-column: 3; font: 600 10px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line); border-radius: 4px; padding: 4px 8px; }
+  #replay-ui { position: fixed; inset: 0; pointer-events: none; }
+  #replay-ui::before, #replay-ui::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
+  #replay-ui::before { top: 0; } #replay-ui::after { bottom: 0; }
+  #replay-ui .tag { position: absolute; top: calc(9vh + 10px); left: 16px; font: 700 13px var(--font-mono); color: #ff4d4d; letter-spacing: .12em; z-index: 1; }
+  #replay-ui .btns { position: absolute; bottom: calc(9vh + 12px); left: 50%; transform: translateX(-50%); pointer-events: auto; z-index: 1; }
+  body.replaying .hud, body.replaying #combo, body.replaying #chal-prompt, body.replaying #touch { visibility: hidden; }
   #combo .name { font: 22px/1.1 var(--font-display); letter-spacing: .02em; color: var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.55); }
   #combo .pts { font: 13px var(--font-mono); color: var(--accent); margin-top: 4px; }
   #combo.bail .name { color: var(--hit); }
@@ -157,10 +174,14 @@
   <div class="label">Score</div>
   <div class="speed" id="score" style="font-size:26px">0</div>
   <div class="label" id="best">best combo –</div>
+  <div class="label" id="prog"></div>
 </div>
 <div class="hud" id="hud-bl"><span id="device">mouse + keyboard</span> · <kbd>Tab</kbd> / <kbd>View</kbd> tuning · <kbd>H</kbd> help</div>
 
 <div id="combo"><div class="name"></div><div class="pts"></div></div>
+<div id="chal-prompt" hidden></div>
+<div id="banner"><div class="t"></div><div class="s"></div></div>
+<div id="replay-ui" hidden><div class="tag">● REPLAY</div><div class="btns"><button type="button" id="rp-angle">Angle</button><button type="button" id="rp-slow">Slow-mo</button><button type="button" id="rp-done">Done</button></div></div>
 <div id="balance" hidden><i></i></div>
 
 <div id="intro">
@@ -202,6 +223,11 @@
     <div class="levels" id="levels-panel"></div>
     <div class="btns" id="districts" hidden></div>
   </fieldset>
+  <fieldset id="chal-set" hidden>
+    <legend>Challenges</legend>
+    <div id="chal-list"></div>
+    <div class="btns"><button type="button" id="btn-replay">Replay last 10 s</button><button type="button" id="btn-prog-reset">Reset progress</button></div>
+  </fieldset>
   <div id="panel-groups"></div>
   <fieldset>
     <legend>Setup</legend>
@@ -217,7 +243,7 @@
 <div id="touch-ui" hidden>
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div><div id="stick-label"></div>
   <canvas id="tstick-trail"></canvas><div id="tstick-base" class="idle"></div><div id="tstick-knob" hidden></div>
-  <div class="tbar"><button type="button" id="tb-walk">Walk</button><button type="button" id="tb-cam">Cam</button><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
+  <div class="tbar"><button type="button" id="tb-walk">Walk</button><button type="button" id="tb-cam">Cam</button><button type="button" id="tb-replay">Replay</button><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
   <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
 </div>
 <div id="error" hidden></div>
@@ -763,7 +789,7 @@ function buildDowntown(K) {
   const isClear = (x0, z0, x1, z1) => !CLEAR.some(([a, b, c, d]) => x1 > a && x0 < c && z1 > b && z0 < d);
   const top = (y, x0, z0, x1, z1, hgt, mat = 'marble', edges) => B(x0, y - 0.3, z0, x1, y + hgt, z1, mat, { edges: edges ?? (Math.abs(x1 - x0) > Math.abs(z1 - z0) ? 'ns' : 'ew') }); // on a podium
   const spots = [];
-  const spot = (name, x, y, z, yaw) => spots.push({ name, pos: V(x, y, z), yaw });
+  const spot = (name, x, y, z, yaw, area) => spots.push({ name, pos: V(x, y, z), yaw, area });
 
   /* ---------- the streets ---------- */
   // axis 'z': an avenue running north-south at x = c; axis 'x': a street running east-west at z = c
@@ -864,7 +890,7 @@ function buildDowntown(K) {
     // the garage exit: a gate arm to grind, parking blocks, the ticket booth
     rail(-21, G + 1.0, -58, -15, G + 1.0, -58, 'Rail', false); B(-14.6, G - 0.4, -59, -13, G + 2.3, -57, 'building', { color: 0xd8d2c4, tex: 'stone' });
     for (let x = -10; x < 0; x += 3.2) parkingBlock(x, -54, true);
-    spot('Rooftops', -14, G + 7, -110, -Math.PI / 2);
+    spot('Rooftops', -14, G + 7, -110, -Math.PI / 2, [-31, -120, 31, -49]);
   }
 
   { // CENTRAL PLAZA (middle): a raised deck with a bank up on to it, stairs down the west, the Big Four
@@ -887,7 +913,7 @@ function buildDowntown(K) {
     pad(-18, 26, -10, 29, 0.22); pad(10, 26, 18, 29, 0.22);
     rail(-28, G + 0.4, 9, -28, G + 0.4, 24, 'Rail');
     for (const [x, z] of [[-28, -2], [28, -2], [-28, 28], [28, 28]]) { planter(x - 1.2, z - 1.2, x + 1.2, z + 1.2, 0.6); tree(x, z); }
-    spot('Central Plaza', 19, T, -22, Math.PI);
+    spot('Central Plaza', 19, T, -22, Math.PI, [-31, -31, 31, 31]);
   }
 
   { // COURTHOUSE (middle south): a podium with an eight-stair down the front, rails and hubbas, a bank off the end
@@ -905,7 +931,7 @@ function buildDowntown(K) {
     rail(-6, G + 0.42, 56, 6, G + 0.42, 56, 'Rail');                           // a flat bar in the run-out of the eight
     ledge(12, 60, 12.6, 72, 0.48, 'marble'); bench(12, 52, 16, 52.6);
     for (const x of [-16.5, 16.5]) for (const z of [53, 64, 75]) tree(x, z);
-    spot('Courthouse', 0, T, 90, 0);
+    spot('Courthouse', 0, T, 90, 0, [-31, 49, 31, 120]);
   }
 
   { // LIBRARY (west north): a six-stair with three rails, a hubba and a bank, then a sunken court to drop into
@@ -925,7 +951,7 @@ function buildDowntown(K) {
     B(cx - 10, f - 0.2, cz - 3, cx - 3, f + 0.45, cz - 2.4, 'marble', { edges: 'ns' }); B(cx + 5, f - 0.2, cz - 4, cx + 10, f + 0.2, cz, 'pad', { edges: 'nswe' });
     for (const z of [-110, -100, -80, -60]) bench(-118, z, -117.4, z + 4);
     tree(-114, -84); tree(-114, -64); tree(-56, -84); tree(-56, -64);
-    spot('Library', -88, T, -94, Math.PI);
+    spot('Library', -88, T, -94, Math.PI, [-120, -120, -49, -49]);
   }
 
   { // BANK PLAZA (west middle): a marble deck with long ledges, steps and banks off every side, a fountain bowl
@@ -940,7 +966,7 @@ function buildDowntown(K) {
     top(T, -94, -14.3, -76, -13.7, 0.55); top(T, -94, 13.7, -76, 14.3, 0.55); top(T, -96, -4, -92, 4, 0.6, 'ledge', 'nswe');
     fountainBowl(-58, 0, 5, 1.6);
     bench(-62, -12, -54, -11.4); bench(-62, 11.4, -54, 12); pad(-66, -29, -56, -26, 0.2); pad(-66, 26, -56, 29, 0.2);
-    spot('Bank Plaza', -84, T, 0, -Math.PI / 2);
+    spot('Bank Plaza', -84, T, 0, -Math.PI / 2, [-120, -31, -49, 31]);
   }
 
   { // OFFICE (east north): a double set with rails, a ten-stair hubba, a bank to wall, a line of ledges
@@ -955,7 +981,7 @@ function buildDowntown(K) {
     K.bankToWall(50, -62, 60, 1.4, 4);
     for (const [x0, x1] of [[78, 90], [94, 104], [108, 116]]) ledge(x0, -56.6, x1, -56, 0.45, 'marble');
     top(T, 84, -88, 96, -87.4, 0.45); planter(112, -78, 116, -74, 0.6); tree(114, -76);
-    spot('Office', 68, T, -88, Math.PI);
+    spot('Office', 68, T, -88, Math.PI, [49, -120, 120, -49]);
   }
 
   { // DIY UNDER THE OVERPASS (east middle): a quarterpipe to drop in off, kickers in a line west, a pyramid,
@@ -982,7 +1008,7 @@ function buildDowntown(K) {
     for (const x of [62, 82, 102]) { planter(x - 0.7, 21.8, x + 0.7, 23.2, 0.7); decorFns.push(D => D.lamp(x, G + 0.7, 22.5, 1)); }
     for (const x of [57.2, 76.4, 92.4, 111.6]) car(x, 22.5, false, G);
     for (const [x, z] of [[96, -20], [97, -22], [60, 6]]) cone(x, z);
-    spot('DIY', 111, qtop, -16, Math.PI / 2);
+    spot('DIY', 111, qtop, -16, Math.PI / 2, [49, -31, 120, 31]);
   }
 
   { // HILL PARK (west south): a grass knoll to bomb, an overlook on top, a railed stairway down the east face,
@@ -998,7 +1024,7 @@ function buildDowntown(K) {
     for (const [px, pz] of [[-60, 56], [-56, 64], [-60, 72], [-56, 80]]) picnic(px, pz, true);
     paintRect(-66, 100, -50, 118, 0x8a5f45, G + 0.008); dash(-66, 109, -50, 109, 0xf0ece2, 0.12); paintRect(-59, 100, -57, 102, 0xf0ece2, G + 0.01);
     pad(-118, 52, -108, 56, 0.2); for (const z of [60, 70, 80]) tree(-116, z);
-    spot('Hill Park', -92, ht + 0.3, 94, -Math.PI / 2);
+    spot('Hill Park', -92, ht + 0.3, 94, -Math.PI / 2, [-120, 49, -49, 120]);
   }
 
   { // CONSTRUCTION (east south): a corner store with a three-stair, then a fenced site: ply on pallets,
@@ -1022,7 +1048,7 @@ function buildDowntown(K) {
     B(78, G + 1.0, 108, 92, G + 1.25, 108.6, 'wood', { edges: 'ns' }); for (const xx of [78.3, 85, 91.7]) prop(xx - 0.06, G, 108.2, xx + 0.06, G + 1.0, 108.4, 0x8a8f94);
     pad(100, 56, 116, 70, 0.45); dumpster(110, 82, false); jersey(80, 58, 86, 58.8);
     for (const [cx, cz] of [[100, 76], [101, 78], [80, 96]]) cone(cx, cz);
-    spot('Construction', 82, G, 66, -Math.PI / 2);
+    spot('Construction', 82, G, 66, -Math.PI / 2, [49, 49, 120, 120]);
   }
 
 
@@ -1116,6 +1142,29 @@ function buildDowntown(K) {
   tag(-13.5, G + 3.4, -65.97, 12, 4, 0);                                                                       // the garage wall: a big piece
   tag(51.97, G + 2.6, 57, 6, 2.4, -Math.PI / 2);                                                               // the corner store's side
   tag(-13, G + 9.2, -116.47, 10, 3.4, 0);                                                                      // high on the building behind the roofs
+  /* ---------- challenges: a marker at each, a goal to land there ---------- */
+  // from / to / area: [x0, z0, x1, z1, yMin, yMax]; trick: a pattern the tricks of that jump must match
+  const FLIP = 'flip|shuv|Shove|Impossible|Varial';
+  K.challenges = [
+    { id: 'garage-gap', name: 'Garage Gap', desc: 'Ollie from the garage deck to the first roof', at: [-6, G + 7, -100], go: [-16, G + 7, -100, -Math.PI / 2], kind: 'gap', from: [-23, -118, -4, -66, G + 6.5], to: [-1, -116, 12, -92, G + 5.5] },
+    { id: 'roof-gap', name: 'Rooftop Gap', desc: 'Gap from the first roof to the second', at: [12, G + 6.1, -104], go: [2, G + 6.1, -104, -Math.PI / 2], kind: 'gap', from: [-1, -116, 12, -92, G + 5.5], to: [15, -116, 29, -96, G + 4.5] },
+    { id: 'big-four', name: 'Kickflip the Big Four', desc: 'Kickflip down the five-stair off the plaza deck', at: [0, G + 1.5, -8], go: [-3, G + 1.5, -18, Math.PI], kind: 'trick', trick: 'Kickflip', from: [-7, -14, 7, -5.8, G + 1.2], to: [-8, -5.8, 8, 10, -1, G + 0.4] },
+    { id: 'plaza-gap', name: 'The Plaza Gap', desc: 'Flip trick off the plaza deck edge', at: [16, G + 1.5, -6], go: [16, G + 1.5, -18, Math.PI], kind: 'trick', trick: FLIP, from: [6.7, -14, 26, -5.8, G + 1.2], to: [6, -5.8, 28, 12, -1, G + 0.4] },
+    { id: 'court-eight', name: 'Heelflip the Courthouse Eight', desc: 'Heelflip down the eight-stair', at: [-7, G + 2.4, 80], go: [-7, G + 2.4, 90, 0], kind: 'trick', trick: 'Heelflip', from: [-10, 79.5, 10, 88, G + 2], to: [-11, 60, 11, 77.6, -1, G + 0.5] },
+    { id: 'court-rail', name: 'Courthouse Handrail', desc: 'Grind a handrail down the eight', at: [3.5, G + 2.4, 81], go: [3.5, G + 2.4, 90, 0], kind: 'grind', rail: 'Handrail', area: [-4.5, 76, 4.5, 82] },
+    { id: 'lib-hubba', name: 'Library Hubba', desc: 'Grind the hubba beside the library six', at: [-78.6, G + 1.8, -88], go: [-78.6, G + 1.8, -95, Math.PI], kind: 'grind', rail: 'Hubba', area: [-80, -89.5, -77.5, -83.5, G + 0.2] },
+    { id: 'court-drop', name: 'Into the Court', desc: 'Pop off the rim into the sunken court (not the stairs)', at: [-96, G, -74], go: [-96, G, -84, Math.PI], kind: 'gap', from: [-99, -80, -72, -73.9, G - 0.1], to: [-98, -74, -72, -58, -3, G - 1.2], notIn: [-89.5, -74, -80.5, -71.5] },
+    { id: 'diy-coping', name: 'DIY Coping', desc: 'Grind the coping on the quarterpipe under the overpass', at: [108.4, G + 1.6, -10], go: [100, G, -10, -Math.PI / 2], kind: 'grind', rail: 'Coping', area: [107, -25, 110, 3] },
+    { id: 'office-ten', name: 'Office Ten Hubba', desc: 'Grind a hubba down the office ten-stair', at: [104.4, G + 3, -82], go: [100, G + 3, -88, Math.PI], kind: 'grind', area: [94.5, -83, 105.5, -77.5, G + 0.2], rail: 'Hubba' },
+    { id: 'bank-ledge', name: 'Bank Plaza Ledges', desc: 'Grind one of the long ledges on the bank deck', at: [-85, G + 1.45, -14], go: [-95, G + 0.9, -18, -Math.PI / 2], kind: 'grind', area: [-95, -15, -75, 15, G + 1.2] },
+    { id: 'deck-drop', name: 'Half-Built Drop', desc: 'Drop off the half-built deck with a flip', at: [108, G + 3.6, 86], go: [108, G + 3.6, 100, 0], kind: 'trick', trick: FLIP, from: [100, 86, 117, 106, G + 3.2], to: [90, 60, 120, 86, -1, G + 2.5] },
+    { id: 'hill-bomb', name: 'Hill Bomb', desc: 'Hit 40 km/h coming down the knoll', at: [-92, G + 6, 86], go: [-92, G + 6.2, 92, 0], kind: 'speed', speed: 40 / 3.6, area: [-112, 44, -70, 92] },
+    { id: 'plaza-score', name: 'Own Central Plaza', desc: 'Land a 5,000 point line that starts in Central Plaza', at: [-14, G + 1.5, -24], go: [-14, G + 1.5, -24, Math.PI], kind: 'score', pts: 5000, area: [-31, -31, 31, 31] },
+    { id: 'city-score', name: 'Downtown Line', desc: 'Land a 12,000 point line anywhere downtown', at: [0, G, 40], go: [0, G, 38, Math.PI], kind: 'score', pts: 12000, area: [-120, -120, 120, 120] },
+  ];
+  // tapes hidden round the district: [x, z, roughly how high the surface there is]
+  K.tapes = [[24, -110.5, G + 5.6], [-6, -116, G + 7], [-74, -72.5, G - 1.8], [114, -22, G + 1.6], [108, 100.3, G + 4.0], [0, 15, G - 1.4],
+    [28, 94, G + 2.4], [-58, 0, G - 1.6], [80, 2, G + 1], [-110, -92, G + 1.8], [116, -86, G + 3], [-117, 112, G + 0.5]];
   return spots;
 }
 
@@ -1145,7 +1194,7 @@ function levelCity() {
   const poolCol = (x, z, h) => { const g = 0.15; return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
-    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots,
+    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes,
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
   };
@@ -1465,8 +1514,18 @@ function levelMega() {
     { name: 'Suburbs', pos: V(-300, 0, 0), yaw: Math.PI / 2 }, { name: 'Industrial', pos: V(260, 0, 0), yaw: Math.PI },
     { name: 'The Dam', pos: V(-345, 24, 200), yaw: -Math.PI / 2 }, { name: 'Waterfront', pos: V(0, 0, 230), yaw: Math.PI },
     { name: 'Port', pos: V(190, 0, 270), yaw: -Math.PI / 2 });
+  const FLIP = 'flip|shuv|Shove|Impossible|Varial';
+  const challenges = [...K.challenges,
+    { id: 'spillway', name: 'Send the Spillway', desc: 'Drop the spillway and fly off the lip into the river', at: [-311, -3.8, 305], go: [-349, 24, 305, -Math.PI / 2], kind: 'gap', from: [-320, 287, -309, 323, -6], to: [-309, 290, -200, 320, -7, -4] },
+    { id: 'freeway', name: 'The Unfinished Freeway', desc: 'Send it off the end of the freeway ramp on to the gravel', at: [338, 13, 270], go: [320, 11.4, 270, -Math.PI / 2], kind: 'gap', from: [328, 262, 341, 278, 11.4], to: [340, 255, 380, 285, -1, 12.3] },
+    { id: 'dry-dock', name: 'Into the Dry Dock', desc: 'Drop off the quay into the dry dock', at: [230, 0, 334], go: [230, 0, 328, Math.PI], kind: 'gap', from: [176, 328, 344, 337, -0.3], to: [180, 336, 340, 424, -10, -6] },
+    { id: 'dirt-line', name: 'Dirt Line', desc: 'Clear the first gap on the middle dirt line', at: [-322, 1, 382], go: [-349, 4.5, 382, -Math.PI / 2], kind: 'gap', from: [-324, 378, -320.5, 386, 0.6], to: [-319.5, 378, -312, 386, -0.1, 1.2] },
+    { id: 'reservoir', name: 'Reservoir Speed', desc: 'Hit 45 km/h in the reservoir bowl', at: [-400, 24, 256], go: [-400, 24, 254, Math.PI], kind: 'speed', speed: 45 / 3.6, area: [-438, 254, -358, 358] },
+    { id: 'uni-triple', name: 'University Triple', desc: 'Flip down the first flight of a university set', at: [210, 6, -172], go: [210, 6, -180, Math.PI], kind: 'trick', trick: FLIP, from: [203, -178, 217, -171.9, 5.5], to: [202, -171.9, 218, -164, -1, 4.6] },
+  ];
+  const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
-    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -1616,6 +1675,7 @@ addEventListener('keydown', e => {
     if (e.code === 'KeyP') EDGE_IN.setSpot = true;
     if (e.code === 'KeyF') EDGE_IN.walk = true;
     if (e.code === 'KeyC') toggleCam();
+    if (e.code === 'KeyX') EDGE_IN.replay = true;
     if (e.code === 'KeyQ') EDGE_IN.flip = true;
   }
   keys.add(e.code); setDevice('kbm'); startAudio();
@@ -1707,9 +1767,9 @@ function startAudio() {
     ringGain = AC.createGain(); ringGain.gain.value = 0; ringOsc.connect(ringGain); ringGain.connect(AC.destination); ringOsc.start();
   } catch (_) { AC = null; }
 }
-function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, tone = 0, toneEnd = 0, toneVol = 0.2 }) {
+function burst({ dur = 0.08, freq = 1000, q = 1, type = 'bandpass', vol = 0.3, tone = 0, toneEnd = 0, toneVol = 0.2, at = 0 }) {
   if (!AC) return;
-  const t = AC.currentTime;
+  const t = AC.currentTime + at;
   const src = AC.createBufferSource(); src.buffer = noiseBuf;
   const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
   const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -1736,6 +1796,8 @@ const sfx = {
   kill: () => burst({ dur: 0.12, freq: 2500, q: 4, vol: 0.25, tone: 1300, toneEnd: 2600, toneVol: 0.15 }),
   bail: () => (buzz(70), burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 })),
   click: () => burst({ dur: 0.03, freq: 5000, type: 'highpass', vol: 0.08 }),
+  win: () => { if (!AC) return; [523, 659, 784, 1047].forEach((f, i) => burst({ dur: 0.16, freq: 4000, type: 'highpass', vol: 0.001, tone: f, toneEnd: f, toneVol: 0.12, at: i * 0.09 })); },
+  tape: () => { if (!AC) return; [880, 1320].forEach((f, i) => burst({ dur: 0.1, freq: 4000, type: 'highpass', vol: 0.001, tone: f, toneEnd: f * 1.02, toneVol: 0.1, at: i * 0.07 })); },
   // a shoe on concrete: a soft low thud and a little scuff, harder when running
   step: sp => { const k = Math.min(1, sp / 7); burst({ dur: 0.07, freq: 500 + Math.random() * 150, type: 'lowpass', vol: 0.1 + 0.12 * k, tone: 95 + Math.random() * 20, toneEnd: 55, toneVol: 0.06 + 0.08 * k });
     burst({ dur: 0.05 + 0.04 * k, freq: 2600 + Math.random() * 800, q: 1.2, vol: 0.03 + 0.04 * k }); },
@@ -2283,13 +2345,15 @@ function surfaceAxes(n) {
   return [f, r];
 }
 
-function addTrick(name, pts, ammo) { combo.parts.push(name); combo.pts += pts; combo.ammo += ammo; showCombo(); }
+const CH = { trick() {}, land() {}, bank() {} };   // challenge hooks, filled in with the challenges below
+function addTrick(name, pts, ammo) { if (!combo.parts.length) S.comboStart = S.pos.clone(); combo.parts.push(name); combo.pts += pts; combo.ammo += ammo; showCombo(); CH.trick(name); }
 function bankCombo() {
   if (!combo.parts.length) return;
   const mult = combo.parts.length, total = Math.round(combo.pts * mult);
   stats.score += total; stats.best = Math.max(stats.best, total);
   showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}`, 'landed');
   combo.parts = []; combo.pts = 0; combo.ammo = 0; combo.sketchy = false;
+  CH.bank(total);
 }
 // Cones and potholes: roll into them fast and you bail (slow, a cone just bumps you); clear them in the air for points
 function checkHazards() {
@@ -2339,6 +2403,7 @@ function takeoff() {
   if (S.revertT > 0) { S.revertT = 0; bankCombo(); }
   S.spinRamp = 0;
   S.fakieTakeoff = !S.rail && fakie(); S.takeoffY = S.pos.y;
+  S.toffPos = S.pos.clone(); S.toffParts = combo.parts.length;   // where this jump started, for gaps and challenges
 }
 function pop(n, strength) {
   endManual(false);
@@ -2557,6 +2622,7 @@ function land(g) {
   S.spin = 0; S.popped = false;
   S.landDip = Math.min(0.35, impact * 0.04);
   sfx.land(clamp(impact / 8, 0, 1)); cam.shake = Math.max(cam.shake || 0, clamp((impact - 1.5) / 6, 0, 1));
+  CH.land();
   // land straight into a manual to keep the combo going
   const mk = manualInput();
   if (mk && combo.parts.length) startManual(mk); else if (combo.parts.length && T.revertWindow > 0) S.revertT = T.revertWindow; else bankCombo();
@@ -2707,6 +2773,7 @@ function stepRail(dt) {
     grindSegment();
     takeoff();
     S.rail = null; S.railCool = 0.3; S.grounded = false; S.sinceGround = 0; S.airTime = 0; S.coyoteOk = false; S.popped = false; S.spin = 0;
+    S.toffPos = S.pos.clone(); S.toffParts = combo.parts.length;
   };
   if (S.railT <= 0 || S.railT >= 1 || Math.abs(S.railS) < 0.4) { exitRail(); S.vel.y += 0.6; return; }
   if (IN.ollie) S.crouch = Math.min(1, S.crouch + dt / T.crouchTime);
@@ -3353,6 +3420,127 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 /* ============================================================
+   Challenges, spot bests and tapes. A marker stands at each challenge; land it and the marker
+   goes green. Every combo that starts inside a spot counts toward that spot's best. Tapes are
+   hidden round the map. Progress is kept per level in this browser.
+   ============================================================ */
+const PROG_KEY = `skate-progress-${LEVEL_ID}`;
+const prog = (() => { const blank = { done: {}, tapes: {}, spots: {} }; try { return { ...blank, ...JSON.parse(localStorage.getItem(PROG_KEY) || '{}') }; } catch (_) { return blank; } })();
+const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch (_) {} };
+const CHAL = LV.challenges || [], TAPES = LV.tapes || [], SPOTS = (LV.spots || []).filter(s => s.area);
+const inBox = (r, p, useY = true, pad = 0) => !!p && p.x >= r[0] - pad && p.x <= r[2] + pad && p.z >= r[1] - pad && p.z <= r[3] + pad && (!useY || ((r[4] ?? -1e9) <= p.y && p.y <= (r[5] ?? 1e9)));
+const beamGeo = new THREE.CylinderGeometry(0.26, 0.26, 40, 10, 1, true).translate(0, 20, 0), ringGeo = new THREE.RingGeometry(0.9, 1.25, 28).rotateX(-Math.PI / 2);
+const GOLD = 0xffc83d, GREEN = 0x6fdc8c;
+for (const c of CHAL) {
+  c.mat = new THREE.MeshBasicMaterial({ color: prog.done[c.id] ? GREEN : GOLD, transparent: true, opacity: prog.done[c.id] ? 0.1 : 0.3, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const g = new THREE.Group(), ring = new THREE.Mesh(ringGeo, c.mat); ring.position.y = 0.05; g.add(new THREE.Mesh(beamGeo, c.mat), ring); g.position.set(...c.at); scene.add(g); c.mesh = g;
+}
+let bannerT = 0;
+function banner(title, sub) { $('banner').querySelector('.t').textContent = title; $('banner').querySelector('.s').textContent = sub; $('banner').classList.add('on'); bannerT = 2.8; }
+function complete(c) {
+  if (prog.done[c.id]) return;
+  prog.done[c.id] = true; saveProg(); c.mat.color.set(GREEN); c.mat.opacity = 0.1;
+  banner('Challenge complete', c.name); sfx.win(); buzz(60); refreshChalList();
+}
+CH.trick = () => { if (!S.rail) return; for (const c of CHAL) if (c.kind === 'grind' && !prog.done[c.id] && (!c.rail || S.rail.kind === c.rail) && inBox(c.area, S.pos)) complete(c); };
+CH.land = () => {
+  const parts = combo.parts.slice(S.toffParts || 0).join(' + ');
+  for (const c of CHAL) if ((c.kind === 'gap' || c.kind === 'trick') && !prog.done[c.id] && inBox(c.from, S.toffPos, true, 0.6) && inBox(c.to, S.pos, true, 0.6)
+    && !(c.notIn && inBox(c.notIn, S.toffPos, false)) && (c.kind === 'gap' || new RegExp(c.trick).test(parts))) complete(c);
+};
+CH.bank = total => {
+  const st = S.comboStart;
+  for (const c of CHAL) if (c.kind === 'score' && !prog.done[c.id] && total >= c.pts && inBox(c.area, st, false)) complete(c);
+  const sp = SPOTS.find(s => inBox(s.area, st, false));
+  if (sp && total > (prog.spots[sp.name] || 0)) { const had = prog.spots[sp.name]; prog.spots[sp.name] = total; saveProg(); if (had) banner('New spot best', `${sp.name} · ${total.toLocaleString()}`); }
+};
+// the tapes: a cassette spinning where you have to work to get to it
+const tapeGeo = new THREE.BoxGeometry(0.44, 0.27, 0.08), tapeMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1e, emissive: 0x2a1c00, roughness: 0.35 });
+const labelGeo = new THREE.BoxGeometry(0.32, 0.11, 0.085), labelMat = new THREE.MeshBasicMaterial({ color: GOLD });
+const tapes = TAPES.map(([x, z, y0], i) => {
+  if (prog.tapes[i]) return null;
+  const g = new THREE.Group(), lab = new THREE.Mesh(labelGeo, labelMat); lab.position.y = 0.05; g.add(new THREE.Mesh(tapeGeo, tapeMat), lab);
+  g.position.set(x, groundAt(x, z, y0 + 0.6).h + 0.6, z); scene.add(g); return { g, i };
+});
+const tapeCount = () => Object.keys(prog.tapes).length;
+function chalTick(dt, time) {
+  for (const t of tapes) if (t && t.g.parent) {
+    t.g.rotation.y = time * 2.2; t.g.position.y += Math.sin(time * 3 + t.i) * 0.002;
+    if (t.g.position.distanceTo(S.pos.clone().add(V(0, 0.7, 0))) < 1.2) { scene.remove(t.g); prog.tapes[t.i] = true; saveProg(); banner('Tape found', `${tapeCount()} of ${TAPES.length}`); sfx.tape(); }
+  }
+  const hv = Math.hypot(S.vel.x, S.vel.z);
+  for (const c of CHAL) if (c.kind === 'speed' && !prog.done[c.id] && S.grounded && hv >= c.speed && inBox(c.area, S.pos, false)) complete(c);
+  if (bannerT > 0 && (bannerT -= dt) <= 0) $('banner').classList.remove('on');
+  // what's here: the nearest challenge marker, or the spot you're in and its best
+  let near = null, nd = 13;
+  for (const c of CHAL) { const d = Math.hypot(S.pos.x - c.at[0], S.pos.z - c.at[2]); if (d < nd && Math.abs(S.pos.y - c.at[1]) < 8) { nd = d; near = c; } }
+  const el = $('chal-prompt'), sp = !near && SPOTS.find(s => inBox(s.area, S.pos, false));
+  if (near) { el.hidden = false; el.className = prog.done[near.id] ? 'done' : ''; el.innerHTML = `<b>${prog.done[near.id] ? '✓' : '★'} ${near.name}</b><small>${near.desc}</small>`; }
+  else if (sp) { el.hidden = false; el.className = 'done'; el.innerHTML = `<b>${sp.name}</b><small>spot best ${(prog.spots[sp.name] || 0).toLocaleString()}</small>`; }
+  else el.hidden = true;
+  if (CHAL.length || TAPES.length) $('prog').textContent = `★ ${CHAL.filter(c => prog.done[c.id]).length}/${CHAL.length}  ·  tapes ${tapeCount()}/${TAPES.length}`;
+}
+function refreshChalList() {
+  if (!CHAL.length) return;
+  $('chal-set').hidden = false; const host = $('chal-list'); host.innerHTML = '';
+  for (const c of CHAL) {
+    const row = document.createElement('div'); row.className = 'c' + (prog.done[c.id] ? ' done' : '');
+    row.innerHTML = `<i>${prog.done[c.id] ? '✓' : '★'}</i><span>${c.name}</span><button type="button">Go</button><small>${c.desc}</small>`;
+    row.querySelector('button').addEventListener('click', () => { goTo({ pos: V(c.go[0], c.go[1], c.go[2]), yaw: c.go[3] }); togglePanel(); });
+    host.appendChild(row);
+  }
+  for (const sp of SPOTS) if (prog.spots[sp.name]) { const r = document.createElement('div'); r.className = 'c done'; r.innerHTML = `<i>◆</i><span>${sp.name} best</span><small>${prog.spots[sp.name].toLocaleString()}</small>`; host.appendChild(r); }
+}
+refreshChalList();
+$('btn-prog-reset').addEventListener('click', () => { prog.done = {}; prog.tapes = {}; prog.spots = {}; saveProg(); location.reload(); });
+
+/* ============================================================
+   Replay: the last ten seconds, filmed. Every frame the skater's whole rig is recorded;
+   playing back poses it again from those records while a filmer's camera follows.
+   ============================================================ */
+const RP = { nodes: [], N: 600, frames: [], active: false, k: 0, acc: 0, angle: 0, slow: false, cam: V() };
+skater.traverse(o => RP.nodes.push(o));
+function recordFrame(dt) {
+  if (RP.active) return;
+  const f = { dt, data: new Float32Array(RP.nodes.length * 10), pos: S.pos.clone(), vel: S.vel.clone(), cp: camera.position.clone(), cq: camera.quaternion.clone(), fov: camera.fov };
+  RP.nodes.forEach((o, i) => { const d = f.data, j = i * 10; d[j] = o.position.x; d[j + 1] = o.position.y; d[j + 2] = o.position.z; d[j + 3] = o.quaternion.x; d[j + 4] = o.quaternion.y; d[j + 5] = o.quaternion.z; d[j + 6] = o.quaternion.w; d[j + 7] = o.scale.x; d[j + 8] = o.scale.y; d[j + 9] = o.scale.z; });
+  RP.frames.push(f); if (RP.frames.length > RP.N) RP.frames.shift();
+}
+function applyFrame(f) { RP.nodes.forEach((o, i) => { const d = f.data, j = i * 10; o.position.set(d[j], d[j + 1], d[j + 2]); o.quaternion.set(d[j + 3], d[j + 4], d[j + 5], d[j + 6]); o.scale.set(d[j + 7], d[j + 8], d[j + 9]); }); }
+function startReplay() {
+  if (RP.active || RP.frames.length < 30) return;
+  RP.active = true; RP.k = 0; RP.acc = 0; RP.live = applyFrameSnapshot(); document.body.classList.add('replaying'); $('replay-ui').hidden = false;
+  if (!$('panel').hidden) togglePanel();
+  RP.cam.copy(RP.frames[0].pos).add(V(0, 1.2, 0)).addScaledVector(sideOf(0), 4.5);
+}
+function applyFrameSnapshot() { const f = { data: new Float32Array(RP.nodes.length * 10) }; RP.nodes.forEach((o, i) => { const d = f.data, j = i * 10; d[j] = o.position.x; d[j + 1] = o.position.y; d[j + 2] = o.position.z; d[j + 3] = o.quaternion.x; d[j + 4] = o.quaternion.y; d[j + 5] = o.quaternion.z; d[j + 6] = o.quaternion.w; d[j + 7] = o.scale.x; d[j + 8] = o.scale.y; d[j + 9] = o.scale.z; }); return f; }
+function stopReplay() { if (!RP.active) return; RP.active = false; applyFrame(RP.live); document.body.classList.remove('replaying'); $('replay-ui').hidden = true; }
+// a filmer standing off to the side of where you're going, panning to follow, walking along a little
+function sideOf(k) {
+  const a = RP.frames[Math.max(0, k - 20)].pos, b = RP.frames[Math.min(RP.frames.length - 1, k + 20)].pos, d = b.clone().sub(a).setY(0);
+  if (d.lengthSq() < 0.01) d.set(0, 0, 1); d.normalize(); return V(-d.z, 0, d.x);
+}
+function replayTick(dt) {
+  const fr = RP.frames; RP.acc += dt * (RP.slow ? 0.4 : 1);
+  while (RP.acc >= fr[RP.k].dt) { RP.acc -= fr[RP.k].dt; RP.k++; if (RP.k >= fr.length) { RP.k = 0; RP.cam.copy(fr[0].pos).add(V(0, 1.2, 0)).addScaledVector(sideOf(0), 4.5); } }
+  const f = fr[RP.k]; applyFrame(f);
+  sun.position.copy(f.pos).add(SUN_OFFSET); sun.target.position.copy(f.pos);
+  if (RP.angle === 1) { camera.position.copy(f.cp); camera.quaternion.copy(f.cq); camera.fov = f.fov; }       // as you saw it
+  else {
+    const low = RP.angle === 2, want = f.pos.clone().add(V(0, low ? 0.35 : 1.2, 0)).addScaledVector(sideOf(RP.k), low ? 2.6 : 4.8).addScaledVector(f.vel.clone().setY(0), low ? 0.25 : 0.12);
+    RP.cam.lerp(want, 1 - Math.exp(-(low ? 5 : 3) * dt));
+    const floor = groundAt(RP.cam.x, RP.cam.z, RP.cam.y + 1).h + 0.2; if (RP.cam.y < floor) RP.cam.y = floor;
+    camera.position.copy(RP.cam); camera.lookAt(f.pos.clone().add(V(0, 0.8, 0))); camera.fov = low ? 92 : 58;
+  }
+  camera.updateProjectionMatrix();
+}
+$('rp-done').addEventListener('click', stopReplay);
+$('rp-angle').addEventListener('click', () => { RP.angle = (RP.angle + 1) % 3; $('rp-angle').textContent = ['Angle: filmer', 'Angle: game', 'Angle: fisheye'][RP.angle]; });
+$('rp-slow').addEventListener('click', () => { RP.slow = !RP.slow; $('rp-slow').textContent = RP.slow ? 'Normal speed' : 'Slow-mo'; });
+$('btn-replay').addEventListener('click', startReplay);
+$('tb-replay').addEventListener('click', startReplay);
+
+/* ============================================================
    Main loop: input once per frame, physics at a fixed 120 Hz
    ============================================================ */
 const DT = 1 / 120;
@@ -3365,17 +3553,21 @@ function frame(now) {
   padTick(now);
   if (labelT > 0 && !touch.active) { labelT -= dt; if (labelT <= 0) stickLabel.style.opacity = 0; }
   if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
+  if (EDGE_IN.replay) { EDGE_IN.replay = false; RP.active ? stopReplay() : startReplay(); }
+  if (RP.active) { replayTick(dt); chalTick(dt, simTime); renderer.render(scene, camera); requestAnimationFrame(frame); return; }
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
   const co = window.__camOverride; // test hook: a fixed camera for screenshots
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
+  recordFrame(dt);
+  chalTick(dt, simTime);
   updateHud(dt);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__toy = { goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

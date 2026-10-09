@@ -281,6 +281,54 @@ Safety yellow paint marks the plaza lip and the nosing of each step so the
 edges read from a distance, and the sides of ledges and boxes are darker than
 their tops.
 
+**Filmer camera:** press **C**, or **Cam** on a phone, for a low, close, wide
+camera just behind the board, like a filmer with a fisheye. Landings kick
+either camera with a short shake (*Landing shake*).
+
+## Challenges, spot bests and tapes
+
+- **Challenges:** a gold beam marks each challenge. Ride near one and its
+  goal shows at the top of the screen. Some examples:
+  - Kickflip the Big Four.
+  - Gap from the garage to the roof.
+  - Grind the courthouse handrail.
+  - Hit 40 km/h down the hill.
+  - Land a 5,000-point line that starts in Central Plaza.
+
+  Land it and the beam turns green. Downtown has 15. Port City adds six of its
+  own: the spillway, the freeway gap, the dry dock, a dirt gap, the reservoir
+  and a university set.
+- **Spot bests:** every combo that starts inside a spot counts toward that
+  spot's best. Beating it puts it up on screen.
+- **Tapes:** cassettes are hidden in hard-to-reach places, such as roofs, the
+  bottoms of the bowls, the quarterpipe deck and the half-built deck's beam.
+- **The challenge list:** it's in the tuning panel, with a **Go** button for
+  each challenge.
+- **Progress:** it's saved per level in this browser. **Reset progress**
+  clears it.
+
+## Replay
+
+**X**, **Replay** on a phone, or **Replay last 10 s** in the panel plays back
+the last ten seconds, letterboxed, on a loop. **Angle** cycles through three
+views:
+- a filmer off to the side, panning;
+- the camera you played with;
+- a low fisheye.
+
+**Slow-mo** plays it at 40%. **Done** goes back to skating.
+
+## Sound
+
+Everything is synthesized, so there are no samples.
+- **Wheels:** they sound different on smooth concrete, rough asphalt or dirt,
+  hollow wood and metal. On sidewalks and plazas they tick over the cracks
+  between slabs.
+- **Tricks:** the pop is a wooden snap and landings rattle the trucks.
+- **Grinds:** metal rails ring and hiss, and concrete ledges scrape.
+- **Background:** the city hums in the distance, with cars passing a block
+  away and birds. The beach has waves and gulls instead.
+
 ## Levels
 
 Pick a level on the intro screen, or in the **Level** section of the tuning
@@ -313,56 +361,67 @@ grind. Coping grinds need a pop or some air first.
 
 ### Downtown
 
-A hillside neighbourhood built to be found, not handed to you. North is up the
-hill. You start at the top of Bomb Hill.
+A dense 240 m square of city with no dead space. It has nine blocks on two
+avenues and two streets, and every block is a spot. The spots are laid out
+as lines that cross the street from one block into the next, with curb ramps
+where each line meets a curb. You start on the Central Plaza deck. To jump to
+any spot, use the buttons under **Level** in the tuning panel.
 
-**Streets**
-- Sidewalks are real 15 cm curbs. You can grind them, and riding into one fast
-  bails you.
-- Curb ramps are at every zebra crossing.
-- Lane lines, lamps, trees and parked cars line the streets.
+**The lines**
+- **North to south:** push up the garage ramp and ollie the gap to the first
+  roof, then roll the second gap. Roll in down the big bank off the last roof
+  and cross the street. Bank up onto the Central Plaza deck and go off the Big
+  Four gap. Carry on into the fountain bowl and across into the courthouse
+  plaza.
+- **East to west:** drop in on the DIY quarterpipe under the overpass and hit
+  the kickers and pad heading west. Cross the avenue and bank up onto the
+  plaza deck, then go down its west stairs. Cross again and bank up onto the
+  bank plaza's ledge deck.
+- **From the hill:** bomb the north face of the Hill Park knoll, cross the
+  street and bank up onto the bank plaza. Or take the railed stairway down
+  the east face, cross, and bank up onto the courthouse podium.
 
-**Bomb Hill**
-- The east avenue drops 6 m off the hilltop. The middle intersection is a
-  crest that kicks you up if you're fast.
-- On the way down there are roadworks: a coned-off lane, a steel road plate,
-  and potholes in the lanes.
+**The blocks**
+- **Rooftops:** a parking garage with ply on the deck, two roof gaps, a
+  roll-in bank, and a plaza of ledges at the bottom.
+- **Central Plaza:** a granite deck with banks up onto it and stairs down the
+  west side. The Big Four is a five-stair with a centre rail and two hubbas.
+  The whole south edge is a gap, and the lower plaza has ledges round a
+  drained fountain bowl.
+- **Courthouse:** an eight-stair with two handrails and two hubbas. There's a
+  bank off the end, a flat bar in the run-out, and a bump to bar.
+- **Library:** a six-stair with three rails, a hubba and a bank. Below it is a
+  sunken court with straight walls to drop off, stairs in and a bank out.
+- **Bank Plaza:** a marble deck with long ledges. It has banks and steps on
+  its sides and a fountain bowl in front.
+- **Office:** a double set with rails, a ten-stair hubba, a bank to wall and a
+  line of ledges.
+- **DIY:** under the overpass there is:
+  - a quarterpipe with coping;
+  - ply kickers on pallets;
+  - a pyramid, a hip and a bank to wall;
+  - a pipe on blocks;
+  - jersey barriers;
+  - a car park with parking blocks.
+- **Hill Park:** a grass knoll to bomb, an overlook, a railed stairway,
+  picnic tables and a court.
+- **Construction:** a corner store with a three-stair. Behind it is a fenced
+  site with:
+  - a half-built deck to push up a ply ramp and drop off;
+  - a trench to gap;
+  - pallets, a dirt pile, a scaffold plank, a slab and a dumpster.
 
-**The Channel**
-- A concrete storm channel runs down the west edge, LA River style, with
-  banks on both sides. Its floor slopes with the hill, so you can pick up
-  real speed.
-- There's a centre divider to grind and a sheet of plywood someone dragged
-  in as a kicker.
-- An overpass crosses it, with a DIY ledge on the bank under the bridge.
-- Get in through the gaps in the chain-link fence.
-
-**Hillside**
-- **Row houses:** some have stoops, little stair sets with handrails.
-- **The Hillside Steps:** seven public terraces down the hill, each with stairs,
-  a rail, a hubba, painted lips, planters and benches.
-- **The bank plaza:** level with the sidewalk at the top. As the hill drops
-  away its edge turns into a ledge and then a 2.5 m drop, with big stairs and
-  two rails at the bottom.
-
-**Lowlands**
-- **The schoolyard:** a big bank down into the yard, a rail at the school
-  door, picnic tables and a bike rack.
-- **The store car park:** sunk below the street. Get in down the driveway
-  bank or off the retaining wall. Inside are parking blocks, a planter
-  island, speed bumps, a wheelchair ramp with a handrail, and a drop off the
-  south end onto the sidewalk.
-- **The courthouse plaza:** grand stairs with two rails, a fountain, marble
-  ledges, a statue plinth, and an access ramp with a long rail up the side.
-- **The construction site:** fenced, with a gate and a gap in the fence.
-  Inside are plywood on pallets and on a Jersey barrier as kickers, a dirt
-  pile, a row of barriers, a pipe on blocks, a foundation slab, a scaffold
-  plank, a dumpster and cones.
-
-**Rooftops**
-- At the top of the hill, push up the parking-garage ramp to the top deck.
-- Ollie the 3 m gap to a roof, roll across the next gap, drop to the loading
-  dock, and take its stairs and rail down.
+**The streets**
+- The blocks sit at sidewalk height, so curbs only face the road.
+- Every sidewalk has things to skate: benches, planters, newspaper boxes,
+  trash cans, bike racks, bus stops with a bench ledge, hydrants, parking
+  meters and dumpsters.
+- Driveways now and then make kickers off the curb.
+- The buildings have stoops with handrails, access ramps and planter ledges.
+- Parked cars line one curb of each road. There are potholes and a coned-off
+  lane.
+- Each place has its own paving. The gutters and parking lanes are oily, the
+  ledge edges are waxed, and there's graffiti on the walls.
 
 **Hazards**
 - **Cones:** hit one faster than about 2 m/s and you bail. Slower, it just
@@ -378,20 +437,8 @@ A whole city, about 880 m on a side, around twenty times the size of
 Downtown. It has nine districts. To jump between them, open the tuning
 panel: under **Level** there is a button for each district.
 
-- **Downtown:** sixteen blocks on a street grid, each its own spot:
-  - a library podium with an 8-stair, three rails and a hubba;
-  - office ledges;
-  - a parking garage with roofs to gap between;
-  - church steps with a bank;
-  - a sunken plaza;
-  - City Hall;
-  - a fountain bowl;
-  - a hubba hideout;
-  - a museum on a 4.5 m podium with a 14-stair and a bank;
-  - a raised plaza;
-  - the mall and more.
-
-  There are potholes, and coned-off lanes to hop.
+- **Downtown:** the same dense downtown as the Downtown level, with its
+  lines, challenges and tapes.
 - **Residential Hills (north-west):** a 28 m hill.
   - The avenues bomb straight down it and flatten at each cross street.
   - Houses have stoops with little sets and rails, and driveway kickers.
@@ -444,15 +491,17 @@ use it.
 ## Things to try
 
 1. Push to full speed and carve S-turns. Does turning feel weighty or twitchy?
-   Then drop into the clover bowl (Beach Park), or bomb the hill (Downtown).
+   Then drop into the clover bowl (Beach Park), or the DIY quarterpipe (Downtown).
    (*Turn rate*, *Grip*, *Speed kept when carving*)
-2. Kickflip down the Hillside Steps or the grand stairs (Downtown).
+2. Kickflip the Big Four or heelflip the courthouse eight (Downtown), then
+   press X to watch it back.
 3. Ollie onto a handrail or a hubba from the top of the stairs, holding a
    direction on the trick stick to pick the grind. Pop about two to four
    metres before the top of the rail.
-4. Bomb the hill and ollie the potholes and cones on the way down, then find
-   the gap in the fence into the storm channel.
-5. Take the rooftop line off the parking garage.
+4. Bomb the Hill Park knoll, cross the street and bank up onto the bank
+   plaza. Ollie the potholes and cones on the way.
+5. Take the rooftop line: garage gap, roof gap, roll in, across, and off the
+   Big Four gap.
 6. Set a spot at the top of a line, then use Return to retry it.
 7. Pull back to powerslide before the buildings.
 8. In Port City, drop the dam spillway, push up the unfinished freeway and
