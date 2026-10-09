@@ -168,6 +168,13 @@ to the rail as it lands: how you approached, plus any set-up from the stick.
 Both thresholds are sliders (*Board angled this much keeps its angle*, *Board
 this far across the rail slides*).
 
+**Riding fakie** turns the stick round for grinds and for lining up in the
+air. The camera then looks at the board from its nose end, so up still means
+the leading truck (the tail, when fakie) and right still turns the board to
+the right on screen. Up into a rail fakie is a Fakie 5-0, right is a Fakie
+Boardslide, and so on. The grind name says Fakie. Steering stays the same
+either way.
+
 **FS or BS** isn't a stick input: it comes from which side you meet the rail.
 With the rail on your toe side it's frontside, with it on your heel side it's
 backside, and the name says so (FS Smith, BS Boardslide...).

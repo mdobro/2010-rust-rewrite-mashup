@@ -1709,9 +1709,13 @@ function grindFromAngle(key, rel) {
   if (tail) return pos ? 'L>U' : 'R>U';
   return PARTNER[key] && Math.sign(g.yaw) !== Math.sign(rel) ? PARTNER[key] : key;
 }
+// Riding fakie the camera looks at the board from its nose end, so the stick is turned round:
+// up still means the leading truck and right still means screen-right
+const ROT = { U: 'D', D: 'U', L: 'R', R: 'L' };
+const stance = sec => sec && (!fakie() ? sec : sec.replace(/[UDLR]/g, c => ROT[c]));
 function grindKey() {
   if (Math.hypot(GS.x, GS.y) < 0.45) return 'C';
-  const cur = stickSector(), st = gStick.start || cur;
+  const cur = stance(stickSector()), st = stance(gStick.start) || cur;
   if (st === cur) return cur === 'DL' ? 'D>L' : cur;                 // straight down-left: tailslide
   if (ADJ[st]) { const b = ADJ[st].find(b => cur === b || cur === diagOf(st, b)); return b ? st + '>' + b : cur; }
   if (st.includes(cur)) return st.replace(cur, '') + '>' + cur;      // through a diagonal onto a side
@@ -1774,7 +1778,7 @@ function tryRail() {
   // the board's real angle to the rail (how you came in, plus any set-up in the air) picks the grind family
   const rel = wrap(yaw0 + GRINDS[held].yaw - S.yaw);
   S.grindKey = grindFromAngle(held, rel); S.grindYaw = GRINDS[S.grindKey].slide || Math.abs(rel) < T.grindAngle * DEG ? GRINDS[S.grindKey].yaw : rel;
-  S.grindName = (side >= 0 ? 'FS ' : 'BS ') + GRINDS[S.grindKey].name;
+  S.grindName = (keepFakie ? 'Fakie ' : '') + (side >= 0 ? 'FS ' : 'BS ') + GRINDS[S.grindKey].name;
   if (typeof showTrickName === 'function' && device !== 'kbm') showTrickName(S.grindName);
   const onRail = r.a.clone().addScaledVector(r.dir, t * r.len); onRail.y += 0.035;
   pose.posLag.add(S.pos.clone().sub(onRail)); S.pos.copy(onRail); // ...and settles onto it
