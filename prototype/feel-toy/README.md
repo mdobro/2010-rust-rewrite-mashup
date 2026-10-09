@@ -95,7 +95,7 @@ hitting exact boxes:
 | 360 Hardflip / Laserflip | Swing in from the left side (a bigger swing), flick up-left / up-right |
 | 360 Flip / 360 Inward Heelflip | Swing in from the right side, flick up-left / up-right |
 | Nollie anything | The same, upside down: push up first, flick down |
-| Late flip | Any flip motion while already in the air |
+| Late flip | In the air, let the stick back to the middle (or lift your thumb), then any flip motion |
 
 A shuvit has to be a clear arc round the rim. A sideways move that cuts
 straight across from the bottom to a side is read as a flick, so it's a
@@ -111,6 +111,13 @@ Drifting sideways while you hold a crouch doesn't change the trick: only a
 swing that ends at the bottom of the rim counts.
 Slow stick movement never fires a trick. After a trick the stick has to come
 back to the centre before the next one.
+
+**Late flips need a return to neutral.** After the pop, moving the trick stick
+straight on, even sweeping it through the middle, only moves the board: it
+lines it up for a grind and never fires a trick. To do a late flip, let the
+stick come back to the middle and rest there for a moment, or lift your thumb
+and touch again, then do the motion. Each late flip needs its own return to
+neutral (*Late flips: rest the stick in the middle this long first*).
 
 There are no grabs. In the air, holding the trick stick in a direction lines
 the board up for the grind it will land in (see below), so you can set up a
@@ -167,12 +174,6 @@ to the rail as it lands: how you approached, plus any set-up from the stick.
 
 Both thresholds are sliders (*Board angled this much keeps its angle*, *Board
 this far across the rail slides*).
-
-**Near a rail the trick stick is for grinds.** In the air within about
-4.5 m of a rail or ledge, it only sets up the grind and doesn't fire late
-flips or shuvits. Otherwise rolling down then left (a tailslide) would be
-read as a late shuvit, turn the board round and land you in something else
-(*In the air this close to a rail the trick stick only sets up grinds*).
 
 **Riding fakie** turns the stick round for grinds and for lining up in the
 air. The camera then looks at the board from its nose end, so up still means
