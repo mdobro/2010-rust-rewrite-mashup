@@ -225,7 +225,7 @@ const DEFAULTS = {
   autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55,
   camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camLag: 12, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
-  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, swingTime: 0.18, nudge: 20, sweepVarial: 25, sweep360: 70, sweepUp360: 40, shuv360: 120, holdReleasePops: false,
+  flickRim: 0.6, flickTime: 0.25, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
 };
 const SPEC = [
   ['Skating', [
@@ -261,12 +261,10 @@ const SPEC = [
   ['Trick stick', [
     ['flickRim', 'How far counts as a direction', 0.3, 0.95, 0.01],
     ['flickTime', 'Max time from pull to flick (s)', 0.08, 0.6, 0.01],
-    ['nudge', 'Hardflip / inward heel: sideways nudge (°)', 5, 60, 1],
-    ['swingTime', 'Nudge counts if the flick follows within (s)', 0.06, 0.5, 0.01],
-    ['sweepVarial', 'Varials: swing in from the side (°)', 10, 60, 1],
-    ['sweep360', '360 flip / laserflip: swing in from the side (°)', 40, 120, 1],
-    ['sweepUp360', '360 hardflip / 360 inward heel: swing in (°)', 20, 100, 1],
-    ['shuv360', '360 shuvits: sweep round the bottom (°)', 80, 200, 1],
+    ['ollieCone', 'Ollie: how straight up the flick must be (± °)', 3, 40, 1],
+    ['sweepVarial', 'Hardflip / varials / inward heel: swing in to the bottom (°)', 8, 60, 1],
+    ['sweep360', '360 flips: swing in from the side (°)', 30, 120, 1],
+    ['shuv360', '360 shuvits: sweep round the bottom (°)', 80, 200, 1], ['shuvArc', 'Shuvit: how round the arc must be (0 = any)', 0, 0.3, 0.01],
     ['flickSettle', 'Ignore stick after a trick (s)', 0, 0.5, 0.01],
     ['holdReleasePops', 'Pull down + let go pops (no flick)', 'bool'],
   ]],
@@ -274,7 +272,7 @@ const SPEC = [
     ['stickRadius', 'Stick size (px)', 30, 100, 1],
   ]],
 ];
-const STORE_KEY = 'skate-feel-toy-v8';
+const STORE_KEY = 'skate-feel-toy-v9';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
@@ -1433,20 +1431,20 @@ function toggleIntro() { introVisible = !introVisible; $('intro').hidden = !intr
 $('intro').addEventListener('click', () => hideIntro());
 
 /* ============================================================
-   Flick-it: Skate's right-stick trick motions, regular stance.
+   Flick-it: Skate's right-stick trick motions, regular stance (as on the skate. flickit chart).
    The stick's path round its rim is measured as an angle, so moves are judged by how far
-   you swing, not by exact boxes:
-     Ollie              pull down, flick up              Nollie anything: the same, upside down
-     Kickflip/Heelflip  pull down, flick up-right / up-left
-     FS / BS Shuvit     pull down, flick (or sweep) left / right
-     Hardflip           pull down, nudge right (≥ ~20°), flick up
-     Inward Heelflip    pull down, nudge left, flick up
-     Varial Kick/Heel   swing in from the left / right (≥ ~25°) to the bottom, flick up-right / up-left
-     360 Flip           swing in from the left (≥ ~70°), flick up-right
-     Laserflip          swing in from the right (≥ ~70°), flick up-left
-     360 Hardflip       swing in from the right (≥ ~70°), flick up
-     360 Inward Heel    swing in from the left (≥ ~70°), flick up
-     FS / BS 360 Shuv   sweep round the bottom (≥ ~120°) onto the left / right
+   you swing, not by exact boxes. The flick picks the family, the swing before it the variation:
+     Ollie                pull down, flick straight up         Nollie anything: the same, upside down
+     Kickflip / Heelflip  pull down, flick up-left / up-right (or straight left / right)
+     Hardflip             swing in from the lower left to the bottom, flick up-left
+     Varial Heelflip      swing in from the lower left, flick up-right
+     Varial Kickflip      swing in from the lower right, flick up-left
+     Inward Heelflip      swing in from the lower right, flick up-right
+     360 Hardflip / Laser swing in from the left side (a bigger swing), flick up-left / up-right
+     360 Flip / 360 Inw.  swing in from the right side, flick up-left / up-right
+     FS / BS Pop Shuvit   pull down, then an ARC round the bottom up onto the right / left
+     FS / BS 360 Shuvit   arc from one side round the bottom up onto the other (right / left)
+   A sideways move that cuts straight across (not round the rim) is a flick, so it's a flip.
    On the ground the pull loads a crouch and the flick pops; in the air the same motions
    are late flips. One recogniser per stick: the touch right stick and the controller's.
    ============================================================ */
@@ -1465,7 +1463,7 @@ function flickLoad(f, on) {
 }
 function flickCancel(f) { if (f.loaded) { FL.cancelPop = true; flickLoad(f, false); } }
 // Name a flick: w = the rim path before the stick crossed the middle, arrival = where it landed.
-function nameFlick(w, arrival, quickMs) {
+function nameFlick(w, arrival) {
   // pull down (or nollie push up): whichever extreme the stick reached last
   let iLo = -1, iHi = -1;
   for (let i = 0; i < w.length; i++) { if (w[i].sin < -0.7) iLo = i; if (w[i].sin > 0.7) iHi = i; }
@@ -1475,34 +1473,30 @@ function nameFlick(w, arrival, quickMs) {
   const W = w.map(s => ({ a: m(s.a), t: s.t, sin: nollie ? -s.sin : s.sin }));
   let iE = 0; for (let i = 1; i < W.length; i++) if (W[i].sin <= W[iE].sin + 0.02) iE = i; // the (latest) bottom of the pull
   const pre = W[iE].a - W[0].a;                                    // + swung in from the left, - from the right
-  const post = W[W.length - 1].a - W[iE].a;                        // + nudged right, - nudged left (before the flick)
-  const quick = quickMs <= T.swingTime * 1000;
-  const fa = norm180(m(arrival));
-  let name = null;
-  if (fa > 65 && fa < 115) {
-    // a flick straight up has no varial version, so a smaller swing already makes it a 360
-    name = pre >= T.sweepUp360 ? '360 Inward Heelflip' : pre <= -T.sweepUp360 ? '360 Hardflip'
-      : quick && post >= T.nudge ? 'Hardflip' : quick && post <= -T.nudge ? 'Inward Heelflip' : 'Ollie';
-  } else if (fa >= 15 && fa <= 65) {
-    name = pre >= T.sweep360 ? '360 Flip' : pre >= T.sweepVarial ? 'Varial Kickflip' : 'Kickflip';
-  } else if (fa >= 115 && fa <= 165) {
-    name = pre <= -T.sweep360 ? 'Laserflip' : pre <= -T.sweepVarial ? 'Varial Heelflip' : 'Heelflip';
-  } else if (fa > -30 && fa < 15) name = pre <= -T.sweep360 ? 'BS 360 Pop Shuvit' : 'BS Pop Shuvit';
-  else if (fa > 165 || fa < -150) name = pre >= T.sweep360 ? 'FS 360 Pop Shuvit' : 'FS Pop Shuvit';
-  if (!name) return null;
+  const dev = norm180(norm180(m(arrival)) - 90);                   // where the flick went: + left of up, - right of up
+  if (Math.abs(dev) > 125) return null;                            // came back down: not a flick
+  const from = pre >= T.sweep360 ? 'L360' : pre >= T.sweepVarial ? 'L' : pre <= -T.sweep360 ? 'R360' : pre <= -T.sweepVarial ? 'R' : '';
+  const name = Math.abs(dev) <= T.ollieCone ? 'Ollie'
+    : dev > 0 ? { '': 'Kickflip', L: 'Hardflip', L360: '360 Hardflip', R: 'Varial Kickflip', R360: '360 Flip' }[from]
+    : { '': 'Heelflip', L: 'Varial Heelflip', L360: 'Laserflip', R: 'Inward Heelflip', R360: '360 Inward Heelflip' }[from];
   return nollie ? (name === 'Ollie' ? 'Nollie' : 'Nollie ' + name) : name;
 }
-// Shuvits can also be a sweep round the bottom (or top) onto a side without crossing the middle.
-function sideSweep(f, now) {
-  const r = f.rim; if (r.length < 3) return null;
+// A move from the bottom (or top) out to a side without crossing the middle. An arc round the rim
+// is a shuvit; a move that cuts straight across is a sideways flick, so it's a flip.
+function sideSweep(f) {
+  const r = f.rim; if (r.length < 2) return null;
   const cur = r[r.length - 1];
-  if (Math.abs(cur.sin) > 0.4) return null;
   let iB = -1; for (let i = r.length - 2; i >= 0; i--) if (Math.abs(r[i].sin) > 0.85) { iB = i; break; }
-  if (iB < 0 || cur.t - r[iB].t > T.flickTime * 1000 || Math.abs(cur.a - r[iB].a) < 55) return null;
+  if (iB < 0 || cur.t - r[iB].t > T.flickTime * 1000 || Math.abs(cur.a - r[iB].a) < 60 || Math.abs(cur.sin) > 0.6) return null;
   const nollie = r[iB].sin > 0;
-  const total = Math.abs(cur.a - r[0].a), toLeft = Math.abs(norm180(cur.a)) > 90;
-  const name = (toLeft ? 'FS' : 'BS') + (total >= T.shuv360 ? ' 360' : '') + ' Pop Shuvit';
-  return nollie ? 'Nollie ' + name : name;
+  // how far the path bows out from the straight line between the bottom and here
+  const P = s => [s.m * Math.cos(s.a / DEGS), s.m * Math.sin(s.a / DEGS)];
+  const [x0, y0] = P(r[iB]), [x1, y1] = P(cur), len = Math.hypot(x1 - x0, y1 - y0) || 1;
+  let bow = 0; for (let i = iB + 1; i < r.length - 1; i++) { const [x, y] = P(r[i]); bow = Math.max(bow, Math.abs((x1 - x0) * (y0 - y) - (x0 - x) * (y1 - y0)) / len); }
+  const arc = bow / len >= T.shuvArc;
+  const toRight = Math.cos(cur.a / DEGS) > 0, total = Math.abs(cur.a - r[0].a);
+  const name = (toRight ? 'FS' : 'BS') + (total >= T.shuv360 ? ' 360' : '') + ' Pop Shuvit';
+  return { name: nollie ? 'Nollie ' + name : name, arc, iB };
 }
 function flickFire(f, name, now, flickMs) {
   f.pending = null;
@@ -1519,7 +1513,7 @@ function flickFire(f, name, now, flickMs) {
 // Feed the stick position (x right, y down, magnitude 0..1).
 function flickFeed(f, nx, ny, now) {
   if (S.walking) { f.rim = []; f.windup = null; f.active = false; return; }
-  const m = Math.min(1, Math.hypot(nx, ny));
+  const m = Math.hypot(nx, ny);                                    // touch can pass past the rim: the bow test wants the real path
   f.active = m > 0.05;
   if (f.needCenter) { if (m < 0.35) f.needCenter = false; else return; }
   if (now < f.settleUntil) return;
@@ -1528,20 +1522,20 @@ function flickFeed(f, nx, ny, now) {
     if (!f.rim.length && f.windup) {                               // arriving after crossing the middle
       const w = f.windup; f.windup = null;
       if (now - f.leftT <= T.flickTime * 1000) {
-        let iLo = -1, iHi = -1; for (let i = 0; i < w.length; i++) { if (w[i].sin < -0.7) iLo = i; if (w[i].sin > 0.7) iHi = i; }
-        const up = iHi > iLo;                                        // nollie: the extreme is the top
-        let iE = 0; for (let i = 1; i < w.length; i++) if (up ? w[i].sin >= w[iE].sin - 0.02 : w[i].sin <= w[iE].sin + 0.02) iE = i;
-        const name = nameFlick(w, raw, now - w[iE].t);
+        const name = nameFlick(w, raw);
         if (name) { flickFire(f, name, now, now - f.leftT); return; }
       }
     }
     const a = f.rim.length ? f.rim[f.rim.length - 1].a + norm180(raw - f.rim[f.rim.length - 1].a) : raw;
     const sn = Math.sin(a / DEGS);
-    f.rim.push({ a, t: now, sin: sn }); if (f.rim.length > 80) f.rim.shift();
+    f.rim.push({ a, t: now, sin: sn, m }); if (f.rim.length > 80) f.rim.shift();
     if (Math.abs(sn) > 0.7) flickLoad(f, true);                     // the pull (or nollie push) loads the crouch
-    const sw = sideSweep(f, now);
-    if (sw) { if (!f.pending || f.pending.name !== sw) f.pending = { name: sw, at: now }; }
-    else if (f.pending && Math.abs(sn) > 0.5) f.pending = null;     // kept swinging past the side
+    const sw = sideSweep(f);
+    if (sw && !sw.arc) {                                             // cut straight across to a side: a flip
+      const name = nameFlick(f.rim.slice(0, sw.iB + 1), raw);
+      if (name) { flickFire(f, name, now, now - f.rim[sw.iB].t); return; }
+    } else if (sw) { if (!f.pending || f.pending.name !== sw.name) f.pending = { name: sw.name, at: now }; }
+    else if (f.pending && Math.abs(sn) > 0.85) f.pending = null;    // kept swinging right round to the far end
   } else if (f.rim.length) {                                         // left the rim: maybe a flick on its way across
     // a thumb held dead still sends no events, so the stick was on the rim until the last frame that saw it there
     f.windup = f.rim; f.leftT = Math.max(f.rim[f.rim.length - 1].t, f.heldT || 0); f.rim = [];
@@ -1652,7 +1646,7 @@ function moveTrickStick(x, y, now) {
   ts.x = x; ts.y = y; ts.moved = Math.max(ts.moved, Math.hypot(x - ts.x0, y - ts.y0));
   GS.touchX = nx; GS.touchY = ny;
   placeKnob(tKnob, c, nx, ny);
-  flickFeed(touchFlick, nx, ny, now);
+  flickFeed(touchFlick, (x - ts.ox) / T.stickRadius, (y - ts.oy) / T.stickRadius, now); // unclamped: the real thumb path
 }
 canvas.addEventListener('pointermove', e => {
   if (e.pointerType !== 'touch') return;

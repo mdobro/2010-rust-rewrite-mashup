@@ -66,32 +66,37 @@ ollie.
 
 ### Flick-it tricks (right stick, regular stance)
 
-Pull the stick down to crouch, then flick. The stick's path round its rim is
-measured as an angle, so a move is judged by how far you swing, not by hitting
-exact boxes:
+These follow EA's *skate.* flickit chart for regular stance. Pull the stick
+down to crouch, then flick. The flick picks the trick family, and any swing
+round the rim before it picks the variation. The stick's path round its rim
+is measured as an angle, so a move is judged by how far you swing, not by
+hitting exact boxes:
 
 | Trick | Motion |
 | --- | --- |
-| Ollie | Pull down, flick up |
-| Kickflip / Heelflip | Pull down, flick up-right / up-left |
-| FS / BS Pop Shuvit | Pull down, flick (or sweep) left / right |
-| Hardflip / Inward Heelflip | Pull down, nudge right / left (about 20°), flick up |
-| Varial Kickflip / Varial Heelflip | Swing in from the left / right (about 25°) to the bottom, flick up-right / up-left |
-| 360 Flip / Laserflip | Swing in from the left / right (about 70°), flick up-right / up-left |
-| 360 Inward Heelflip / 360 Hardflip | Swing in from the left / right (about 40°), flick up |
-| FS / BS 360 Pop Shuvit | Sweep round the bottom (about 120°) onto the left / right |
+| Ollie | Pull down, flick straight up |
+| Kickflip / Heelflip | Pull down, flick up-left / up-right. A flick straight left / right counts too |
+| FS / BS Pop Shuvit | Pull down, then arc round the bottom of the rim up onto the right / left |
+| FS / BS 360 Pop Shuvit | Arc from the left / right, round the bottom, up onto the other side |
+| Hardflip / Varial Heelflip | Swing in from the lower left to the bottom, flick up-left / up-right |
+| Varial Kickflip / Inward Heelflip | Swing in from the lower right to the bottom, flick up-left / up-right |
+| 360 Hardflip / Laserflip | Swing in from the left side (a bigger swing), flick up-left / up-right |
+| 360 Flip / 360 Inward Heelflip | Swing in from the right side, flick up-left / up-right |
 | Nollie anything | The same, upside down: push up first, flick down |
 | Late flip | Any flip motion while already in the air |
 
-The motions follow the Skate flick-it chart as published in GameSpot's trick
-list for EA's current *skate.*. The swing angles are all on sliders in the
-**Trick stick** tuning section.
+A shuvit has to be a clear arc round the rim. A sideways move that cuts
+straight across from the bottom to a side is read as a flick, so it's a
+kickflip (left) or heelflip (right). A flick within ±15° of straight up is an
+ollie (*Ollie: how straight up the flick must be*). A swing of about 22° into
+the bottom makes a hardflip, varial or inward heelflip, and about 55° makes the
+360 version. These and the shuvit arc are all on sliders in the **Trick
+stick** tuning section.
 
 You can hold the crouch as long as you like and flick whenever you're ready.
 Letting the stick back to the middle without flicking stands you back up.
-A sideways nudge only turns an ollie into a hardflip or inward heelflip when
-the flick follows it quickly, so drifting while you hold a crouch doesn't
-change the trick, and overshooting the nudge doesn't turn it into a 360.
+Drifting sideways while you hold a crouch doesn't change the trick: only a
+swing that ends at the bottom of the rim counts.
 Slow stick movement never fires a trick. After a trick the stick has to come
 back to the centre before the next one.
 
@@ -103,7 +108,7 @@ boardslide or a 5-0 before you reach the rail.
 
 Like Skate, where you hold the trick stick as you land on a rail or ledge
 lines the board up. Hold it in the air and the board is already set up in that
-position before you reach the rail; move it mid-grind to switch. Once you're on, the grind is locked until you pop off.
+position before you reach the rail. Once you're on, the grind is locked until you pop off.
 
 | Hold | Grind |
 | --- | --- |
