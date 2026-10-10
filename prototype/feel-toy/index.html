@@ -68,6 +68,20 @@
   #chal-list .c { display: grid; grid-template-columns: 18px 1fr auto; gap: 2px 6px; align-items: center; font-size: 11px; margin: 6px 0; }
   #chal-list .c i { font-style: normal; color: #ffc83d; } #chal-list .c.done i { color: var(--good); } #chal-list .c small { grid-column: 2; color: var(--ink-dim); }
   #chal-list .c button { grid-row: 1 / span 2; grid-column: 3; font: 600 10px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line); border-radius: 4px; padding: 4px 8px; }
+  #shop-btn { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(30vh + env(safe-area-inset-bottom, 0px)); z-index: 5; font: 700 14px var(--font-mono); color: #1a1408;
+    background: #ffc83d; border: 0; border-radius: 6px; padding: 11px 18px; box-shadow: 0 3px 0 rgba(0,0,0,.4); }
+  #shop { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+  #shop .sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 52vh; overflow-y: auto; pointer-events: auto; background: var(--panel); border-top: 1px solid var(--panel-line);
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
+  @media (orientation: landscape) and (max-height: 600px) { #shop .sheet { left: auto; top: 0; width: min(380px, 50vw); max-height: none; border-top: 0; border-left: 1px solid var(--panel-line); } }
+  #shop .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; position: sticky; top: -10px; background: var(--panel); padding: 4px 0 6px; z-index: 1; }
+  #shop .head b { font: 15px var(--font-display); color: #ffc83d; } #shop .head .btns { margin: 0; }
+  #shop .row { display: block; margin: 8px 0 4px; } #shop .row > span { display: block; font: 11px var(--font-mono); color: var(--ink-dim); margin-bottom: 4px; }
+  #shop .sw { display: inline-block; width: 30px; height: 30px; margin: 0 6px 6px 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); cursor: pointer; padding: 0; vertical-align: middle; }
+  #shop .sw.on { border-color: #ffc83d; box-shadow: 0 0 0 2px #ffc83d; }
+  #shop .opt { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line); border-radius: 4px; padding: 6px 9px; margin: 0 6px 6px 0; }
+  #shop .opt.on { border-color: #ffc83d; color: #ffc83d; }
+  body.shopping .hud, body.shopping #combo, body.shopping #chal-prompt, body.shopping #touch, body.shopping #shop-btn, body.shopping #banner, body.shopping .tbar, body.shopping #rotate-hint, body.shopping #stick-base, body.shopping #stick-knob, body.shopping #tstick-base, body.shopping #tstick-knob, body.shopping #tstick-trail { visibility: hidden; }
   #replay-ui { position: fixed; inset: 0; pointer-events: none; }
   #replay-ui::before, #replay-ui::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
   #replay-ui::before { top: 0; } #replay-ui::after { bottom: 0; }
@@ -182,6 +196,13 @@
 
 <div id="combo"><div class="name"></div><div class="pts"></div></div>
 <div id="chal-prompt" hidden></div>
+<button type="button" id="shop-btn" hidden>Enter skate shop</button>
+<div id="shop" hidden>
+  <div class="sheet">
+    <div class="head"><b id="shop-name">Skate Shop</b><div class="btns"><button type="button" id="shop-random">Random</button><button type="button" id="shop-reset">Reset</button><button type="button" id="shop-done">Done</button></div></div>
+    <div id="shop-rows"></div>
+  </div>
+</div>
 <div id="banner"><div class="t"></div><div class="s"></div></div>
 <div id="replay-ui" hidden><div class="tag">● REPLAY</div><div class="btns"><button type="button" id="rp-angle">Angle</button><button type="button" id="rp-slow">Slow-mo</button><button type="button" id="rp-done">Done</button></div></div>
 <div id="balance" hidden><i></i></div>
@@ -502,7 +523,8 @@ function levelPark() {
     { x0: -10.5, x1: 1.5, z0: -20.5, z1: 20.5, res: 0.18, col: poolCol },          // snake run
     { x0: 21, x1: 32, z0: 11, z1: 22, res: 0.2 },                                  // clamshell
   ];
-  const boxes = [
+  const SHOP_FRONT = box(48.5, -0.5, 0, 52.5, 5.2, 12, 'building', { color: 0xe7d6a1, tex: 'brick' });   // the skate shop on the boardwalk
+  const boxes = [SHOP_FRONT, 
     // the platform in the north-east corner: bank down its west side, stairs and a hubba down its south side
     box(22, 0, -22, 32, 1.1, -12, 'plaza', { edges: 'w' }),
     ...stairs('z', -12, 1, 24.5, 30, 1.1, 0, 4, 0.5),
@@ -542,6 +564,8 @@ function levelPark() {
   return {
     terrainH, regions, boxes, hubbas, rails,
     spawn: { pos: V(8, 0, 15), yaw: 0 }, bounds: [-48, 52, -40, 40], fog: [70, 170], sky: 0xa9d3ec,
+    // the skate shop on the boardwalk, facing the park
+    shop: { name: 'Boardwalk Skate Shop', sign: [48.46, 3.9, 6, -Math.PI / 2, 7], awning: [47.2, 0.5, 48.5, 11.5, 2.9, 'x'], zone: [44.6, 3.2, 48.3, 8.8], door: [48.3, 0, 6] },
 
     drag: (x, z) => onPad(x, z) || (x > 40 && x < 48) ? 0 : 7,                    // sand
     decor(D) {
@@ -1032,6 +1056,8 @@ function buildDowntown(K) {
   { // CONSTRUCTION (east south): a corner store with a three-stair, then a fenced site: ply on pallets,
     //   a trench to gap, a dirt pile, a pipe on blocks, a scaffold plank, a slab, a dumpster
     building(52, 52, 70, 62, 2, 0xc98f6b, 'brick');
+    // ...which is the skate shop: a sign, an awning, a mat at the door. Stop on the mat to go in.
+    K.shop = { name: 'Corner Skate Shop', sign: [61, G + 4.3, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
     B(54, G - 1, 62, 68, G + 0.9, 65, 'plaza', { edges: 'ew' }); SET('z', 65, 1, 58, 64, G + 0.9, G, 3, 0.4); rails.push(handrail('z', 65, 1, 61, G + 0.9, G, 3, 0.4));
     for (const [x0, z0, x1, z1] of [[74, 52, 74.08, 64], [74, 76, 74.08, 118], [74, 52, 90, 52.08], [98, 52, 118, 52.08]]) B(x0, G - 0.1, z0, x1, G + 1.9, z1, 'fence');
     hubbas.push({ a: V(90.4, G + 0.6, 70), b: V(88, G + 0.02, 70), w: 1.4, noRails: true, color: 0xc49a5c });
@@ -1207,7 +1233,7 @@ function levelCity() {
   const poolCol = (x, z, h) => { const g = 0.15; return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
-    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes,
+    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop,
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
   };
@@ -1544,7 +1570,7 @@ function levelMega() {
   ];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
-    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -1695,6 +1721,7 @@ addEventListener('keydown', e => {
     if (e.code === 'KeyF') EDGE_IN.walk = true;
     if (e.code === 'KeyC') toggleCam();
     if (e.code === 'KeyX') EDGE_IN.replay = true;
+    if (e.code === 'KeyE') SHOP.active ? closeShop() : SHOP.here && openShop();
     if (e.code === 'KeyQ') EDGE_IN.flip = true;
   }
   keys.add(e.code); setDevice('kbm'); startAudio();
@@ -2146,95 +2173,132 @@ const spotMarker = new THREE.Group(); spotMarker.visible = false; scene.add(spot
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.25), new THREE.MeshBasicMaterial({ color: 0xffb547, side: THREE.DoubleSide })); flag.position.set(0.2, 1.27, 0); spotMarker.add(flag); }
 
 // Skater: a jointed figure standing sideways on a board that flips.
-const shadowedB = m => { m.castShadow = true; return m; };
-const skater = new THREE.Group(); scene.add(skater);
-const boardOrient = new THREE.Group(); skater.add(boardOrient);
-const boardFlip = new THREE.Group(); boardOrient.add(boardFlip);
-{ // the deck: a flat middle and two kicked-up tails; grip tape on top, maple on the edges, the graphic underneath
-  const grip = new THREE.MeshStandardMaterial({ color: 0x1d1d20, roughness: 0.95 }), ply = new THREE.MeshStandardMaterial({ color: 0xcfa871, roughness: 0.7 });
-  const graphic = new THREE.MeshStandardMaterial({ color: 0xffb547, roughness: 0.55 }), deckMats = [ply, ply, grip, graphic, ply, ply];
-  const mid = shadowedB(new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.022, 0.56), deckMats)); mid.position.y = 0.094; boardFlip.add(mid);
-  for (const s of [-1, 1]) {                      // -1 the nose, +1 the tail
-    const KICK = 0.2, KL = 0.13;                    // about 11°, like a real popsicle deck
-    const kick = shadowedB(new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.022, KL), deckMats));
-    kick.rotation.x = -s * KICK; kick.position.set(0, 0.094 + Math.sin(KICK) * KL / 2, s * (0.28 + Math.cos(KICK) * KL / 2 - 0.002)); boardFlip.add(kick);
-    const round = shadowedB(new THREE.Mesh(new THREE.CylinderGeometry(0.1025, 0.1025, 0.022, 18, 1, false, s < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), [ply, grip, graphic]));
-    round.rotation.x = -s * KICK; round.position.set(0, 0.094 + Math.sin(KICK) * KL, s * (0.28 + Math.cos(KICK) * KL - 0.004)); boardFlip.add(round);   // the rounded end
-  }
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.002, 0.5), new THREE.MeshStandardMaterial({ color: 0x2f5d8a, roughness: 0.6 }));
-  stripe.position.y = 0.0825; boardFlip.add(stripe);                                                        // a stripe on the graphic
-  // trucks: baseplate, hanger and axle; four wheels
-  const metal = new THREE.MeshStandardMaterial({ color: 0xb9bec4, roughness: 0.35, metalness: 0.85 });
-  const wheelGeo = new THREE.CylinderGeometry(0.029, 0.029, 0.034, 14); wheelGeo.rotateZ(Math.PI / 2);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0xf3efe2, roughness: 0.45 }), coreMat = new THREE.MeshStandardMaterial({ color: 0xd04a35, roughness: 0.5 });
-  const coreGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.036, 10); coreGeo.rotateZ(Math.PI / 2);
-  for (const z of [-0.255, 0.255]) {
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.075), metal); base.position.set(0, 0.077, z); boardFlip.add(base);
-    const hanger = shadowedB(new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.15, 10).rotateZ(Math.PI / 2), metal)); hanger.position.set(0, 0.047, z); boardFlip.add(hanger);
-    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), metal); neck.position.set(0, 0.062, z); boardFlip.add(neck);
-    for (const x of [-0.094, 0.094]) { const w = shadowedB(new THREE.Mesh(wheelGeo, wheelMat)); w.position.set(x, 0.03, z); boardFlip.add(w);
-      const c = new THREE.Mesh(coreGeo, coreMat); c.position.set(x, 0.03, z); boardFlip.add(c); }
-  }
-}
-// The rider lives in the board's space (x toe side, y up, -z the nose), so feet stay planted
-// through ramps. Regular stance: left foot forward, chest facing the toe edge.
-const shirt = new THREE.MeshStandardMaterial({ color: 0x3f7fbf, roughness: 0.7 });
-const pants = new THREE.MeshStandardMaterial({ color: 0x2b3440, roughness: 0.8 });
-const skin = new THREE.MeshStandardMaterial({ color: 0xd9a77f, roughness: 0.6 });
-const shoeMat = new THREE.MeshStandardMaterial({ color: 0xf1efe8, roughness: 0.6 });         // soles, toe caps, laces
-const suede = new THREE.MeshStandardMaterial({ color: 0x34383f, roughness: 0.95 });          // the shoe uppers
-const capMat = new THREE.MeshStandardMaterial({ color: 0xc8432f, roughness: 0.7 });
-const hairMat = new THREE.MeshStandardMaterial({ color: 0x3b2a20, roughness: 0.9 });
-const darkMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1e, roughness: 0.5 });
-const beltMat = new THREE.MeshStandardMaterial({ color: 0x1f1d1b, roughness: 0.6 });
-const cuffMat = new THREE.MeshStandardMaterial({ color: 0x232a33, roughness: 0.85 });
-const rig = new THREE.Group(); boardOrient.add(rig);
 const DECK_TOP = 0.105, THIGH = 0.44, SHIN = 0.44, UPPER_ARM = 0.31, FOREARM = 0.3;
-const shadowed = m => { m.castShadow = true; return m; };
+const shadowed = m => { m.castShadow = true; return m; }, shadowedB = shadowed;
 const capsule = (r, len, mat) => shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, len - 2 * r), 4, 10), mat));
-const pelvis = new THREE.Group(); rig.add(pelvis);
-// (the rider faces +x, the toe edge; shoulders run along z)
-{ const hips = capsule(0.105, 0.32, pants); hips.rotation.x = Math.PI / 2; hips.scale.set(0.95, 1, 0.85); hips.position.y = 0.02; pelvis.add(hips);
-  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.118, 0.035, 16), beltMat); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
-const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
-// the torso: one smooth shape, a loose tee hanging at the hips, narrow at the waist, broad and rounded at the shoulders
-const chest = shadowed(new THREE.Mesh(new THREE.LatheGeometry([[0, 0.05], [0.128, 0.05], [0.134, 0.09], [0.124, 0.17], [0.126, 0.26], [0.138, 0.36], [0.146, 0.43], [0.142, 0.48], [0.122, 0.525], [0.085, 0.56], [0.05, 0.58], [0, 0.585]].map(([r, y]) => new THREE.Vector2(r, y)), 28), shirt));
-chest.scale.set(0.8, 1, 1.3); torso.add(chest);
-for (const z of [-0.168, 0.168]) { const sh = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), shirt)); sh.scale.set(0.9, 0.85, 1); sh.position.set(0, 0.49, z); torso.add(sh); }   // rounded shoulders
-{ const neck = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10), skin)); neck.position.y = 0.6; torso.add(neck);
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.014, 6, 16), shirt); collar.rotation.x = Math.PI / 2; collar.position.y = 0.565; torso.add(collar); }
-const head = new THREE.Group(); head.position.set(0, 0.71, 0); torso.add(head);
-{ const skull = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), skin)); skull.scale.set(1, 1.08, 0.93); head.add(skull);
-  const jaw = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), skin)); jaw.scale.set(1.05, 0.85, 1.15); jaw.position.set(0.03, -0.055, 0); head.add(jaw);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), skin); nose.scale.set(1.2, 1, 0.9); nose.position.set(0.104, -0.012, 0); head.add(nose);
-  for (const z of [-0.036, 0.036]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), darkMat); eye.position.set(0.094, 0.016, z); head.add(eye);
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.008, 0.034), hairMat); brow.position.set(0.1, 0.038, z); head.add(brow); }
-  for (const z of [-0.098, 0.098]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), skin); ear.scale.set(0.7, 1.1, 0.5); ear.position.set(-0.005, -0.005, z); head.add(ear); }
-  const hair = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12, -Math.PI * 0.45, Math.PI * 0.9, Math.PI * 0.22, Math.PI * 0.5), hairMat)); hair.scale.set(1, 1.04, 0.97); hair.position.set(-0.008, 0.006, 0); head.add(hair);  // the back and sides, under the cap
-  const cap = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.115, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), capMat)); cap.scale.set(1, 0.92, 0.97); cap.position.y = 0.022; head.add(cap);
-  const brim = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.01, 18, 1, false, 0, Math.PI), capMat)); brim.scale.set(1.15, 1, 1); brim.position.set(0.075, 0.026, 0); brim.rotation.z = -0.12; head.add(brim);
-  const button = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), capMat); button.position.y = 0.128; head.add(button); }
-const LIMBS = {};
-for (const side of ['front', 'back']) {
-  LIMBS[side] = {
-    thigh: capsule(0.085, THIGH, pants), shin: capsule(0.074, SHIN, pants),                // loose pants
-    upper: capsule(0.047, UPPER_ARM, skin), fore: capsule(0.04, FOREARM, skin),
-    shoe: new THREE.Group(),
-  };
-  for (const m of Object.values(LIMBS[side])) rig.add(m);
-  const L = LIMBS[side];
-  // bones run from the joint nearer the body (-y) to the far one (+y)
-  const sleeve = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.055, 0.15, 12), shirt)); sleeve.position.y = -UPPER_ARM / 2 + 0.065; L.upper.add(sleeve);
-  const hand = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), skin)); hand.scale.set(0.85, 1.25, 0.65); hand.position.y = FOREARM / 2 + 0.03; L.fore.add(hand);
-  const cuff = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.084, 0.07, 12), cuffMat)); cuff.position.y = SHIN / 2 - 0.05; L.shin.add(cuff);
-  const knee = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), pants); knee.position.y = -SHIN / 2 + 0.02; L.shin.add(knee);
-  // a skate shoe: suede upper, a white sole and toe cap, laces (the foot points along x)
-  const upperS = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.07, 0.1), suede)); upperS.position.y = 0.015; L.shoe.add(upperS);
-  const sole = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.025, 0.106), shoeMat)); sole.position.y = -0.0225; L.shoe.add(sole);
-  const toe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.104), shoeMat); toe.position.set(0.105, 0.0, 0); L.shoe.add(toe);
-  const laces = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.008, 0.05), shoeMat); laces.position.set(0.02, 0.051, 0); L.shoe.add(laces);
-  const collarS = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.035, 0.104), suede); collarS.position.set(-0.07, 0.065, 0); L.shoe.add(collarS);
+/* ---- the look: everything the skate shop can change (and what the other skaters in town get dealt) ---- */
+const PALETTE = {
+  shirt: [0x3f7fbf, 0xc8432f, 0xe8e4da, 0x222326, 0x3f6b46, 0xd4a017, 0x6b4c9a, 0xe07a2e, 0x8a8f94, 0x2f8f8a, 0xe58fb0, 0x7a2e2e],
+  pants: [0x2b3440, 0x1f1f22, 0xb39b72, 0x3b5a86, 0x6b6f75, 0x5d6b45, 0x8c5a3c, 0xd8d2c4],
+  shoes: [0x34383f, 0x1f1f22, 0xb23a32, 0x2f5d8a, 0xe8e4da, 0x6b4c9a, 0x3f6b46, 0xc9a26b],
+  soles: [0xf1efe8, 0xc49a5c, 0x1f1f22],
+  cap: [0xc8432f, 0x222326, 0x3f7fbf, 0xe8e4da, 0x3f6b46, 0xd4a017, 0x6b4c9a, 0xe07a2e],
+  skin: [0xf1c9a5, 0xd9a77f, 0xb9825a, 0x8d5a3b, 0x5e3a26],
+  hair: [0x3b2a20, 0x1b1b1e, 0xc79a52, 0x8a3b1f, 0xcfcac0],
+  deck: [0xffb547, 0xe8e4da, 0x222326, 0xc8432f, 0x3f7fbf, 0x3f6b46, 0x6b4c9a, 0x2f8f8a, 0xe58fb0],
+  deck2: [0x2f5d8a, 0x222326, 0xe8e4da, 0xc8432f, 0xd4a017, 0x3f6b46, 0xe07a2e, 0x6b4c9a],
+  wheels: [0xf3efe2, 0xd4a017, 0xc8432f, 0x3f7fbf, 0x222326, 0x7cc4a6],
+  cores: [0xd04a35, 0x222326, 0xe8e4da, 0x3f7fbf, 0xd4a017],
+};
+const PATTERNS = ['stripe', 'solid', 'split', 'checker', 'dots', 'bolt', 'fade'];
+const CAP_STYLES = ['fwd', 'back', 'none'];
+const STYLE_DEFAULT = { shirt: 0x3f7fbf, pants: 0x2b3440, shoes: 0x34383f, soles: 0xf1efe8, cap: 0xc8432f, capStyle: 'fwd', skin: 0xd9a77f, hair: 0x3b2a20,
+  deck: 0xffb547, deck2: 0x2f5d8a, pattern: 'stripe', wheels: 0xf3efe2, cores: 0xd04a35 };
+const randomStyle = (rnd = Math.random) => { const st = {}; for (const k of Object.keys(PALETTE)) st[k] = PALETTE[k][Math.floor(rnd() * PALETTE[k].length)];
+  st.pattern = PATTERNS[Math.floor(rnd() * PATTERNS.length)]; st.capStyle = CAP_STYLES[Math.floor(rnd() * 3)]; return st; };
+// the board's graphic, painted on a canvas: width across the board, length along it
+function graphicTexture(st) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), hex = n => '#' + n.toString(16).padStart(6, '0');
+  g.fillStyle = hex(st.deck); g.fillRect(0, 0, 64, 256); g.fillStyle = hex(st.deck2);
+  if (st.pattern === 'stripe') g.fillRect(22, 0, 20, 256);
+  else if (st.pattern === 'split') g.fillRect(32, 0, 32, 256);
+  else if (st.pattern === 'checker') { for (let y = 0; y < 256; y += 16) for (let x = 0; x < 64; x += 16) if (((x + y) / 16) % 2) g.fillRect(x, y, 16, 16); }
+  else if (st.pattern === 'dots') { for (let y = 10; y < 256; y += 22) for (let x = 10 + (y / 22 % 2) * 11; x < 64; x += 22) { g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); } }
+  else if (st.pattern === 'bolt') { g.beginPath(); g.moveTo(40, 20); g.lineTo(16, 130); g.lineTo(34, 128); g.lineTo(22, 236); g.lineTo(50, 112); g.lineTo(32, 114); g.closePath(); g.fill(); }
+  else if (st.pattern === 'fade') { const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, hex(st.deck)); gr.addColorStop(1, hex(st.deck2)); g.fillStyle = gr; g.fillRect(0, 0, 64, 256); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+// A skater on a board. The rider lives in the board's space (x toe side, y up, -z the nose), so feet
+// stay planted through ramps. Regular stance: left foot forward, chest facing the toe edge.
+function buildRider(style) {
+  const mat = (color, roughness, extra) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
+  const M = { grip: mat(0x1d1d20, 0.95), ply: mat(0xcfa871, 0.7), graphic: mat(0xffffff, 0.55), metal: mat(0xb9bec4, 0.35, { metalness: 0.85 }), wheels: mat(0xf3efe2, 0.45), cores: mat(0xd04a35, 0.5),
+    shirt: mat(0x3f7fbf, 0.7), pants: mat(0x2b3440, 0.8), skin: mat(0xd9a77f, 0.6), soles: mat(0xf1efe8, 0.6), shoes: mat(0x34383f, 0.95), cap: mat(0xc8432f, 0.7),
+    hair: mat(0x3b2a20, 0.9), dark: mat(0x1b1b1e, 0.5), belt: mat(0x1f1d1b, 0.6), cuff: mat(0x232a33, 0.85) };
+  const skater = new THREE.Group(), boardOrient = new THREE.Group(), boardFlip = new THREE.Group(); skater.add(boardOrient); boardOrient.add(boardFlip);
+  { // the deck: a flat middle and two kicked-up tails; grip tape on top, maple on the edges, the graphic underneath
+    const deckMats = [M.ply, M.ply, M.grip, M.graphic, M.ply, M.ply];
+    const mid = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.022, 0.56), deckMats)); mid.position.y = 0.094; boardFlip.add(mid);
+    for (const s of [-1, 1]) {                      // -1 the nose, +1 the tail
+      const KICK = 0.2, KL = 0.13;                    // about 11°, like a real popsicle deck
+      const kick = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.022, KL), deckMats));
+      kick.rotation.x = -s * KICK; kick.position.set(0, 0.094 + Math.sin(KICK) * KL / 2, s * (0.28 + Math.cos(KICK) * KL / 2 - 0.002)); boardFlip.add(kick);
+      const round = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.1025, 0.1025, 0.022, 18, 1, false, s < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), [M.ply, M.grip, M.graphic]));
+      round.rotation.x = -s * KICK; round.position.set(0, 0.094 + Math.sin(KICK) * KL, s * (0.28 + Math.cos(KICK) * KL - 0.004)); boardFlip.add(round);   // the rounded end
+    }
+    // trucks: baseplate, hanger and kingpin block; four wheels
+    const wheelGeo = new THREE.CylinderGeometry(0.029, 0.029, 0.034, 14); wheelGeo.rotateZ(Math.PI / 2);
+    const coreGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.036, 10); coreGeo.rotateZ(Math.PI / 2);
+    for (const z of [-0.255, 0.255]) {
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.075), M.metal); base.position.set(0, 0.077, z); boardFlip.add(base);
+      const hanger = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.15, 10).rotateZ(Math.PI / 2), M.metal)); hanger.position.set(0, 0.047, z); boardFlip.add(hanger);
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), M.metal); neck.position.set(0, 0.062, z); boardFlip.add(neck);
+      for (const x of [-0.094, 0.094]) { const w = shadowed(new THREE.Mesh(wheelGeo, M.wheels)); w.position.set(x, 0.03, z); boardFlip.add(w);
+        const c = new THREE.Mesh(coreGeo, M.cores); c.position.set(x, 0.03, z); boardFlip.add(c); }
+    }
+  }
+  const rig = new THREE.Group(); boardOrient.add(rig);
+  const pelvis = new THREE.Group(); rig.add(pelvis);
+  // (the rider faces +x, the toe edge; shoulders run along z)
+  { const hips = capsule(0.105, 0.32, M.pants); hips.rotation.x = Math.PI / 2; hips.scale.set(0.95, 1, 0.85); hips.position.y = 0.02; pelvis.add(hips);
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.118, 0.035, 16), M.belt); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
+  const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
+  // the torso: one smooth shape, a loose tee hanging at the hips, narrow at the waist, broad and rounded at the shoulders
+  const chest = shadowed(new THREE.Mesh(new THREE.LatheGeometry([[0, 0.05], [0.128, 0.05], [0.134, 0.09], [0.124, 0.17], [0.126, 0.26], [0.138, 0.36], [0.146, 0.43], [0.142, 0.48], [0.122, 0.525], [0.085, 0.56], [0.05, 0.58], [0, 0.585]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M.shirt));
+  chest.scale.set(0.8, 1, 1.3); torso.add(chest);
+  for (const z of [-0.168, 0.168]) { const sh = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), M.shirt)); sh.scale.set(0.9, 0.85, 1); sh.position.set(0, 0.49, z); torso.add(sh); }   // rounded shoulders
+  { const neck = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10), M.skin)); neck.position.y = 0.6; torso.add(neck);
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.014, 6, 16), M.shirt); collar.rotation.x = Math.PI / 2; collar.position.y = 0.565; torso.add(collar); }
+  const head = new THREE.Group(); head.position.set(0, 0.71, 0); torso.add(head);
+  const capParts = new THREE.Group(); head.add(capParts);
+  { const skull = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), M.skin)); skull.scale.set(1, 1.08, 0.93); head.add(skull);
+    const jaw = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), M.skin)); jaw.scale.set(1.05, 0.85, 1.15); jaw.position.set(0.03, -0.055, 0); head.add(jaw);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), M.skin); nose.scale.set(1.2, 1, 0.9); nose.position.set(0.104, -0.012, 0); head.add(nose);
+    for (const z of [-0.036, 0.036]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), M.dark); eye.position.set(0.094, 0.016, z); head.add(eye);
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.008, 0.034), M.hair); brow.position.set(0.1, 0.038, z); head.add(brow); }
+    for (const z of [-0.098, 0.098]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), M.skin); ear.scale.set(0.7, 1.1, 0.5); ear.position.set(-0.005, -0.005, z); head.add(ear); }
+    const hair = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12, -Math.PI * 0.45, Math.PI * 0.9, Math.PI * 0.22, Math.PI * 0.5), M.hair)); hair.scale.set(1, 1.04, 0.97); hair.position.set(-0.008, 0.006, 0); head.add(hair);  // the back and sides, under the cap
+    const top = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.108, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.hair)); top.scale.set(1, 0.85, 0.95); top.position.y = 0.012; head.add(top);    // hair on top, seen with no cap
+    const cap = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.115, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), M.cap)); cap.scale.set(1, 0.92, 0.97); cap.position.y = 0.022; capParts.add(cap);
+    const brim = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.01, 18, 1, false, 0, Math.PI), M.cap)); brim.scale.set(1.15, 1, 1); brim.position.set(0.075, 0.026, 0); brim.rotation.z = -0.12; capParts.add(brim);
+    const button = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), M.cap); button.position.y = 0.128; capParts.add(button); }
+  const LIMBS = {};
+  for (const side of ['front', 'back']) {
+    LIMBS[side] = {
+      thigh: capsule(0.085, THIGH, M.pants), shin: capsule(0.074, SHIN, M.pants),                // loose pants
+      upper: capsule(0.047, UPPER_ARM, M.skin), fore: capsule(0.04, FOREARM, M.skin),
+      shoe: new THREE.Group(),
+    };
+    for (const m of Object.values(LIMBS[side])) rig.add(m);
+    const L = LIMBS[side];
+    // bones run from the joint nearer the body (-y) to the far one (+y)
+    const sleeve = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.055, 0.15, 12), M.shirt)); sleeve.position.y = -UPPER_ARM / 2 + 0.065; L.upper.add(sleeve);
+    const hand = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), M.skin)); hand.scale.set(0.85, 1.25, 0.65); hand.position.y = FOREARM / 2 + 0.03; L.fore.add(hand);
+    const cuff = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.084, 0.07, 12), M.cuff)); cuff.position.y = SHIN / 2 - 0.05; L.shin.add(cuff);
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), M.pants); knee.position.y = -SHIN / 2 + 0.02; L.shin.add(knee);
+    // a skate shoe: suede upper, a sole and toe cap, laces (the foot points along x)
+    const upperS = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.07, 0.1), M.shoes)); upperS.position.y = 0.015; L.shoe.add(upperS);
+    const sole = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.025, 0.106), M.soles)); sole.position.y = -0.0225; L.shoe.add(sole);
+    const toe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.104), M.soles); toe.position.set(0.105, 0.0, 0); L.shoe.add(toe);
+    const laces = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.008, 0.05), M.soles); laces.position.set(0.02, 0.051, 0); L.shoe.add(laces);
+    const collarS = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.035, 0.104), M.shoes); collarS.position.set(-0.07, 0.065, 0); L.shoe.add(collarS);
+  }
+  const R = { skater, boardOrient, boardFlip, rig, pelvis, torso, head, LIMBS, M, capParts };
+  applyStyle(R, style);
+  return R;
+}
+function applyStyle(R, st) {
+  st = { ...STYLE_DEFAULT, ...st }; const M = R.M;
+  for (const k of ['shirt', 'pants', 'shoes', 'soles', 'cap', 'skin', 'hair', 'wheels', 'cores']) M[k].color.set(st[k]);
+  M.cuff.color.set(st.pants).multiplyScalar(0.8);
+  if (M.graphic.map) M.graphic.map.dispose(); M.graphic.map = graphicTexture(st); M.graphic.needsUpdate = true;
+  R.capParts.visible = st.capStyle !== 'none'; R.capParts.rotation.y = st.capStyle === 'back' ? Math.PI : 0;
+  R.style = st;
+}
+const STYLE_KEY = 'skate-style';
+let PLAYER_STYLE = (() => { try { return { ...STYLE_DEFAULT, ...JSON.parse(localStorage.getItem(STYLE_KEY) || '{}') }; } catch (_) { return { ...STYLE_DEFAULT }; } })();
+const PLAYER = buildRider(PLAYER_STYLE); scene.add(PLAYER.skater);
+const { skater, boardOrient, boardFlip, rig, pelvis, torso, head, LIMBS } = PLAYER;
 // two-bone IK: put a capsule pair between root and target, bending towards pole
 const _d = V(), _p = V(), _j = V(), _e = V();
 function placeBone(mesh, a, b) { mesh.position.copy(a).add(b).multiplyScalar(0.5); mesh.quaternion.setFromUnitVectors(UP, _p.copy(b).sub(a).normalize()); }
@@ -3710,6 +3774,88 @@ $('btn-replay').addEventListener('click', startReplay);
 $('tb-replay').addEventListener('click', startReplay);
 
 /* ============================================================
+   The skate shop: a storefront on each map. Stop on the mat at the door and go in to change
+   your clothes and your board. The look is kept in this browser.
+   ============================================================ */
+const SHOP = { active: false, ang: 0, here: false };
+if (LV.shop) {
+  const sh = LV.shop, [sx, sy, sz, srot, sw] = sh.sign;
+  const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 144; const g = c.getContext('2d');
+    g.fillStyle = '#16181c'; g.fillRect(0, 0, 512, 144); g.strokeStyle = '#ffc83d'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 132);
+    g.fillStyle = '#ffc83d'; g.beginPath(); g.arc(70, 72, 40, 0, 7); g.fill(); g.fillStyle = '#16181c'; g.beginPath(); g.arc(70, 72, 16, 0, 7); g.fill();      // a wheel
+    g.fillStyle = '#f3f1ea'; g.font = '900 62px Impact, "Arial Black", sans-serif'; g.textBaseline = 'middle'; g.fillText('SKATE SHOP', 128, 66);
+    g.fillStyle = '#ff6f88'; g.font = '700 22px monospace'; g.fillText('BOARDS · WHEELS · SHOES · TEES', 132, 116);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw * 144 / 512), new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.35, roughness: 0.6 }));
+  sign.position.set(sx, sy, sz); sign.rotation.y = srot; scene.add(sign);
+  // the awning: red and white stripes, sloping out over the door
+  const awTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 16; const g = c.getContext('2d');
+    for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#f3f1ea' : '#c8432f'; g.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const [ax0, az0, ax1, az1, ay, alongZ] = sh.awning, along = alongZ === 'x' ? 'z' : 'x';
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(along === 'x' ? ax1 - ax0 : 0.06, 0.06, along === 'x' ? 0.06 : az1 - az0), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
+  const awPlane = new THREE.Mesh(new THREE.PlaneGeometry(along === 'x' ? ax1 - ax0 : az1 - az0, 1.7), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
+  awPlane.position.set((ax0 + ax1) / 2, ay, (az0 + az1) / 2);
+  awPlane.rotation.set(along === 'x' ? -Math.PI / 2 + 0.45 : 0, along === 'x' ? 0 : Math.PI / 2, along === 'x' ? 0 : 0, 'YXZ');
+  if (along !== 'x') { awPlane.rotation.set(-Math.PI / 2 - 0.45, Math.PI / 2, 0, 'YXZ'); }
+  awPlane.castShadow = true; scene.add(awPlane); void aw;
+  // a glowing mat at the door: stop on it to go in
+  const [zx0, zz0, zx1, zz1] = sh.zone, my = groundAt(sh.door[0], sh.door[2], sh.door[1] + 0.5).h;
+  const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.0), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+  mat.rotation.x = -Math.PI / 2; mat.rotation.z = srot; mat.position.set(sh.door[0] + Math.sin(srot) * 0.7, my + 0.015, sh.door[2] + Math.cos(srot) * 0.7); scene.add(mat); SHOP.mat = mat;
+  void zx0; void zz0; void zx1; void zz1;
+}
+function shopTick(dt) {
+  if (!LV.shop) return;
+  const [x0, z0, x1, z1] = LV.shop.zone, p = S.pos;
+  SHOP.here = !SHOP.active && !RP.active && S.bail <= 0 && (S.grounded || S.walking) && !S.rail && p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1;
+  $('shop-btn').hidden = !SHOP.here;
+  if (SHOP.mat) SHOP.mat.material.opacity = 0.4 + 0.25 * Math.sin(performance.now() / 300);
+}
+function buildShopRows() {
+  const host = $('shop-rows'); host.innerHTML = '';
+  const hex = n => '#' + n.toString(16).padStart(6, '0');
+  const row = (label, key, opts, kind = 'color') => {
+    const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<span>${label}</span>`;
+    for (const v of opts) { const b = document.createElement('button'); b.type = 'button';
+      if (kind === 'color') { b.className = 'sw' + (PLAYER_STYLE[key] === v ? ' on' : ''); b.style.background = hex(v); b.setAttribute('aria-label', label + ' ' + hex(v)); }
+      else { b.className = 'opt' + (PLAYER_STYLE[key] === v ? ' on' : ''); b.textContent = kind[v] || v; }
+      b.addEventListener('click', () => { PLAYER_STYLE[key] = v; saveStyle(); buildShopRows(); });
+      r.appendChild(b); }
+    host.appendChild(r);
+  };
+  row('Shirt', 'shirt', PALETTE.shirt); row('Pants', 'pants', PALETTE.pants); row('Shoes', 'shoes', PALETTE.shoes); row('Soles', 'soles', PALETTE.soles);
+  row('Cap', 'capStyle', CAP_STYLES, { fwd: 'Forward', back: 'Backwards', none: 'No cap' }); row('Cap colour', 'cap', PALETTE.cap);
+  row('Skin', 'skin', PALETTE.skin); row('Hair', 'hair', PALETTE.hair);
+  row('Board graphic', 'pattern', PATTERNS, { stripe: 'Stripe', solid: 'Solid', split: 'Split', checker: 'Checker', dots: 'Dots', bolt: 'Bolt', fade: 'Fade' });
+  row('Board colour', 'deck', PALETTE.deck); row('Graphic colour', 'deck2', PALETTE.deck2); row('Wheels', 'wheels', PALETTE.wheels); row('Wheel cores', 'cores', PALETTE.cores);
+}
+function saveStyle() { applyStyle(PLAYER, PLAYER_STYLE); try { localStorage.setItem(STYLE_KEY, JSON.stringify(PLAYER_STYLE)); } catch (_) {} }
+function openShop() {
+  if (!LV.shop || SHOP.active) return;
+  SHOP.active = true; SHOP.ang = S.yaw + Math.PI / 2; S.vel.set(0, 0, 0);
+  if (S.walking) toggleWalk();
+  $('shop-name').textContent = LV.shop.name; buildShopRows(); $('shop').hidden = false; document.body.classList.add('shopping');
+  if (!$('panel').hidden) togglePanel();
+}
+function closeShop() { if (!SHOP.active) return; SHOP.active = false; $('shop').hidden = true; document.body.classList.remove('shopping'); camera.clearViewOffset(); camera.updateProjectionMatrix(); }
+// a slow swing round the skater, out on the street side of the door, with the picture shifted so the
+// skater stands in the part of the screen the shop sheet doesn't cover
+function shopCamera(dt) {
+  SHOP.t = (SHOP.t || 0) + dt;
+  const out = LV.shop.sign[3], ang = out + 1.0 * Math.sin(SHOP.t * 0.35), landscape = innerWidth > innerHeight, d = landscape ? 2.9 : 5.4;
+  const at = S.pos.clone().add(V(0, 0.82, 0));
+  camera.position.copy(at).add(V(Math.sin(ang) * d, 0.3, Math.cos(ang) * d));
+  camera.lookAt(at); camera.fov = 50;
+  const w = innerWidth, h = innerHeight, sheet = document.querySelector('#shop .sheet').getBoundingClientRect();
+  if (landscape) camera.setViewOffset(w, h, Math.round(sheet.width / 2), 0, w, h); else camera.setViewOffset(w, h, 0, Math.round(sheet.height / 2), w, h);
+  camera.updateProjectionMatrix();
+}
+$('shop-btn').addEventListener('click', openShop);
+$('shop-done').addEventListener('click', closeShop);
+$('shop-random').addEventListener('click', () => { PLAYER_STYLE = randomStyle(); saveStyle(); buildShopRows(); });
+$('shop-reset').addEventListener('click', () => { PLAYER_STYLE = { ...STYLE_DEFAULT }; saveStyle(); buildShopRows(); });
+
+/* ============================================================
    Main loop: input once per frame, physics at a fixed 120 Hz
    ============================================================ */
 const DT = 1 / 120;
@@ -3729,6 +3875,7 @@ function frameBody(now) {
   if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
   if (EDGE_IN.replay) { EDGE_IN.replay = false; RP.active ? stopReplay() : startReplay(); }
   if (RP.active) { replayTick(dt); chalTick(dt, simTime); renderer.render(scene, camera); return; }
+  if (SHOP.active) { updateVisuals(dt, simTime); shopCamera(dt); renderer.render(scene, camera); return; }
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
@@ -3736,11 +3883,12 @@ function frameBody(now) {
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
   recordFrame(dt);
   chalTick(dt, simTime);
+  shopTick(dt);
   updateHud(dt);
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).
