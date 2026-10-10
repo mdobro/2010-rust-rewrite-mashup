@@ -766,8 +766,8 @@ function cityKit(baseH, seed0 = 1) {
     const L = 4.2, Dp = 1.5, g = terrainH(x, z);
     const [x0, z0, x1, z1] = alongX ? around(x, z, L / 2, Dp / 2) : around(x, z, Dp / 2, L / 2);
     decorFns.push(D => D.shelter(x0, z0, x1, z1, 2.5));
-    if (alongX) { B(x0, g - 0.2, z + back * 0.72, x1, g + 2.3, z + back * 0.78, 'fence'); B(x0 + 0.4, g - 0.2, z + back * 0.2, x1 - 0.4, g + 0.48, z + back * 0.65, 'wood', { edges: back > 0 ? 'n' : 's' }); }
-    else { B(x + back * 0.72, g - 0.2, z0, x + back * 0.78, g + 2.3, z1, 'fence'); B(x + back * 0.2, g - 0.2, z0 + 0.4, x + back * 0.65, g + 0.48, z1 - 0.4, 'wood', { edges: back > 0 ? 'w' : 'e' }); }
+    if (alongX) { B(x0, g - 0.2, z + back * 0.72, x1, g + 2.3, z + back * 0.78, 'glass'); B(x0 + 0.4, g - 0.2, z + back * 0.2, x1 - 0.4, g + 0.48, z + back * 0.65, 'wood', { edges: back > 0 ? 'n' : 's' }); }
+    else { B(x + back * 0.72, g - 0.2, z0, x + back * 0.78, g + 2.3, z1, 'glass'); B(x + back * 0.2, g - 0.2, z0 + 0.4, x + back * 0.65, g + 0.48, z1 - 0.4, 'wood', { edges: back > 0 ? 'w' : 'e' }); }
   }
   // a dumpster: its top edges grind
   const dumpster = (x, z, alongX = true) => sit(x, z, alongX ? 1.0 : 0.7, alongX ? 0.7 : 1.0, 1.25, 'car', { color: pick([0x2f5d3a, 0x2c4f7a, 0x55595e]), edges: alongX ? 'ns' : 'ew' });
@@ -2030,8 +2030,9 @@ function collideBoxes(p, v) {
     }
   }
   // sloped ledges: their sides and ends, in the ledge's own frame
-  const hb = hubbaAt(p.x, p.z, r);
-  if (hb && p.y < hubbaTopAt(hb.h, hb.u) - 0.08) {
+  // (a side lower than 20 cm, like a curb ramp's or a driveway's edge, you just roll up on to: it's barely a step)
+  const hb = hubbaAt(p.x, p.z, r), hbTop = hb ? hubbaTopAt(hb.h, hb.u) : 0;
+  if (hb && p.y < hbTop - 0.08 && hbTop - p.y > 0.2) {
     const { h, u: hu, v: hv } = hb, hw = h.w / 2 + r;   // (hv, not v: v is the velocity)
     const [d, du, dv] = [[hu + r, -1, 0], [h.len + r - hu, 1, 0], [hv + hw, 0, -1], [hw - hv, 0, 1]].sort((a, c) => a[0] - c[0])[0];
     const nx = du * h.dir.x + dv * h.side.x, nz = du * h.dir.z + dv * h.side.z;
@@ -2339,6 +2340,13 @@ function windowTexture(kind = 'brick') {
   }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+// chain-link: wire diamonds about 25 cm across (the box faces map 2 m to one tile), the gaps see-through
+function chainLink() {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.strokeStyle = '#ffffff'; g.lineWidth = 2.6; g.lineCap = 'round';
+  for (let k = -128; k <= 256; k += 16) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 128, 128); g.stroke(); g.beginPath(); g.moveTo(k, 128); g.lineTo(k + 128, 0); g.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
 const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'),
   ledge: gridTexture('#9a9ea3', 'rgba(30,30,35,0.25)'), pad: gridTexture('#bdb8ad', 'rgba(40,46,56,0.3)'),
   curb: gridTexture('#b9423a', 'rgba(255,255,255,0.15)'), sidewalk: gridTexture('#c4c0b6', 'rgba(40,46,56,0.3)'),
@@ -2350,7 +2358,8 @@ const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gri
   const groups = new Map();
   const mats = {};
   const matFor = key => mats[key] || (mats[key] =
-    key === 'fence' ? new THREE.MeshStandardMaterial({ color: 0xa3aab0, metalness: 0.5, roughness: 0.5, transparent: true, opacity: 0.32, depthWrite: false })
+    key === 'fence' ? new THREE.MeshStandardMaterial({ map: chainLink(), color: 0xc4cacf, metalness: 0.45, roughness: 0.5, alphaTest: 0.45, side: THREE.DoubleSide })
+    : key === 'glass' ? new THREE.MeshStandardMaterial({ color: 0x9fc3d6, metalness: 0.1, roughness: 0.08, transparent: true, opacity: 0.42, depthWrite: false, side: THREE.DoubleSide })
     : key === 'flat' ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.25 })
     : key === 'roof' ? new THREE.MeshStandardMaterial({ color: 0x55575b, roughness: 0.95 })
     : key === 'roofGrid' ? new THREE.MeshStandardMaterial({ map: gridTexture('#8d8f92', 'rgba(30,30,35,0.25)'), roughness: 0.95 })
@@ -2366,7 +2375,7 @@ const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gri
     if (b.ghost) continue;                                             // solid but drawn by the level (a sculpture)
     const [x0, y0, z0] = b.min, [x1, y1, z1] = b.max, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     const building = b.mat === 'building', flat = b.mat === 'car' || b.mat === 'metal';
-    const key = b.mat === 'fence' ? 'fence' : flat ? 'flat' : building ? (b.tex || 'brick') : (boxTex[b.mat] ? b.mat : 'plaza');
+    const key = b.mat === 'fence' || b.mat === 'glass' ? b.mat : flat ? 'flat' : building ? (b.tex || 'brick') : (boxTex[b.mat] ? b.mat : 'plaza');
     const sideG = grp(key, cx, cz), topG = building ? grp(b.edges ? 'roofGrid' : 'roof', cx, cz) : sideG;
     const tint = tmpC.set(b.color ?? (building ? 0x9b6a55 : flat ? 0x9aa1a6 : 0xffffff)).clone();
     const sideC = building || flat ? tint : tint.clone().multiplyScalar(0.62), topC = building ? new THREE.Color(1, 1, 1) : tint;
@@ -2383,7 +2392,7 @@ const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gri
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.nor, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(g.col, 3));
-    const m = new THREE.Mesh(geo, matFor(g.key)); m.castShadow = g.key !== 'fence'; m.receiveShadow = true; scene.add(m);
+    const m = new THREE.Mesh(geo, matFor(g.key)); m.castShadow = g.key !== 'fence' && g.key !== 'glass'; m.receiveShadow = true; scene.add(m);
   }
 }
 { // painted safety strips on the drop-off lips and the stair nosings, so edges read from a low camera
@@ -2423,6 +2432,12 @@ function tube(a, b, r, mat) {
 const tubeGeo = new THREE.CylinderGeometry(1, 1, 1, 10);
 const decorTube = (a, b, r, mat) => { const len = a.distanceTo(b), q = new THREE.Quaternion().setFromUnitVectors(UP, b.clone().sub(a).normalize());
   decorAdd(tubeGeo, mat, M4.clone().compose(a.clone().add(b).multiplyScalar(0.5), q, S4.clone().set(r, len, r))); };
+for (const b of BOXES) if (b.mat === 'fence') {                    // a fence's posts and top rail, so you can see it from a way off
+  const [x0, y0, z0] = b.min, [x1, y1, z1] = b.max, alongX = x1 - x0 >= z1 - z0, len = alongX ? x1 - x0 : z1 - z0; if (Math.min(x1 - x0, z1 - z0) > 0.4) continue;
+  const at = t => alongX ? V(x0 + t, 0, (z0 + z1) / 2) : V((x0 + x1) / 2, 0, z0 + t), n = Math.max(1, Math.round(len / 2.5));
+  for (let k = 0; k <= n; k++) { const q = at(len * k / n); decorTube(V(q.x, Math.max(y0, terrainH(q.x, q.z) - 0.1), q.z), V(q.x, y1 + 0.04, q.z), 0.035, metal); }
+  const a0 = at(0), a1 = at(len); decorTube(V(a0.x, y1, a0.z), V(a1.x, y1, a1.z), 0.025, metal);
+}
 for (const r of RAILS) {
   decorTube(r.a.clone().add(V(0, -0.03, 0)), r.b.clone().add(V(0, -0.03, 0)), r.coping ? 0.045 : 0.035, metal);
   r.posts = [];
@@ -2919,7 +2934,7 @@ function stepWalk(dt) {
     const seen = new Set();
     for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]]) for (const b of near(S.pos.x + ox, S.pos.z + oz)) {
       if (b.isHubba || seen.has(b)) continue; seen.add(b);
-      const top = b.max[1]; if (top <= S.pos.y + 0.01 || top - S.pos.y > 0.44 || b.mat === 'fence') continue;
+      const top = b.max[1]; if (top <= S.pos.y + 0.01 || top - S.pos.y > 0.44 || b.mat === 'fence' || b.mat === 'glass') continue;
       const cx = clamp(S.pos.x, b.min[0], b.max[0]), cz = clamp(S.pos.z, b.min[2], b.max[2]), dx = cx - S.pos.x, dz = cz - S.pos.z, d = Math.hypot(dx, dz);
       if (d > R) continue;
       if (d > 1e-6 && (dx * S.vel.x + dz * S.vel.z) / (d * hv) < 0.2) continue;              // only what you're walking into
