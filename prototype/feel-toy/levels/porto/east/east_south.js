@@ -47,7 +47,7 @@ function east_south_mall(K, P, keep) {
   for (const z of [780, 800]) for (const x of [702, 716, 730, 776, 788, 800]) K.parkingBlock(x, z, true);
   for (const [x, z] of [[708, 790], [724, 790], [780, 790], [794, 790], [708, 808], [794, 808]]) K.car(x, z, true);
   K.planter(694, 812, 702, 816); K.planter(790, 812, 798, 816);
-  K.bikeRack(698, 769.5, true); K.bikeRack(712, 769.5, true); K.trashCan(778, 768); K.newsBoxes(792, 768, true, 2);
+  K.bikeRack(698, 769.5, true); K.bikeRack(712, 769.5, true); K.trashCan(804.5, 770); K.newsBoxes(792, 771.5, true, 2);
   for (const [x, z, s] of [[696, 774, 1], [796, 774, -1], [696, 806, 1], [796, 806, -1]]) K.lamp(x, z, s);
   for (const [x, z] of [[708, 797], [730, 797], [776, 797], [796, 797]]) K.tree(x, z);       // the lot's islands
   P.spot('Bayview Walkway', 694, -32.6, 770, -Math.PI / 2, [690, 760, 802, 770]);

@@ -212,7 +212,7 @@ function east_spine(K, P, PL) {
    * driveway kicks: one per frontage house, a 0.3 m curb-cut wedge from the road edge up past the sidewalk top, so you can
      kick up onto the walk (and its ledges) at speed;
    * carve banks: three 6 m wedges on the outside of each Crest Bend arc, road edge to the back of the walk, 0.9 m;
-   * crossing gaps: a kicker at the end of the walk before the Orchard and Bayview crossings, with a landing ramp across. */
+   * crossing gaps: a kicker at the end of the walk before the Orchard and Bayview crossings, to ollie the crossing. */
 function east_spine_bombKit(K, P, keep) {
   const T = (x, z) => K.terrainH(x, z), at = east_spine_at;
   const C = 0xb9b5ab, BANK = 0xa7a39a;
@@ -226,7 +226,8 @@ function east_spine_bombKit(K, P, keep) {
     keep.push([Math.min(ax, bx) - 3, Math.min(az, bz) - 3, Math.max(ax, bx) + 3, Math.max(az, bz) + 3]);
   }
   // crossing gaps: west walk over Orchard (z 420..440), east walk over Bayview (z 830..850)
-  K.crossingGap(591, 419.5, 591, 437); K.crossingGap(609, 829.5, 609, 847);
-  keep.push([588, 415, 594, 441], [606, 825, 612, 851]);
+  // (kickers only: a landing ramp in a flush crossing catches riders cutting the corner, so you land on the crossing itself)
+  for (const [x, z] of [[590, 417.5], [610, 827.5]]) K.hubbas.push({ a: V(x, T(x, z + 2) + 0.45, z + 2), b: V(x, T(x, z) + 0.02, z), w: 1.6, noRails: true, color: 0xc49a5c });
+  keep.push([588, 415, 594, 421], [606, 825, 612, 831]);
   P.spot('Orchard Crossing Gap', 591, T(591, 410), 410, Math.PI, [588, 410, 594, 442]);
 }
