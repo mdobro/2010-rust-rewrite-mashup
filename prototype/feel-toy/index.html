@@ -81,6 +81,7 @@
   #shop .sw.on { border-color: #ffc83d; box-shadow: 0 0 0 2px #ffc83d; }
   #shop .opt { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line); border-radius: 4px; padding: 6px 9px; margin: 0 6px 6px 0; }
   #shop .opt.on { border-color: #ffc83d; color: #ffc83d; }
+  #shop .opt.deck { padding: 5px 6px 4px; } #shop .opt.deck canvas { display: block; width: 72px; height: 20px; margin: 0 auto 3px; border-radius: 10px; }
   body.shopping .hud, body.shopping #combo, body.shopping #chal-prompt, body.shopping #touch, body.shopping #shop-btn, body.shopping #banner, body.shopping .tbar, body.shopping #stick-base, body.shopping #stick-knob, body.shopping #tstick-base, body.shopping #tstick-knob, body.shopping #tstick-trail { visibility: hidden; }
   #replay-ui { position: fixed; inset: 0; pointer-events: none; }
   #replay-ui::before, #replay-ui::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
@@ -2577,23 +2578,98 @@ const PALETTE = {
   wheels: [0xf3efe2, 0xd4a017, 0xc8432f, 0x3f7fbf, 0x222326, 0x7cc4a6],
   cores: [0xd04a35, 0x222326, 0xe8e4da, 0x3f7fbf, 0xd4a017],
 };
-const PATTERNS = ['stripe', 'solid', 'split', 'checker', 'dots', 'bolt', 'fade'];
+const PATTERNS = ['stripe', 'solid', 'split', 'checker', 'dots', 'bolt', 'fade', 'flame', 'stars', 'wave', 'sun', 'tri', 'word'];
+const PATTERN_NAMES = { stripe: 'Stripe', solid: 'Solid', split: 'Split', checker: 'Checker', dots: 'Dots', bolt: 'Bolt', fade: 'Fade', flame: 'Flames', stars: 'Stars', wave: 'Waves', sun: 'Sunset', tri: 'Triangles', word: 'Wordmark' };
+const GRIPS = ['black', 'grey', 'white', 'red', 'blue', 'camo', 'checker', 'flames', 'galaxy', 'cut', 'tiger'];
+const GRIP_NAMES = { black: 'Black', grey: 'Grey', white: 'White', red: 'Red', blue: 'Blue', camo: 'Camo', checker: 'Checker', flames: 'Flames', galaxy: 'Galaxy', cut: 'Cut-out', tiger: 'Tiger' };
 const CAP_STYLES = ['fwd', 'back', 'none'];
 const STYLE_DEFAULT = { shirt: 0x3f7fbf, pants: 0x2b3440, shoes: 0x34383f, soles: 0xf1efe8, cap: 0xc8432f, capStyle: 'fwd', skin: 0xd9a77f, hair: 0x3b2a20,
-  deck: 0xffb547, deck2: 0x2f5d8a, pattern: 'stripe', wheels: 0xf3efe2, cores: 0xd04a35 };
+  deck: 0xffb547, deck2: 0x2f5d8a, pattern: 'stripe', grip: 'black', wheels: 0xf3efe2, cores: 0xd04a35 };
 const randomStyle = (rnd = Math.random) => { const st = {}; for (const k of Object.keys(PALETTE)) st[k] = PALETTE[k][Math.floor(rnd() * PALETTE[k].length)];
-  st.pattern = PATTERNS[Math.floor(rnd() * PATTERNS.length)]; st.capStyle = CAP_STYLES[Math.floor(rnd() * 3)]; return st; };
-// the board's graphic, painted on a canvas: width across the board, length along it
-function graphicTexture(st) {
-  const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d'), hex = n => '#' + n.toString(16).padStart(6, '0');
-  g.fillStyle = hex(st.deck); g.fillRect(0, 0, 64, 256); g.fillStyle = hex(st.deck2);
-  if (st.pattern === 'stripe') g.fillRect(22, 0, 20, 256);
-  else if (st.pattern === 'split') g.fillRect(32, 0, 32, 256);
-  else if (st.pattern === 'checker') { for (let y = 0; y < 256; y += 16) for (let x = 0; x < 64; x += 16) if (((x + y) / 16) % 2) g.fillRect(x, y, 16, 16); }
-  else if (st.pattern === 'dots') { for (let y = 10; y < 256; y += 22) for (let x = 10 + (y / 22 % 2) * 11; x < 64; x += 22) { g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); } }
-  else if (st.pattern === 'bolt') { g.beginPath(); g.moveTo(40, 20); g.lineTo(16, 130); g.lineTo(34, 128); g.lineTo(22, 236); g.lineTo(50, 112); g.lineTo(32, 114); g.closePath(); g.fill(); }
-  else if (st.pattern === 'fade') { const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, hex(st.deck)); gr.addColorStop(1, hex(st.deck2)); g.fillStyle = gr; g.fillRect(0, 0, 64, 256); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  st.pattern = PATTERNS[Math.floor(rnd() * PATTERNS.length)]; st.grip = rnd() < 0.5 ? 'black' : GRIPS[Math.floor(rnd() * GRIPS.length)]; st.capStyle = CAP_STYLES[Math.floor(rnd() * 3)]; return st; };
+// the board's graphic and grip tape, painted on canvases: width across the board, length along it
+// (the top of the canvas is the tail, the bottom the nose)
+const hexCss = n => '#' + n.toString(16).padStart(6, '0');
+const mixHex = (a, b, t) => { const c = new THREE.Color(a).lerp(new THREE.Color(b), t); return '#' + c.getHexString(); };
+const seeded = seed => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+function starPath(g, x, y, r, rot = 0) { g.beginPath(); for (let k = 0; k < 10; k++) { const a = rot + k * Math.PI / 5, rr = k % 2 ? r * 0.42 : r; g.lineTo(x + Math.sin(a) * rr, y - Math.cos(a) * rr); } g.closePath(); }
+function flamePath(g, w, h, base, len, n, rnd) {     // tongues of flame licking up from y = base towards y = base - len
+  g.beginPath(); g.moveTo(0, base + 4);
+  for (let k = 0; k < n; k++) { const x0 = w * k / n, x1 = w * (k + 1) / n, tip = base - len * (0.55 + 0.45 * rnd()), lean = (rnd() - 0.3) * w / n;
+    g.quadraticCurveTo(x0 + (x1 - x0) * 0.1, base - len * 0.35, x0 + (x1 - x0) * 0.5 + lean, tip);
+    g.quadraticCurveTo(x0 + (x1 - x0) * 0.75, base - len * 0.3, x1, base - len * 0.12); }
+  g.lineTo(w, base + 4); g.closePath(); void h;
+}
+function graphicCanvas(st) {
+  const c = document.createElement('canvas'), w = 128, h = 512; c.width = w; c.height = h; const g = c.getContext('2d');
+  const a = hexCss(st.deck), b = hexCss(st.deck2), mid = mixHex(st.deck, st.deck2, 0.5), rnd = seeded(7);
+  g.fillStyle = a; g.fillRect(0, 0, w, h); g.fillStyle = b;
+  const pat = st.pattern;
+  if (pat === 'stripe') g.fillRect(44, 0, 40, h);
+  else if (pat === 'split') g.fillRect(64, 0, 64, h);
+  else if (pat === 'checker') { for (let y = 0; y < h; y += 32) for (let x = 0; x < w; x += 32) if (((x + y) / 32) % 2) g.fillRect(x, y, 32, 32); }
+  else if (pat === 'dots') { for (let y = 20; y < h; y += 44) for (let x = 20 + (y / 44 % 2) * 22; x < w; x += 44) { g.beginPath(); g.arc(x, y, 12, 0, 7); g.fill(); } }
+  else if (pat === 'bolt') { g.beginPath(); g.moveTo(80, 40); g.lineTo(32, 260); g.lineTo(68, 256); g.lineTo(44, 472); g.lineTo(100, 224); g.lineTo(64, 228); g.closePath(); g.fill(); }
+  else if (pat === 'fade') { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
+  else if (pat === 'flame') {   // flames up from the nose, a lighter core inside
+    flamePath(g, w, h, h, 330, 4, rnd); g.fill();
+    g.fillStyle = mixHex(st.deck2, 0xffffff, 0.35); flamePath(g, w, h, h, 200, 5, rnd); g.fill();
+  } else if (pat === 'stars') {
+    for (let k = 0; k < 26; k++) { const r = 5 + rnd() * 16; starPath(g, 10 + rnd() * (w - 20), 12 + rnd() * (h - 24), r, rnd()); g.fillStyle = k % 4 ? b : mid; g.fill(); }
+  } else if (pat === 'wave') {
+    for (let band = 0; band < 7; band++) { const y0 = 60 + band * 64; g.fillStyle = band % 2 ? b : mid; g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 4) g.lineTo(x, y0 + Math.sin(x / w * Math.PI * 2 + band) * 14); g.lineTo(w, h); g.closePath(); g.fill(); }
+  } else if (pat === 'sun') {   // a setting sun cut by bars, rays behind it
+    g.save(); g.translate(64, 230); g.fillStyle = mid; for (let k = 0; k < 12; k++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(-8, 0); g.lineTo(8, 0); g.lineTo(0, -260); g.closePath(); g.fill(); } g.restore();
+    g.fillStyle = b; g.beginPath(); g.arc(64, 230, 54, 0, 7); g.fill();
+    g.fillStyle = a; for (let k = 0; k < 5; k++) g.fillRect(0, 236 + k * 11, w, 3 + k * 1.2);
+  } else if (pat === 'tri') {
+    const sz = 32; for (let y = 0; y < h; y += sz) for (let x = -sz; x < w + sz; x += sz) { const off = (y / sz) % 2 ? sz / 2 : 0;
+      g.fillStyle = (x / sz + y / sz) % 3 === 0 ? b : (x / sz + y / sz) % 3 === 1 ? mid : a;
+      g.beginPath(); g.moveTo(x + off, y + sz); g.lineTo(x + off + sz / 2, y); g.lineTo(x + off + sz, y + sz); g.closePath(); g.fill(); }
+  } else if (pat === 'word') {  // a made-up brand down the board, a bar either side
+    g.fillRect(14, 0, 8, h); g.fillRect(106, 0, 8, h);
+    g.save(); g.translate(64, 256); g.rotate(-Math.PI / 2); g.font = 'italic 900 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('CURBSIDE', 0, 0); g.font = '700 13px system-ui, sans-serif'; g.fillStyle = mid; g.fillText('SKATE CO. — EST. 2010', 0, 34); g.restore();
+  }
+  return c;
+}
+// grip tape: a colour or a print, with the sandpaper grain over it
+function gripCanvas(key) {
+  const c = document.createElement('canvas'), w = 128, h = 512; c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true }), rnd = seeded(13);
+  const fill = col => { g.fillStyle = col; g.fillRect(0, 0, w, h); };
+  const plain = { black: '#1d1d20', grey: '#5a5d63', white: '#e6e3dc', red: '#a8302a', blue: '#2b5590' };
+  if (plain[key]) fill(plain[key]);
+  else if (key === 'camo') { fill('#4d5a3a'); for (const col of ['#6d7a4c', '#2f3826', '#8a7a58'])
+    for (let k = 0; k < 22; k++) { g.fillStyle = col; g.beginPath(); const x = rnd() * w, y = rnd() * h; for (let t = 0; t < 7; t++) { const an = t / 7 * Math.PI * 2, rr = 10 + rnd() * 14; g.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr * 1.4); } g.closePath(); g.fill(); } }
+  else if (key === 'checker') { fill('#1d1d20'); g.fillStyle = '#e6e3dc'; for (let y = 0; y < h; y += 32) for (let x = 0; x < w; x += 32) if (((x + y) / 32) % 2) g.fillRect(x, y, 32, 32); }
+  else if (key === 'flames') { fill('#1d1d20'); for (const [col, len] of [['#c8321c', 300], ['#f07a1a', 210], ['#ffd043', 110]]) {
+      g.fillStyle = col; flamePath(g, w, h, h, len, 4, rnd); g.fill(); g.save(); g.translate(w, 0); g.scale(-1, -1); g.translate(0, -h); flamePath(g, w, h, h, len * 0.6, 4, rnd); g.fill(); g.restore(); } }
+  else if (key === 'galaxy') { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#1a1036'); gr.addColorStop(0.5, '#2b1450'); gr.addColorStop(1, '#0d1a3a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    for (const [col, x, y, rr] of [['rgba(214,84,180,.45)', 40, 140, 90], ['rgba(70,140,230,.45)', 90, 360, 100], ['rgba(140,90,230,.35)', 60, 260, 70]]) {
+      const rg = g.createRadialGradient(x, y, 0, x, y, rr); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h); }
+    for (let k = 0; k < 160; k++) { g.fillStyle = `rgba(255,255,255,${0.4 + rnd() * 0.6})`; g.fillRect(rnd() * w, rnd() * h, rnd() < 0.1 ? 2 : 1, rnd() < 0.1 ? 2 : 1); }
+    for (let k = 0; k < 5; k++) { starPath(g, rnd() * w, rnd() * h, 4, 0); g.fillStyle = '#fff'; g.fill(); } }
+  else if (key === 'cut') {   // black with two diagonal bands cut away, showing the maple underneath
+    fill('#1d1d20'); g.fillStyle = '#cfa871'; for (const y of [210, 250]) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y - 70); g.lineTo(w, y - 56); g.lineTo(0, y + 14); g.closePath(); g.fill(); } }
+  else if (key === 'tiger') { fill('#e08a22'); g.fillStyle = '#1d1d20';
+    for (let y = 10; y < h; y += 26 + rnd() * 12) for (const side of [0, 1]) { const len = 30 + rnd() * 40, th = 5 + rnd() * 6, x0 = side ? w : 0, dir = side ? -1 : 1;
+      g.beginPath(); g.moveTo(x0, y - th); g.quadraticCurveTo(x0 + dir * len * 0.6, y - th * 0.4, x0 + dir * len, y + rnd() * 10); g.quadraticCurveTo(x0 + dir * len * 0.5, y + th * 0.6, x0, y + th); g.closePath(); g.fill(); } }
+  else fill('#1d1d20');
+  // grain: fine light and dark specks, the way sandpaper catches the light
+  const im = g.getImageData(0, 0, w, h), d = im.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (rnd() - 0.5) * 34 + (rnd() < 0.04 ? 30 : 0); d[i] += n; d[i + 1] += n; d[i + 2] += n; }   // (the array clamps itself)
+  g.putImageData(im, 0, 0);
+  return c;
+}
+const canvasTex = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+const graphicTexture = st => canvasTex(graphicCanvas(st));
+const GRIP_TEX = new Map(), gripTexture = key => { if (!GRIP_TEX.has(key)) GRIP_TEX.set(key, canvasTex(gripCanvas(key))); return GRIP_TEX.get(key); };
+// a little side-on picture of a deck for the shop buttons
+function deckThumb(c) {
+  const t = document.createElement('canvas'); t.width = 120; t.height = 34; const g = t.getContext('2d');
+  g.beginPath(); g.roundRect(1, 1, 118, 32, 16); g.clip(); g.translate(60, 17); g.rotate(Math.PI / 2); g.drawImage(c, -16, -60, 32, 120);
+  return t;
 }
 // A skater on a board. The rider lives in the board's space (x toe side, y up, -z the nose), so feet
 // stay planted through ramps. Regular stance: left foot forward, chest facing the toe edge.
@@ -2619,13 +2695,30 @@ function bendDeck(g) {   // kick the nose and tail up, and dish the middle
 }
 function deckGeos() {
   return geo('deck', () => {
-    const sh = deckOutline(), T = 0.016, B = 0.003;
-    const body = new THREE.ExtrudeGeometry(sh, { depth: T, bevelEnabled: true, bevelThickness: B, bevelSize: B, bevelSegments: 2, curveSegments: 16 });
-    body.rotateX(Math.PI / 2); body.translate(0, 0.083 + T + B, 0); bendDeck(body);       // (x, y, z) -> width, up, length
-    const skin = (up, y) => { const g = new THREE.ShapeGeometry(sh, 16); g.rotateX(up ? -Math.PI / 2 : Math.PI / 2); g.translate(0, y, 0);
-      const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 0.105) / 0.21, (p.getZ(i) + 0.41) / 0.82);
-      return bendDeck(g); };
-    return { body, grip: skin(true, 0.083 + T + 2 * B + 0.0006), graphic: skin(false, 0.083 - 0.0006) };
+    // built as fine grids rather than one flat cap, so the top and bottom follow the kicks and the concave
+    // exactly: grip tape on top, the graphic underneath, and a rounded ply edge joining them
+    const W = 0.105, L = 0.41 - W, B = 0.003, yTop = 0.105, yBot = 0.083, NA = 12, NM = 40, NX = 10;
+    const rowsAt = d => { const r = W - d, out = [];
+      for (let i = NA; i > 0; i--) { const a = Math.PI / 2 * i / NA; out.push([-(L + r * Math.sin(a)), r * Math.cos(a)]); }
+      for (let i = 0; i <= NM; i++) out.push([-L + 2 * L * i / NM, r]);
+      for (let i = 1; i <= NA; i++) { const a = Math.PI / 2 * i / NA; out.push([L + r * Math.sin(a), r * Math.cos(a)]); }
+      return out; };
+    const finish = (pos, uv, idx) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      if (uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return bendDeck(g); };
+    const cap = (y, up) => { const R = rowsAt(B), pos = [], uv = [], idx = [];
+      for (const [z, w] of R) for (let j = 0; j <= NX; j++) { const x = w * (-1 + 2 * j / NX); pos.push(x, y, z); uv.push((x + W) / (2 * W), (z + 0.41) / 0.82); }
+      for (let i = 0; i < R.length - 1; i++) for (let j = 0; j < NX; j++) { const a = i * (NX + 1) + j, b = a + 1, c = a + NX + 1, d = c + 1;
+        if (up) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c); }
+      return finish(pos, uv, idx); };
+    // the edge: rings of the outline running round the board, rolled over at the top and bottom
+    const ARC = 4, rings = [];
+    for (let k = 0; k <= ARC; k++) { const f = Math.PI / 2 * k / ARC; rings.push([B * (1 - Math.sin(f)), yTop - B * (1 - Math.cos(f))]); }
+    for (let k = 0; k <= ARC; k++) { const f = Math.PI / 2 * k / ARC; rings.push([B * (1 - Math.cos(f)), yBot + B * (1 - Math.sin(f))]); }
+    const pos = [], idx = []; let n = 0;
+    for (const [d, y] of rings) { const R = rowsAt(d), loop = [...R.map(([z, w]) => [w, z]), ...R.slice().reverse().map(([z, w]) => [-w, z])];
+      n = loop.length; for (const [x, z] of loop) pos.push(x, y, z); }
+    for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < n; i++) { const a = k * n + i, b = k * n + (i + 1) % n, c = a + n, e = b + n; idx.push(a, b, c, b, e, c); }
+    return { body: finish(pos, null, idx), grip: cap(yTop, true), graphic: cap(yBot, false) };
   });
 }
 // a skate shoe, pointing along +x: a cupsole with a rounded toe, a suede upper that slopes down to the toe,
@@ -2648,14 +2741,14 @@ function shoeGeos() {
 // detail 0 is a lighter build for the other skaters in town
 function buildRider(style, detail = 1) {
   const mat = (color, roughness, extra) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
-  const M = { grip: mat(0x1d1d20, 0.95), ply: mat(0xcfa871, 0.7), graphic: mat(0xffffff, 0.55), metal: mat(0xb9bec4, 0.35, { metalness: 0.85 }), wheels: mat(0xf3efe2, 0.45), cores: mat(0xd04a35, 0.5),
+  const M = { grip: mat(0xffffff, 0.95), ply: mat(0xcfa871, 0.7), graphic: mat(0xffffff, 0.55), metal: mat(0xb9bec4, 0.35, { metalness: 0.85 }), wheels: mat(0xf3efe2, 0.45), cores: mat(0xd04a35, 0.5),
     bushing: mat(0xd4a017, 0.6), shirt: mat(0x3f7fbf, 0.7), pants: mat(0x2b3440, 0.8), skin: mat(0xd9a77f, 0.55), lip: mat(0xb9786a, 0.5), soles: mat(0xf1efe8, 0.6), shoes: mat(0x34383f, 0.95),
     cap: mat(0xc8432f, 0.7), hair: mat(0x3b2a20, 0.9), dark: mat(0x1b1b1e, 0.4), white: mat(0xf4f1ea, 0.3), iris: mat(0x5a3b22, 0.3), belt: mat(0x1f1d1b, 0.6), cuff: mat(0x232a33, 0.85), sock: mat(0xeeeae0, 0.9) };
   const mesh = (g, m, shadow = true) => { const o = new THREE.Mesh(g, m); o.castShadow = shadow; return o; };
   const skater = new THREE.Group(), boardOrient = new THREE.Group(), boardFlip = new THREE.Group(); skater.add(boardOrient); boardOrient.add(boardFlip);
   { // the board
     const D = deckGeos();
-    boardFlip.add(mesh(D.body, M.ply), mesh(D.grip, M.grip, false), mesh(D.graphic, M.graphic, false));
+    boardFlip.add(mesh(D.body, M.ply), mesh(D.grip, M.grip), mesh(D.graphic, M.graphic));
     // trucks: baseplate, kingpin and bushings, the hanger, the axle; four wheels with rounded lips and a bearing in the core
     const base = geo('base', () => new THREE.BoxGeometry(0.062, 0.01, 0.08)), bush = geo('bush', () => new THREE.CylinderGeometry(0.012, 0.012, 0.016, 12));
     const hanger = geo('hanger', () => { const g = new THREE.CylinderGeometry(0.016, 0.02, 0.12, 8); g.rotateZ(Math.PI / 2); g.scale(1, 1, 0.8); return g; });
@@ -2765,6 +2858,7 @@ function applyStyle(R, st) {
   for (const k of ['shirt', 'pants', 'shoes', 'soles', 'cap', 'skin', 'hair', 'wheels', 'cores']) M[k].color.set(st[k]);
   M.cuff.color.set(st.pants).multiplyScalar(0.8); M.lip.color.set(st.skin).lerp(new THREE.Color(0xb05a50), 0.35).multiplyScalar(0.92);
   if (M.graphic.map) M.graphic.map.dispose(); M.graphic.map = graphicTexture(st); M.graphic.needsUpdate = true;
+  M.grip.map = gripTexture(GRIPS.includes(st.grip) ? st.grip : 'black'); M.grip.needsUpdate = true;
   R.capParts.visible = st.capStyle !== 'none'; R.capParts.rotation.y = st.capStyle === 'back' ? Math.PI : 0;
   R.style = st;
 }
@@ -4310,14 +4404,16 @@ function shopTick(dt) {
   $('shop-btn').hidden = !SHOP.here;
   for (const m of SHOP.mats) m.material.opacity = 0.4 + 0.25 * Math.sin(performance.now() / 300);
 }
+const GRIP_THUMB = {};
 function buildShopRows() {
   const host = $('shop-rows'); host.innerHTML = '';
   const hex = n => '#' + n.toString(16).padStart(6, '0');
-  const row = (label, key, opts, kind = 'color') => {
+  const row = (label, key, opts, kind = 'color', thumb = null) => {
     const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<span>${label}</span>`;
     for (const v of opts) { const b = document.createElement('button'); b.type = 'button';
       if (kind === 'color') { b.className = 'sw' + (PLAYER_STYLE[key] === v ? ' on' : ''); b.style.background = hex(v); b.setAttribute('aria-label', label + ' ' + hex(v)); }
-      else { b.className = 'opt' + (PLAYER_STYLE[key] === v ? ' on' : ''); b.textContent = kind[v] || v; }
+      else { b.className = 'opt' + (PLAYER_STYLE[key] === v ? ' on' : ''); b.textContent = kind[v] || v;
+        if (thumb) { b.prepend(thumb(v)); b.classList.add('deck'); } }
       b.addEventListener('click', () => { PLAYER_STYLE[key] = v; saveStyle(); buildShopRows(); });
       r.appendChild(b); }
     host.appendChild(r);
@@ -4325,7 +4421,8 @@ function buildShopRows() {
   row('Shirt', 'shirt', PALETTE.shirt); row('Pants', 'pants', PALETTE.pants); row('Shoes', 'shoes', PALETTE.shoes); row('Soles', 'soles', PALETTE.soles);
   row('Cap', 'capStyle', CAP_STYLES, { fwd: 'Forward', back: 'Backwards', none: 'No cap' }); row('Cap colour', 'cap', PALETTE.cap);
   row('Skin', 'skin', PALETTE.skin); row('Hair', 'hair', PALETTE.hair);
-  row('Board graphic', 'pattern', PATTERNS, { stripe: 'Stripe', solid: 'Solid', split: 'Split', checker: 'Checker', dots: 'Dots', bolt: 'Bolt', fade: 'Fade' });
+  row('Grip tape', 'grip', GRIPS, GRIP_NAMES, v => GRIP_THUMB[v] || (GRIP_THUMB[v] = deckThumb(gripCanvas(v))));
+  row('Board graphic (underneath)', 'pattern', PATTERNS, PATTERN_NAMES, v => deckThumb(graphicCanvas({ ...STYLE_DEFAULT, ...PLAYER_STYLE, pattern: v })));
   row('Board colour', 'deck', PALETTE.deck); row('Graphic colour', 'deck2', PALETTE.deck2); row('Wheels', 'wheels', PALETTE.wheels); row('Wheel cores', 'cores', PALETTE.cores);
 }
 function saveStyle() { applyStyle(PLAYER, PLAYER_STYLE); try { localStorage.setItem(STYLE_KEY, JSON.stringify(PLAYER_STYLE)); } catch (_) {} }
@@ -4806,7 +4903,7 @@ function frameBody(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { THREE, scene, keepBoardAboveGround, CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { THREE, scene, renderer, gripCanvas, graphicCanvas, deckThumb, buildShopRows, saveStyle, keepBoardAboveGround, CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

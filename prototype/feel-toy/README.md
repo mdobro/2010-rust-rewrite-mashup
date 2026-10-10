@@ -377,8 +377,13 @@ over a slow turntable view of your skater, where you can change:
 - shirt, pants, shoes and soles;
 - the cap (forward, backwards or none) and its colour;
 - skin and hair;
-- the board graphic (stripe, solid, split, checker, dots, bolt or fade) and its
-  two colours;
+- the grip tape on top. It's black by default; the others are grey, white,
+  red, blue, camo, checker, flames, galaxy, cut-out (two bands cut away to
+  show the maple) and tiger. Every grip has a sandpaper grain;
+- the graphic underneath (stripe, solid, split, checker, dots, bolt, fade,
+  flames, stars, waves, sunset, triangles or a wordmark) and its two colours.
+  Grip and graphic buttons show a small picture of the deck, so you can see
+  what you're picking. You see the graphic whenever the board flips;
 - wheels and wheel cores.
 
 **Random** deals a random look and **Reset** goes back to the default. Your
