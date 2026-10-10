@@ -2327,7 +2327,7 @@ function respawn() {
   Object.assign(S, { pos: SPAWN.pos.clone(), vel: V(), yaw: SPAWN.yaw, grounded: true, n: UP.clone(), rail: null, railCool: 0, trick: null, flipBuf: 0, bail: 0, crouch: 0, grabT: 0, spin: 0,
     walking: false, manual: null, manualT: 0, bankT: 0, sliding: false, pushQueue: 0, pushLeft: 0, manHold: 0, revertT: 0 });
   if (typeof updateWalkButton === 'function') updateWalkButton();
-  S.pos.y = terrainH(S.pos.x, S.pos.z);
+  S.pos.y = groundAt(S.pos.x, S.pos.z, SPAWN.pos.y + 0.5).h;     // stand on whatever is there (a deck, a roof), not the ground under it
   combo.parts = []; combo.pts = 0; combo.ammo = 0;
   cam.yaw = SPAWN.yaw; cam.pivot.copy(S.pos);
 }
