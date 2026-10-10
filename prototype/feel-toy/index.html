@@ -2226,8 +2226,11 @@ let manualDepth = null;
 function manualInput() {
   if (S.walking) return null;
   manualDepth = null;
-  if (keys.has('KeyM')) return 'Manual';
-  if (keys.has('KeyN')) return 'Nose Manual';
+  // the stick is relative to where you're going: pulling back lifts the leading end, so rolling fakie
+  // it puts you on the nose wheels (S.manual names the wheels you're on, so the pose follows the board)
+  const swap = mk => mk && (S.manual ? S.manualFakie : fakie()) ? (mk === 'Manual' ? 'Nose Manual' : 'Manual') : mk;
+  if (keys.has('KeyM')) return swap('Manual');
+  if (keys.has('KeyN')) return swap('Nose Manual');
   const m = Math.hypot(GS.x, GS.y);
   const top = Math.max(T.manualMin + 0.1, T.flickRim - 0.05); // a gap below the crouch so a short pull isn't a manual
   // once you're on a manual it's forgiving: anywhere short of the crouch, and well off straight down, keeps it
@@ -2235,15 +2238,17 @@ function manualInput() {
   if (m < lo || m >= hi) return null;
   manualDepth = clamp((m - T.manualMin) / (top - T.manualMin), 0, 1); // 0 just tipped .. 1 top of the band
   const sn = -GS.y / m, cone = on ? 0.45 : 0.7;
-  return sn < -cone ? 'Manual' : sn > cone ? 'Nose Manual' : null;
+  return swap(sn < -cone ? 'Manual' : sn > cone ? 'Nose Manual' : null);
 }
 function startManual(mk) {
+  S.manualFakie = fakie();
   S.manual = mk; S.manualT = 0; S.bankT = 0; S.manBal = (Math.random() - 0.5) * 0.2; S.manPhase = Math.random() * 6;
-  if (device !== 'kbm') showTrickName(mk);
+  if (device !== 'kbm') showTrickName(manualName());
 }
+const manualName = () => (S.manualFakie ? 'Fakie ' : '') + S.manual;
 function endManual(bank) {
   if (!S.manual) return;
-  if (S.manualT > 0.25) addTrick(S.manual, Math.round((S.manual === 'Manual' ? 60 : 75) + 90 * S.manualT), 1);
+  if (S.manualT > 0.25) addTrick(manualName(), Math.round((S.manual === 'Manual' ? 60 : 75) + 90 * S.manualT), 1);
   S.manual = null;
   S.bankT = bank ? 0.45 : 0; // a moment to pop out of it before the combo pays out
 }
@@ -3064,7 +3069,7 @@ function showCombo(sub, cls) {
 }
 function updateHud(dt) {
   $('speed').textContent = Math.round(S.vel.length() * 3.6);
-  $('state').textContent = S.walking ? 'walking' : S.bail > 0 ? 'bailed' : S.manual ? S.manual.toLowerCase() : S.rail ? `grinding · ${S.rail.kind.toLowerCase()}` : S.grounded ? (fakie() ? 'rolling fakie' : 'rolling') : 'airborne';
+  $('state').textContent = S.walking ? 'walking' : S.bail > 0 ? 'bailed' : S.manual ? manualName().toLowerCase() : S.rail ? `grinding · ${S.rail.kind.toLowerCase()}` : S.grounded ? (fakie() ? 'rolling fakie' : 'rolling') : 'airborne';
   $('score').textContent = stats.score;
   $('best').textContent = `best combo ${stats.best || '–'}`;
   const bal = $('balance'); bal.hidden = !S.manual;

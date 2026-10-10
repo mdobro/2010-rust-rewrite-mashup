@@ -205,6 +205,10 @@ can ollie or flip out of a manual into the next trick. Push all the way down
 and it's the ollie crouch instead. *Manual: trick stick tip from* sets where
 halfway starts.
 
+Riding fakie turns it round, the same as grinds. Halfway down still lifts the
+leading end, which is now the nose, so you balance on the nose wheels for a
+**Fakie Nose Manual**. Halfway up is a **Fakie Manual** on the tail wheels.
+
 Manuals are meant to be holdable. A manual starts once the stick has stayed
 put in the halfway band for about a fifth of a second (*Manual: hold the stick
 steady this long first*). Normal thumb shake is fine. Pulling down to crouch
