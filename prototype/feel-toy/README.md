@@ -363,7 +363,8 @@ Every map has a skate shop, and Downtown has three:
 - **Port City:** the same three, in its downtown.
 - **Beach Park:** a shopfront on the boardwalk.
 
-Look for the lit SKATE SHOP sign and the striped awning. Stop on the glowing
+You start every map (and come back after a reset) facing a skate shop, a few
+metres out from its door. Look for the lit SKATE SHOP sign and the striped awning. Stop on the glowing
 mat at the door, then tap **Enter skate shop** (or press **E**). A sheet opens
 over a slow turntable view of your skater, where you can change:
 - shirt, pants, shoes and soles;
@@ -477,7 +478,7 @@ grind. Coping grinds need a pop or some air first.
 A dense 240 m square of city with no dead space. It has nine blocks on two
 avenues and two streets, and every block is a spot. The spots are laid out
 as lines that cross the street from one block into the next, with curb ramps
-where each line meets a curb. You start on the Central Plaza deck. To jump to
+where each line meets a curb. You start outside the Corner Skate Shop. To jump to
 any spot, use the buttons under **Level** in the tuning panel.
 
 **The lines**

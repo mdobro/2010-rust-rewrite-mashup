@@ -2471,7 +2471,13 @@ const pose = { grind: 0, push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd:
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
    ============================================================ */
-const SPAWN = LV.spawn;
+// you start out in front of a skate shop, facing its sign, a couple of metres past the mat
+const SPAWN = (() => {
+  const sh = (LV.shops || (LV.shop ? [LV.shop] : [])).filter(Boolean)[0]; if (!sh) return LV.spawn;
+  const rot = sh.sign[3], ox = Math.sin(rot), oz = Math.cos(rot), [dx, dy, dz] = sh.door, [x0, z0, x1, z1] = sh.zone;
+  const depth = Math.max(...[[x0, z0], [x1, z0], [x0, z1], [x1, z1]].map(([x, z]) => (x - dx) * ox + (z - dz) * oz));
+  return { ...LV.spawn, pos: V(dx + ox * (depth + 2.5), dy, dz + oz * (depth + 2.5)), yaw: rot };
+})();
 const S = {
   pos: SPAWN.pos.clone(), vel: V(), yaw: 0, grounded: true, n: UP.clone(), boardUp: UP.clone(),
   crouch: 0, pushT: 0, sinceGround: 0, airTime: 0, coyoteOk: false, rail: null, railT: 0, railS: 0, railCool: 0, railTime: 0,
