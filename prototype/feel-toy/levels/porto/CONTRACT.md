@@ -123,6 +123,9 @@ P.col((x, z, h) => THREE.Color | null)   // ground colour (null: the default gra
 P.surface((x, z) => 'rough' | 'smooth' | null)  // rough = grass/gravel/dirt (slower, louder)
 P.region(x0, x1, z0, z1, res)           // draw the ground finer here (res in metres: 4, 2, 1, 0.5)
 P.spot(name, x, y, z, yaw, area)        // a named spot (for the spot list and challenges)
+P.line(name, [[x, z], ...], kind, main) // a line people ride: kind 'push' (streets, plazas, paths) or 'bomb'
+                                        // (descents); main = true for your named lines. Declare every street,
+                                        // path and line in your doc: check.mjs --rhythm measures them (see 7)
 P.travel(name, x, y, z, yaw, kind)      // a fast-travel point. kind: 'district' (exactly one per
                                         // district: its front door), 'park' (each skatepark), 'spot'
 P.challenge({...})                      // see 6
@@ -161,7 +164,12 @@ are world y, and most "sits on the ground" builders read `K.terrainH` for you):
 | `K.lip(ax, az, bx, bz, y)` | a painted grindable edge (a curb, a stair lip) |
 | `K.feat(x0, x1, z0, z1, (x, z, h) => v, op)` | change the ground in a box: op 'min' (dig), 'add', 'set' |
 | `K.pool(x0, x1, z0, z1, [[K.poolS.circle(cx, cz, r), depth], ...], y0)` | a bowl or pool (draws its ground fine on its own) |
-| `K.hump(cx, cz, r, hgt)`, `K.fountainBowl`, `K.sunkenPlaza`, `K.raisedPlaza`, `K.bankToWall`, `K.garage`, `K.loadingDock`, `K.containers`, `K.backyardPool`, `K.driveway` | ready-made spots |
+| `K.hump(cx, cz, r, hgt)`, `K.fountainBowl`, `K.sunkenPlaza`, `K.raisedPlaza`, `K.bankToWall`, `K.garage`, `K.loadingDock`, `K.containers(x0, z, n, stack, alongX, gap, y)`, `K.backyardPool`, `K.driveway(axis, c, side, u, RW, w)` | ready-made spots. `K.driveway` now ends on the road wherever the road is, and `K.containers` stands on the ground (or on `y`), so both work on slopes |
+| `K.strip(ax, az, bx, bz, hgt, w, { kind, top, seg, noRails, color })` | a slab that follows the ground along any line, in chords of ≤ 6 m, `hgt` over the ground; both long edges grind as one continuous grind. Sidewalk curbs, ground-hugging ledges, long manual pads |
+| `K.median(ax, az, bx, bz, w, { planter, trees })` | a traffic island down a road: 0.15 curb, a 0.5 planter ledge in the middle, trees |
+| `K.retainWall(ax, az, bx, bz, back, hgt, thick)` | a hillside retaining wall: a ledge `hgt` over the high ground `back` m to the side (+ left, − right of the line) |
+| `K.construction(x, z, alongX)` | a 12 × 3 m roadworks pocket: jerseys, a ply kicker, a scaffold pipe rail, cones |
+| `K.crossingGap(ax, az, bx, bz, hgt)` | a curb-cut kicker at A aimed at B (over a cross street or driveway) and a landing ramp at B |
 | `K.tree(x, z)`, `K.lamp(x, z, side)`, `K.car(x, z, alongX)`, `K.busStop`, `K.trashCan`, `K.hydrant`, `K.bikeRack`, `K.dumpster`, `K.newsBoxes`, `K.meter` | dressing (trees and lamps are solid posts) |
 | `K.prop(x0, y0, z0, x1, y1, z1, color)` | a box you can see but not hit (awnings, signs, far-off detail) |
 | `K.paintRect(x0, z0, x1, z1, color, y)`, `K.dash(...)` | paint on the ground |
@@ -225,6 +233,31 @@ Look at `buildDowntown` in `levels/dt.js` (lines ~389–435) for working example
 * **Spots are part of the city**, not dropped on it: the 12-set is the City Hall's front steps, the
   ledges are the plaza's planters, the gap is between two loading docks. Look at how Downtown does it.
 * Leave **run-up and roll-away** room at every spot (at least 10 m in front, 15 m after a big drop).
+* **Grinds chain.** At the end of a rail, the grind carries straight on along the next one if it starts
+  within 0.25 m and points within 35° (kinked rails, ledges and curbs built in pieces, `K.strip`). Build
+  long ledges and curbs as pieces that meet end to end and they grind as one.
+* **No dead stretches (the rhythm rule).** On every street, path and line (`P.line`), something
+  skateable comes up within 10 m of the line at least every **30 m on push lines** (~4 s at push speed)
+  and every **80 m on bomb lines** (~4 s at 20 m/s); on main lines a named spot or a pull-off pocket
+  (`P.spot`) at least every **150 m**. Skateable: a rail, a ledge, a bank, a kicker, a gap, a manual pad,
+  a box to ollie onto or grind. The plain sidewalk and its curb don't count (every street has them),
+  nor do lamps, trees or buildings. `check.mjs --rhythm` reports every gap with its coordinates. You may
+  keep a few deliberate breathers (a pure-speed stretch, a quiet lawn), but name each one in your doc.
+  The filler menu:
+  * **Bombs:** carve banks at the bends, driveway kicks up onto sidewalk ledges, gaps over the crossings
+    (`K.crossingGap`), guardrail and median grinds, a pull-off pocket every ~150 m (a bus stop with a
+    bench and a bank, a gas station forecourt, a lookout). Keep the road line itself clear at speed:
+    obstacles at the edges, not in the lane.
+  * **Residential:** driveways, retaining walls (`K.retainWall`), stoops, hydrants, parked cars, low
+    garden walls, every house or two.
+  * **Commercial / city:** planters, benches, bus stops, newsboxes, bike racks, medians, roadworks
+    (`K.construction`).
+  * **Industrial / harbour:** loading docks, pallets, containers, jerseys, pipe rails, bollards.
+  * **Gate seams:** something small on your side of each gate (the 16 m corridor plus the 12 m blend
+    is where gaps happen).
+  * **Life:** traffic on the through streets, peds on the sidewalks, NPC skaters on your named lines,
+    tapes in the quiet stretches, and line challenges that use the whole length ("bomb it without
+    bailing", "the whole guardrail", "5 driveways in one line").
 * Lines: every spot should lead into another. A good district has 3–4 lines you can chain for
   30–60 seconds without pushing much.
 * **Made-up names only.** No real places, brands, skaters, games or trademarks.
@@ -235,7 +268,7 @@ Per district, measured with `--only <id>`:
 
 | | budget |
 |---|---|
-| boxes | 900 (Financial: 1,100 with Downtown) |
+| boxes | 900 (Financial: 1,100 with Downtown; Downtown's own 589 boxes, 717 grind lines and ~950k triangles are counted apart, so Financial's new work gets the same budget as any other district on top) |
 | grind lines | 700 |
 | buildings (`K.building`) | 70 |
 | triangles added (the check's scene triangles minus about 160k for the empty map) | 450k |
@@ -255,6 +288,7 @@ node tools/build.mjs --only <id> --out $SP/<id>.html        # a test page with j
 node tools/check.mjs --html $SP/<id>.html --only <id>       # counts, the contract, the sink scan
 node tools/check.mjs --html $SP/<id>.html --only <id> --shots $SP/shots-<id>   # + aerial and 4 views (look at them!)
 node tools/check.mjs --html $SP/<id>.html --only <id> --views '[["plaza",[x,y,z],[lx,ly,lz]]]' --shots $SP/s
+node tools/check.mjs --html $SP/<id>.html --only <id> --rhythm   # the gaps along every P.line
 node tools/check.mjs --html $SP/<id>.html --only <id> --rides '[["hill", [x,y,z], [vx,0,vz], 6, "push"]]'
 ```
 
@@ -264,8 +298,22 @@ rewrites `index.html`; only the integrator does that). The test page also takes 
 borders blue and the gates orange).
 
 The check must say: errors none; inside the rectangle ok; border band ok; every gate on your borders
-ok; the sink scan with nothing worse than about 10 cm. Then look at your screenshots and ride your
+ok; the sink scan with nothing worse than about 10 cm; the rhythm with every line ok or its breathers
+named in your doc. Then look at your screenshots and ride your
 lines with `--rides` (a ride reports where it ended, its speed, and whether it bailed or got stuck).
+
+**The base ground mesh** is drawn in 256 m tiles on the 8 m grid (x from -1000, z from -656), so tile
+edges fall on 8 m grid lines. Pools (`K.pool`) are coloured from their own rim height `y0`.
+
+**Gate handshakes** (both sides must meet these exactly):
+* fin ↔ old, Grand Boulevard (z -120): the sidewalks run continuously; fin's sidewalk ends at its border
+  and old's starts there at the same top height, with no step.
+* fin ↔ uni, the avenue (x 360): the sidewalk tops match at the border; if they differ by more than 3 cm,
+  the lower side chamfers up over 2 m.
+* old ↔ east, crosstown (x 300): the road crown at -20.31 on both sides; camber at most 2 % each side.
+* bw ↔ ship (x 0): Harbour Road at -40.93 and the boardwalk at -41.80 on both sides; the quay wall sits
+  at z 1176..1180 on both sides.
+* old ↔ bw, the steep street gate: old's sea-wall ledge at z 881 stops 4 m short of the gate corridor.
 
 ## 10. District briefs
 

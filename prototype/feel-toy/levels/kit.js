@@ -27,7 +27,7 @@ function cityKit(baseH, seed0 = 1) {
   // a pool or bowl: lobes [[shapeFn, depth]], all at ground level y0
   function pool(x0, x1, z0, z1, lobes, y0 = 0, res = 0.25) {
     feat(x0, x1, z0, z1, (x, z, h) => { let d = 0; for (const [s, D] of lobes) { const v = s(x, z); if (v > 0) d = Math.min(d, poolDepth(v, D)); } return y0 + d; });
-    fine.push({ x0, x1, z0, z1, res, kind: 'pool' });
+    fine.push({ x0, x1, z0, z1, res, kind: 'pool', y0 });
   }
   const hump = (cx, cz, r, hgt) => { feat(cx - r, cx + r, cz - r, cz + r, (x, z) => { const d = Math.hypot(x - cx, z - cz) / r; return d < 1 ? hgt * (1 - d * d) ** 1.5 : 0; }, 'add'); };
   /* ---------- building blocks ---------- */
@@ -144,11 +144,12 @@ function cityKit(baseH, seed0 = 1) {
     rail(x1 + 0.2, g + 1.3 + 0.9, z + side * 3.15, x1 + 6, g + 0.9, z + side * 3.15, 'Handrail');
   }
   // a row of shipping containers, stacked
-  function containers(x0, z, n, stack, alongX = true, gap = 0) {
+  // (y: the ground they stand on; by default the ground at the row's start)
+  function containers(x0, z, n, stack, alongX = true, gap = 0, y = alongX ? terrainH(x0, z) : terrainH(z, x0)) {
     const cols = [0x2f6b8a, 0xb23a32, 0x3f6b46, 0xd4a017, 0x8a5a3a, 0x6b6f75];
     for (let i = 0; i < n; i++) { const x = x0 + i * (12.2 + gap), h = stack[i % stack.length];
-      for (let k = 0; k < h; k++) alongX ? B(x, k * 2.6, z, x + 12.2, (k + 1) * 2.6, z + 2.45, 'car', { color: pick(cols), edges: k === h - 1 ? 'ns' : '' })
-                                       : B(z, k * 2.6, x, z + 2.45, (k + 1) * 2.6, x + 12.2, 'car', { color: pick(cols), edges: k === h - 1 ? 'ew' : '' }); }
+      for (let k = 0; k < h; k++) alongX ? B(x, y + k * 2.6, z, x + 12.2, y + (k + 1) * 2.6, z + 2.45, 'car', { color: pick(cols), edges: k === h - 1 ? 'ns' : '' })
+                                       : B(z, y + k * 2.6, x, z + 2.45, y + (k + 1) * 2.6, x + 12.2, 'car', { color: pick(cols), edges: k === h - 1 ? 'ew' : '' }); }
   }
   // a backyard pool, drained, with a fence and a gap in it
   function backyardPool(cx, cz, rot = 0) {
@@ -190,9 +191,54 @@ function cityKit(baseH, seed0 = 1) {
   const meter = (x, z) => { const g = terrainH(x, z); prop(x - 0.04, g, z - 0.04, x + 0.04, g + 1.1, z + 0.04, 0x3a3d42); prop(x - 0.1, g + 1.1, z - 0.08, x + 0.1, g + 1.38, z + 0.08, 0x6b7076); };
   // a driveway cut in a curb: a little ramp from the sidewalk into the road, which is also a kicker
   function driveway(axis, c, side, u, RW, w = 3) {
-    const xc = c + side * RW, y = terrainH(axis === 'z' ? xc + side * 0.5 : u, axis === 'z' ? u : xc + side * 0.5);
-    hubbas.push(axis === 'z' ? { a: V(xc, y, u), b: V(c + side * (RW - 1.8), 0.01, u), w, noRails: true, color: 0xb9b5ab }
-                             : { a: V(u, y, xc), b: V(u, 0.01, c + side * (RW - 1.8)), w, noRails: true, color: 0xb9b5ab });
+    const xc = c + side * RW, y = terrainH(axis === 'z' ? xc + side * 0.5 : u, axis === 'z' ? u : xc + side * 0.5), vr = c + side * (RW - 1.8);
+    const yr = terrainH(axis === 'z' ? vr : u, axis === 'z' ? u : vr) + 0.01;   // the road end sits on the road, wherever the road is
+    hubbas.push(axis === 'z' ? { a: V(xc, y, u), b: V(vr, yr, u), w, noRails: true, color: 0xb9b5ab }
+                             : { a: V(u, y, xc), b: V(u, yr, vr), w, noRails: true, color: 0xb9b5ab });
+  }
+  /* ---------- filler: small skateable things for the stretches between spots ---------- */
+  // a slab that follows the ground from (ax, az) to (bx, bz), in straight chords of at most opt.seg m (default 6), hgt over the
+  // ground (or over opt.top(x, z) when given), w wide. Both long edges grind (opt.kind, default 'Curb') unless opt.noRails;
+  // the chords meet end to end, so a grind carries on from one to the next.
+  function strip(ax, az, bx, bz, hgt = 0.15, w = 1, opt = {}) {
+    const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / (opt.seg || 6))), top = opt.top || terrainH;
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n, x0 = ax + (bx - ax) * t0, z0 = az + (bz - az) * t0, x1 = ax + (bx - ax) * t1, z1 = az + (bz - az) * t1;
+      const p0 = V(x0, top(x0, z0) + hgt, z0), p1 = V(x1, top(x1, z1) + hgt, z1), hi = p0.y >= p1.y;
+      hubbas.push({ a: hi ? p0 : p1, b: hi ? p1 : p0, w, noRails: !!opt.noRails, kind: opt.kind || 'Curb', color: opt.color ?? 0xb9b5ab });
+    }
+  }
+  // a traffic island down the middle of a road: a curb you can grind or manual along, with a planter ledge in the middle
+  // (opt.planter false for none) and a tree every opt.trees m (0 for none). Keep 3 m clear of each crossing yourself.
+  function median(ax, az, bx, bz, w = 2.4, opt = {}) {
+    strip(ax, az, bx, bz, 0.15, w, { color: 0xb9b5ab });
+    const L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+    if (opt.planter !== false && L > 10) strip(ax + ux * 3, az + uz * 3, bx - ux * 3, bz - uz * 3, 0.5, Math.max(0.8, w - 1.2), { kind: 'Ledge', color: 0xa9a59c });
+    if (opt.trees) for (let s = opt.trees / 2; s < L; s += opt.trees) tree(ax + ux * s, az + uz * s);
+  }
+  // a retaining wall along a hillside street: its top is hgt over the high ground behind it (back m to the left or right of
+  // the line, + or -), so from the street it's a wall and from the bank a ledge. Its street face grinds.
+  function retainWall(ax, az, bx, bz, back = 2, hgt = 0.45, thick = 0.6) {
+    const L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L, nz = (bx - ax) / L;
+    const top = (x, z) => Math.max(terrainH(x, z), terrainH(x + nx * back, z + nz * back));
+    strip(ax + nx * Math.sign(back) * thick / 2, az + nz * Math.sign(back) * thick / 2, bx + nx * Math.sign(back) * thick / 2, bz + nz * Math.sign(back) * thick / 2,
+      hgt, thick, { top, kind: 'Ledge', color: 0xa39d90, seg: 4 });
+  }
+  // a construction zone on a sidewalk or a lane: jersey barriers, a plywood kicker, a scaffold pipe rail and cones
+  // (x, z the middle; alongX: which way it runs; 12 m long, 3 m wide)
+  function construction(x, z, alongX = true) {
+    const P = (u, v) => alongX ? [x + u, z + v] : [x + v, z + u];
+    const [j0x, j0z] = P(-6, -1.4), [j1x, j1z] = P(-1, -1.0); jersey(Math.min(j0x, j1x), Math.min(j0z, j1z), Math.max(j0x, j1x), Math.max(j0z, j1z));
+    const [k0x, k0z] = P(1.5, 0), [d0x, d0z] = alongX ? [1, 0] : [0, 1]; kicker(k0x, k0z, d0x, d0z, 2.4, 0.55, 1.3);
+    const [r0x, r0z] = P(-5, 1.2), [r1x, r1z] = P(1, 1.2); rail(r0x, terrainH(r0x, r0z) + 0.95, r0z, r1x, terrainH(r1x, r1z) + 0.95, r1z, 'Pipe', true);
+    for (const u of [-6.5, 5.5, 6]) { const [cx, cz] = P(u, u > 0 ? -1 : 1); cone(cx, cz); }
+    const [bx0, bz0] = P(4.5, -1.5), [bx1, bz1] = P(6.5, 1.5); prop(Math.min(bx0, bx1), terrainH(x, z), Math.min(bz0, bz1), Math.max(bx0, bx1), terrainH(x, z) + 0.9, Math.max(bz0, bz1), 0xd4a017);
+  }
+  // a gap across a cross street or a driveway: a curb-cut kicker at (ax, az) aimed at (bx, bz), and a low landing ramp there
+  function crossingGap(ax, az, bx, bz, hgt = 0.45) {
+    const L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+    kicker(ax - ux * 2, az - uz * 2, ux, uz, 2, hgt, 1.6);
+    const g = terrainH(bx, bz); hubbas.push({ a: V(bx, g + 0.25, bz), b: V(bx + ux * 2.2, terrainH(bx + ux * 2.2, bz + uz * 2.2) + 0.02, bz + uz * 2.2), w: 2, noRails: true, color: 0xb9b5ab });
   }
   // the ground mesh: coarse over a world rect, finer patches from `fine` cut out of it
   function regionsFor(W, res, groundCol, poolCol = groundCol) {
@@ -205,6 +251,7 @@ function cityKit(baseH, seed0 = 1) {
   return { rnd, R, pick, col, boxes, hubbas, rails, hazards, fine, decorFns, feats, feat, terrainH, poolS, pool, hump,
     groundMin, groundMax, B, Bg, building, rail, cone, pothole, kicker, SET, stairSpot, lip, ledge, planter, pad, bench, tree, lamp,
     paintRect, dash, street, zebra, car, raisedPlaza, sunkenPlaza, fountainBowl, bankToWall, garage, loadingDock, containers, backyardPool,
-    posts, roads, prop, sit, newsBoxes, trashCan, hydrant, bikeRack, busStop, dumpster, jersey, parkingBlock, picnic, meter, driveway, regionsFor };
+    posts, roads, prop, sit, newsBoxes, trashCan, hydrant, bikeRack, busStop, dumpster, jersey, parkingBlock, picnic, meter, driveway,
+    strip, median, retainWall, construction, crossingGap, regionsFor };
 }
 

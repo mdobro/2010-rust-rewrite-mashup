@@ -97,7 +97,7 @@ function levelPorto() {
   K.shops = []; K.challenges = []; K.tapes = []; K.traffic = []; K.ringTraffic = []; K.peds = []; K.ringPeds = []; K.npcs = [];
   K.dtCol = () => null; K.dtSurface = () => null;
 
-  const extraRegions = [], spots = [], fast = [], challenges = [], tapes = [], traffic = [], peds = [], npcs = [], landmarks = [], water = [];
+  const extraRegions = [], spots = [], lines = [], fast = [], challenges = [], tapes = [], traffic = [], peds = [], npcs = [], landmarks = [], water = [];
   water.push({ x0: BX0 - 400, x1: BX1 + 400, z0: PORTO.seaZ, z1: BZ1 + 450, y: PORTO.seaY });
   const gatesOf = id => PORTO.gates.filter(g => g.a === id || g.b === id);
   function makeP(id) {
@@ -112,6 +112,9 @@ function levelPorto() {
       surface(fn) { SURF[id] = fn; },                     // fn(x, z) -> 'rough' | 'smooth' | null
       region(x0, x1, z0, z1, res) { extraRegions.push({ id, x0: Math.floor(x0 / 8) * 8, x1: Math.ceil(x1 / 8) * 8, z0: Math.floor(z0 / 8) * 8, z1: Math.ceil(z1 / 8) * 8, res }); },
       spot(name, x, y, z, yaw, area) { const s = { name, pos: V(x, y, z), yaw, area, district: id }; spots.push(s); return s; },
+      // a line people ride (a street, a path, a route through the district): kind 'push' (streets, plazas) or 'bomb'
+      // (descents); main: true for the district's named lines. tools/check.mjs --rhythm checks something skateable comes up often
+      line(name, pts, kind = 'push', main = false) { lines.push({ name, pts, kind, main, district: id }); },
       travel(name, x, y, z, yaw, kind = 'spot') { fast.push({ name, pos: V(x, y, z), yaw, kind, district: id }); },  // kind: 'district' | 'park' | 'spot'
       challenge(c) { challenges.push({ ...c, district: id }); },
       tape(x, z, y) { tapes.push([x, z, y]); },
@@ -152,15 +155,17 @@ function levelPorto() {
     if (z > 910) return concrete;
     return grass;
   };
-  const poolCol = (x, z, h) => { const g = baseH(x, z); return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
+  // a pool's tile band and floor, measured from its own rim height (y0 in K.pool), not the base ground
+  const poolCol = y0 => (x, z, h) => { const g = y0 ?? baseH(x, z); return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const snap = f => ({ ...f, x0: Math.floor(f.x0 / 8) * 8, x1: Math.ceil(f.x1 / 8) * 8, z0: Math.floor(f.z0 / 8) * 8, z1: Math.ceil(f.z1 / 8) * 8 });
   const F = K.fine.map(snap), XR = extraRegions;
   const regions = [];
-  const TILE = 250;
-  for (let x = BX0; x < BX1; x += TILE) for (let z = BZ0; z < BZ1 + 60; z += TILE)
-    regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(BZ1 + 60, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F] });
+  // tiles on the 8 m grid (x -1000 and z -656 are multiples of 8), so their edges fall on grid lines
+  const TILE = 256, TZ0 = Math.floor(BZ0 / 8) * 8, TZ1 = Math.ceil((BZ1 + 60) / 8) * 8;
+  for (let x = BX0; x < BX1; x += TILE) for (let z = TZ0; z < TZ1; z += TILE)
+    regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(TZ1, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F] });
   for (const r of XR) regions.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, res: r.res, col: groundCol, skip: [...F, ...XR.filter(o => o !== r && o.res < r.res && o.x0 >= r.x0 && o.x1 <= r.x1 && o.z0 >= r.z0 && o.z1 <= r.z1)] });
-  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
+  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol(f.y0) : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
 
   /* ---------- fast travel, spawn ---------- */
   const order = { district: 0, park: 1, spot: 2 };
@@ -171,7 +176,7 @@ function levelPorto() {
     terrainH: K.terrainH, baseH: portoBaseH, PORTO, built,
     surface: (x, z) => { const id = districtAt(x, z), f = id && SURF[id]; return (f && f(x, z)) || K.dtSurface(x, z) || 'smooth'; },
     regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards,
-    districts: travel, spots, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
+    districts: travel, spots, lines, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
     landmarks, water, seaZ: PORTO.seaZ,
     spawn: travel[0], bounds: [BX0 + 5, BX1 - 5, BZ0 + 5, BZ1 - 5],
     fog: [170, 520], far: 2800, cullDist: 540, simDist: 280, sky: 0xa9c8de,

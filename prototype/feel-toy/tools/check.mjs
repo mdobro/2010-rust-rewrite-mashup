@@ -3,10 +3,12 @@
 // Prints: load time and errors; counts; with --only: the contract (everything inside the rectangle,
 // the border band at the base height, gates open and rideable both ways) and a sink scan; with --shots:
 // an aerial and four oblique views of the district (plus any --views [[name,[x,y,z],[lookx,looky,lookz]],...]).
+// --rhythm [--lines file.json]: the gaps between skateable things along each P.line (see below).
 // --rides: [[label, [x,y,z], [vx,vy,vz], seconds, 'push'?], ...] physics runs, reported like megaride.
 import { chromium } from '/opt/node-tools/node_modules/playwright/index.mjs';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 const args = process.argv.slice(2), opt = k => { const i = args.indexOf(k); return i < 0 ? null : args[i + 1]; };
+const RHYTHM = args.includes('--rhythm'), RHYTHM_EXTRA = opt('--lines') ? JSON.parse(readFileSync(opt('--lines'), 'utf8')) : []; // --lines file: [{name, pts, kind, main}]
 const HTML = opt('--html'), ONLY = opt('--only'), SHOTS = opt('--shots'), RIDES = opt('--rides'), VIEWS = opt('--views'), LEVEL = opt('--level') || 'porto';
 if (!HTML) { console.error('usage: node tools/check.mjs --html page.html [--only id] [--shots dir] [--rides json] [--views json]'); process.exit(2); }
 const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -82,6 +84,56 @@ if (ONLY) out.push(await p.evaluate(id => { // the sink scan: drawn ground stand
   worst.sort((a, b) => b[0] - a[0]);
   return `sink scan (${n} points every 6 m): ${worst.length ? `${worst.length} points where the drawn ground is over 5 cm above the ridden surface, worst ${worst.slice(0, 6).map(([d, x, z]) => `${(d * 100).toFixed(0)} cm at (${x},${z})`).join(', ')}` : 'ok'}`;
 }, ONLY));
+
+// --rhythm: along every line the district declared (P.line), how far you ride between skateable things.
+// Skateable: a rail or ledge, a bank or kicker, a box you can ollie onto or grind (not buildings, not the plain
+// sidewalk and its curb, which every street has). Within 10 m of the line, at least every 30 m on 'push' lines and
+// every 80 m on 'bomb' lines, and a named spot (P.spot) within 25 m at least every 150 m on main lines.
+if (RHYTHM) out.push(await p.evaluate(([id, extra]) => {
+  const { LV, BOXES, terrainH } = __toy, G = 8, grid = new Map(), res = [];
+  const add = (x, z) => { const k = Math.floor(x / G) + ',' + Math.floor(z / G); (grid.get(k) || grid.set(k, []).get(k)).push([x, z]); };
+  const seg = (ax, az, bx, bz) => { const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 2)); for (let i = 0; i <= n; i++) add(ax + (bx - ax) * i / n, az + (bz - az) * i / n); };
+  for (const b of BOXES) {
+    if (b.mat === 'building' || b.mat === 'sidewalk' || b.mat === 'glass') continue;
+    const [x0, y0, z0] = b.min, [x1, y1, z1] = b.max, g = terrainH((x0 + x1) / 2, (z0 + z1) / 2), h = y1 - g;
+    if (h < 0.12 || h > 3) continue;
+    seg(x0, z0, x1, z0); seg(x1, z0, x1, z1); seg(x1, z1, x0, z1); seg(x0, z1, x0, z0);
+  }
+  for (const hb of LV.hubbas) {
+    const drop = Math.abs(hb.a.y - hb.b.y), curb = hb.kind === 'Curb' || (hb.noRails && drop < 0.3);
+    if (curb && hb.w < 1.5) continue;            // a curb strip or a curb ramp
+    if (curb && drop < 0.3 && hb.noRails) continue;
+    seg(hb.a.x, hb.a.z, hb.b.x, hb.b.z);
+  }
+  for (const r of LV.rails) if (r.kind !== 'Curb') seg(r.a.x, r.a.z, r.b.x, r.b.z);
+  const near = (x, z, R) => { const gx = Math.floor(x / G), gz = Math.floor(z / G), n = Math.ceil(R / G);
+    for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) for (const [px, pz] of grid.get((gx + i) + ',' + (gz + j)) || []) if (Math.hypot(px - x, pz - z) <= R) return true; return false; };
+  const lines = [...(LV.lines || []).filter(l => !id || l.district === id), ...extra];
+  if (!lines.length) return 'rhythm: no lines declared (P.line)';
+  res.push('rhythm (gap = metres ridden with nothing skateable within 10 m):');
+  let bad = 0;
+  for (const l of lines) {
+    const lim = l.kind === 'bomb' ? 80 : 30, gaps = [], pockets = []; let len = 0, run = 0, runFrom = null, sinceSpot = 0, spotFrom = null, cov = 0, n = 0;
+    for (let i = 0; i + 1 < l.pts.length; i++) {
+      const [ax, az] = l.pts[i], [bx, bz] = l.pts[i + 1], L = Math.hypot(bx - ax, bz - az), m = Math.max(1, Math.round(L / 5));
+      for (let k = 0; k < m; k++) {
+        const x = ax + (bx - ax) * k / m, z = az + (bz - az) * k / m, d = L / m; len += d; n++;
+        if (near(x, z, 10)) { cov++; if (run > lim) gaps.push([run, runFrom, [x, z]]); run = 0; runFrom = null; }
+        else { if (!runFrom) runFrom = [x, z]; run += d; }
+        if (l.main) { if (LV.spots.some(s => Math.hypot(s.pos.x - x, s.pos.z - z) < 25)) { if (sinceSpot > 150) pockets.push([sinceSpot, spotFrom, [x, z]]); sinceSpot = 0; spotFrom = null; } else { if (!spotFrom) spotFrom = [x, z]; sinceSpot += d; } }
+      }
+    }
+    if (run > lim) gaps.push([run, runFrom, l.pts[l.pts.length - 1]]);
+    if (l.main && sinceSpot > 150) pockets.push([sinceSpot, spotFrom, l.pts[l.pts.length - 1]]);
+    const f = ([a, b]) => `(${a.toFixed(0)},${b.toFixed(0)})`;
+    const ok = !gaps.length && !pockets.length; if (!ok) bad++;
+    res.push(`  ${ok ? 'ok ' : 'GAP'} ${l.name} [${l.kind}${l.main ? ', main' : ''}] ${len.toFixed(0)} m, ${(100 * cov / n).toFixed(0)}% covered` +
+      gaps.map(([r, a, b]) => `\n      ${r.toFixed(0)} m bare (limit ${lim}) from ${f(a)} to ${f(b)}`).join('') +
+      pockets.map(([r, a, b]) => `\n      ${r.toFixed(0)} m with no named spot (limit 150) from ${f(a)} to ${f(b)}`).join(''));
+  }
+  res.push(`rhythm: ${lines.length - bad}/${lines.length} lines ok`);
+  return res.join('\n');
+}, [ONLY, RHYTHM_EXTRA]));
 
 if (RIDES) out.push(await p.evaluate(cases => { const { S, step, respawn, GS, IN, groundAt, terrainH } = __toy; const res = [];
   for (const [label, pos, vel, secs, mode] of cases) {
