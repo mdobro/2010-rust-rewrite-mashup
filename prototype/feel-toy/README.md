@@ -392,11 +392,48 @@ Run into one faster than about 2.5 m/s (counting both of your speeds) and you
 both slam. Slower than that and you just bump apart. They follow set lines
 rather than the full physics.
 
+## Port City's buildings
+
+Port City's spots come from its buildings: entrances, terraces, ramps and
+railings that a real city would have, which you happen to be able to skate.
+- **West Boulevard,** between the suburbs and the boulevard:
+  - **Harbor Tower:** a glass office on a granite entry plaza 2 m up. It has
+    a wide stair with three handrails. To the north, a row of planters runs
+    along the plaza edge with a bank below, so you can ollie the planters into
+    the bank. To the south, a seat wall stands above the drop.
+  - **Corner Café:** tables and umbrellas on a patio inside a low wall, with
+    two steps and a rail down to the street.
+  - **The Metro entrance:** a stairwell 3.6 m down to the station doors, with
+    three rails and a granite guard wall on each side.
+  - **City Museum:** a colonnade on a podium, with five wide steps and three
+    rails along the front. A 1-in-12 accessibility ramp runs down the north
+    side with a handrail on each side, and a lawn bank slopes down the south
+    side.
+  - **The garage:** two levels of parking. Its ramp climbs the boulevard side
+    with a long handrail down its outer edge, and there are cars on the roof.
+- **Stadium Gates:** ticket booths and rows of queue railings in front of the
+  steps. There's a long Hall of Champions seat wall, and bollards across the
+  plaza.
+- **The Riverview Hotel (Waterfront):** a drive runs up onto the entry deck
+  under the canopy and back down. Planters line the deck's front edge, so you
+  can ollie them off the drop, and steps with rails come down the middle.
+- **Port Authority (Port):** a concrete office on a raised terrace, with a long
+  three-stair and three rails. There are block benches, and a bank runs off
+  the east end.
+- **Fish Market (on the quay):** an open shed with steel tables and crates. A
+  loading platform runs along the back, with a ramp at one end and steps and
+  a rail at the other.
+
+Along the streets you'll find what a city puts there: a bin and newspaper boxes
+at the corners, hydrants by the curb, and bus stops near the end of some blocks.
+
 ## Port City's monuments
 
-Public art you can ollie over. Each sculpture stands low on a plinth past the
-end of a raised deck. Push up the ramp, get your speed back along the deck,
-pop off the end over the statue, and land on the bank beyond. Each one has a
+Public art you can ollie over. Each sculpture stands on a plinth in a small
+plaza below the end of a raised terrace, with benches facing it and its name
+on the plinth. Push up the promenade ramp (it has a handrail on each side, and
+steps come down off the terrace's side), get your speed back along the
+terrace, pop off the end over the statue, and land on the bank beyond. Each one has a
 gap challenge and a hard one with a named trick, and appears in the jump
 list.
 - **The Night Owl (University):** the college's bronze owl, on the campus
