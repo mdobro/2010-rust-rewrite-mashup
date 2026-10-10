@@ -1579,9 +1579,17 @@ function levelMega() {
     { id: 'reservoir-60', hard: true, name: 'Reservoir 60', desc: 'Hit 60 km/h in the reservoir bowl', at: [-400, 24, 358], go: [-400, 24, 254, Math.PI], kind: 'speed', speed: 60 / 3.6, area: [-438, 254, -358, 358] },
     { id: 'uni-rail', hard: true, name: 'University Handrail', desc: 'Grind a handrail on one of the university triple sets', at: [212, 6, -172], go: [212, 6, -180, Math.PI], kind: 'grind', rail: 'Handrail', area: [203, -172.5, 217, -155] },
   ];
+  // traffic: both ways round the downtown ring and the boulevard ring, keeping right. People walk round
+  // the middle block, round the outside of the ring (over the crossings), and along the boulevards.
+  const sq = h => [[-h, -h], [h, -h], [h, h], [-h, h]];
+  const traffic = [
+    { path: sq(40), lane: 1.05, dir: 1, n: 3, speed: 8.5, r: 6 }, { path: sq(40), lane: 1.05, dir: -1, n: 3, speed: 8.5, r: 6 },
+    { path: sq(130), lane: 2.8, dir: 1, n: 6, speed: 13, r: 9 }, { path: sq(130), lane: 2.8, dir: -1, n: 6, speed: 13, r: 9 },
+  ];
+  const peds = [{ path: sq(33.5), n: 6 }, { path: sq(46.5), n: 9 }, { path: sq(122), n: 5 }, { path: sq(138), n: 4 }];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
-    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, npcs: K.npcs,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, npcs: K.npcs, traffic, peds,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -1856,6 +1864,8 @@ const sfx = {
   kill: () => burst({ dur: 0.12, freq: 2500, q: 4, vol: 0.25, tone: 1300, toneEnd: 2600, toneVol: 0.15 }),
   bail: () => (buzz(70), burst({ dur: 0.35, freq: 300, type: 'lowpass', vol: 0.4, tone: 90, toneEnd: 35, toneVol: 0.3 })),
   click: () => burst({ dur: 0.03, freq: 5000, type: 'highpass', vol: 0.08 }),
+  // a car horn: two flat tones together, through a bit of buzz
+  honk: () => { burst({ dur: 0.34, freq: 900, q: 1.5, vol: 0.05, tone: 415, toneEnd: 405, toneVol: 0.14 }); burst({ dur: 0.34, freq: 1300, q: 2, vol: 0.03, tone: 523, toneEnd: 512, toneVol: 0.11 }); },
   win: () => { if (!AC) return; [523, 659, 784, 1047].forEach((f, i) => burst({ dur: 0.16, freq: 4000, type: 'highpass', vol: 0.001, tone: f, toneEnd: f, toneVol: 0.12, at: i * 0.09 })); },
   tape: () => { if (!AC) return; [880, 1320].forEach((f, i) => burst({ dur: 0.1, freq: 4000, type: 'highpass', vol: 0.001, tone: f, toneEnd: f * 1.02, toneVol: 0.1, at: i * 0.07 })); },
   // a shoe on concrete: a soft low thud and a little scuff, harder when running
@@ -3957,6 +3967,7 @@ $('shop-reset').addEventListener('click', () => { PLAYER_STYLE = { ...STYLE_DEFA
 const NPC_TRICKS = [['Ollie', 0, 0], ['Kickflip', 1, 0], ['Heelflip', -1, 0], ['Pop Shuvit', 0, 1], ['360 Flip', 1, 2], ['Varial Kickflip', 1, 1], ['Hardflip', 1, -1]];
 const NPC_GRINDS = ['C', 'C', 'D', 'U', 'L', 'UL', 'D>L', 'R>U', 'L>U'];
 const NPCS = [];
+let BAKED_MAT = null;              // one vertex-coloured material for every baked figure (see bakeRider)
 // round off a corner: replace it with a short curve from r before it to r after
 function filletPath(pts, r, closed) {
   const out = [];
@@ -3987,7 +3998,7 @@ function npcPath(def) {
 }
 function makeNpc(def, i) {
   let seed = 1234 + i * 977; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const R = buildRider(randomStyle(rnd), 0); scene.add(R.skater);
+  const R = bakeRider(buildRider(randomStyle(rnd), 0), true); scene.add(R.skater);
   const n = { def, R, rnd, x: 0, y: 0, z: 0, dir: V(0, 0, -1), up: UP.clone(), s: rnd() * 50, v: def.speed || 5, trick: null, manualT: 0, nextTrick: 1 + rnd() * 3, bailT: 0, grind: 'C',
     pose: { gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, crouch: 0.2, grind: 0 }, vel: V() };
   if (def.kind !== 'carve') {
@@ -4100,6 +4111,261 @@ function npcTick(dt, time) {
 }
 
 /* ============================================================
+   Traffic and people on foot. Cars drive the ring roads on the right, slow for the corners and
+   stop for whatever is in front of them, you included if they see you in time. People walk the
+   sidewalks, keep right, step round things, and wait at the crossings for cars. Get hit by a car,
+   or skate into someone fast, and you go down.
+   ============================================================ */
+// merge meshes into one geometry, each part baked into the given space and coloured from its material
+function mergeParts(parts) {
+  let n = 0; const gs = parts.map(({ g, m, color }) => { const h = (g.index ? g.toNonIndexed() : g.clone()); h.applyMatrix4(m); n += h.attributes.position.count; return [h, color]; });
+  const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
+  for (const [h, c] of gs) { const p = h.attributes.position, q = h.attributes.normal;
+    pos.set(p.array, o * 3); if (q) nrm.set(q.array, o * 3);
+    for (let i = 0; i < p.count; i++) { col[(o + i) * 3] = c.r; col[(o + i) * 3 + 1] = c.g; col[(o + i) * 3 + 2] = c.b; }
+    o += p.count; h.dispose(); }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3)); out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  out.computeBoundingSphere(); return out;
+}
+// a rider for the crowd: every moving part becomes a single mesh (about a dozen draw calls, not eighty)
+function bakeRider(R, keepBoard) {
+  const anchors = new Set([R.skater, R.boardOrient, R.rig, R.pelvis, R.torso, R.head, ...Object.values(R.LIMBS).flatMap(L => Object.values(L))]);
+  if (!keepBoard) R.boardFlip.clear();
+  BAKED_MAT ||= new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
+  R.skater.updateMatrixWorld(true);
+  const visible = o => { for (let a = o; a; a = a.parent) if (!a.visible) return false; return true; };
+  for (const A of anchors) {
+    const inv = A.matrixWorld.clone().invert(), parts = [], drop = [];
+    const walk = o => { for (const c of [...o.children]) { if (anchors.has(c) || (keepBoard && c === R.boardFlip)) continue;
+      if (c.isMesh && visible(c)) parts.push({ g: c.geometry, m: inv.clone().multiply(c.matrixWorld), color: c.material.color });
+      walk(c); drop.push(c); } };
+    walk(A);
+    if (A.isMesh) parts.push({ g: A.geometry, m: new THREE.Matrix4(), color: A.material.color });
+    for (const c of drop) c.parent && c.parent.remove(c);
+    if (!parts.length) continue;
+    const g = mergeParts(parts);
+    if (A.isMesh) { A.geometry = g; A.material = BAKED_MAT; A.castShadow = true; }
+    else { const m = new THREE.Mesh(g, BAKED_MAT); m.castShadow = true; A.add(m); }
+  }
+  return R;
+}
+
+// a closed route: corners pushed out sideways by off (to the right of travel), rounded off, measured
+function routePath(pts, off, dir, r) {
+  if (dir < 0) pts = [...pts].reverse();
+  const n = pts.length, P = [];
+  for (let i = 0; i < n; i++) {
+    const a = pts[(i - 1 + n) % n], p = pts[i], b = pts[(i + 1) % n];
+    const d0 = V(p[0] - a[0], 0, p[1] - a[1]).normalize(), d1 = V(b[0] - p[0], 0, b[1] - p[1]).normalize();
+    const n0 = V(-d0.z, 0, d0.x), m = n0.clone().add(V(-d1.z, 0, d1.x)).normalize(), k = off / Math.max(0.3, m.dot(n0));
+    P.push({ x: p[0] + m.x * k, z: p[1] + m.z * k, mode: 'ride' });
+  }
+  const pts2 = r > 0 ? filletPath(P, r, true) : P, cum = [0];
+  for (let k = 0; k < pts2.length; k++) { const a = pts2[k], b = pts2[(k + 1) % pts2.length]; cum.push(cum[k] + Math.hypot(b.x - a.x, b.z - a.z)); }
+  return { pts: pts2, cum, L: cum[cum.length - 1] };
+}
+const _pa = { x: 0, z: 0, dx: 0, dz: -1, seg: 0 };
+function pathAt(P, s, out = _pa) {
+  s = ((s % P.L) + P.L) % P.L; let lo = 0, hi = P.pts.length;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P.cum[m] <= s) lo = m; else hi = m; }
+  const a = P.pts[lo], b = P.pts[(lo + 1) % P.pts.length], len = Math.max(1e-6, P.cum[lo + 1] - P.cum[lo]), t = (s - P.cum[lo]) / len;
+  out.x = a.x + (b.x - a.x) * t; out.z = a.z + (b.z - a.z) * t; out.dx = (b.x - a.x) / len; out.dz = (b.z - a.z) / len; out.seg = lo; return out;
+}
+
+/* ---------- cars ---------- */
+let CAR_G = null;
+function carGeos() {
+  if (CAR_G) return CAR_G;
+  const prof = pts => { const s = new THREE.Shape(); s.moveTo(...pts[0]); for (const p of pts.slice(1)) s.lineTo(...p); return s; };
+  const ext = (pts, w, bev) => { const g = new THREE.ExtrudeGeometry(prof(pts), { depth: w, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 4 }); g.translate(0, 0, -w / 2); return g; };
+  const at = (g, x, y, z) => g.clone().translate(x, y, z);
+  const body = ext([[-2.2, 0.32], [2.2, 0.32], [2.25, 0.6], [2.15, 0.78], [1.75, 0.88], [0.9, 0.96], [-1.45, 0.96], [-2.12, 0.9], [-2.25, 0.62]], 1.62, 0.08);
+  const roof = new THREE.BoxGeometry(1.16, 0.05, 1.42).translate(-0.4, 1.43, 0);
+  const glass = ext([[0.95, 0.94], [0.22, 1.38], [-1.02, 1.4], [-1.62, 0.94]], 1.34, 0.06);
+  const tyre = new THREE.CylinderGeometry(0.33, 0.33, 0.24, 18).rotateX(Math.PI / 2), hub = new THREE.CylinderGeometry(0.19, 0.19, 0.25, 12).rotateX(Math.PI / 2);
+  const bump = new THREE.BoxGeometry(0.16, 0.17, 1.74), lamp = new THREE.BoxGeometry(0.06, 0.12, 0.34), I = new THREE.Matrix4();
+  const wheels = [[-1.42, -0.8], [-1.42, 0.8], [1.45, -0.8], [1.45, 0.8]];
+  const join = list => mergeParts(list.map(g => ({ g, m: I, color: new THREE.Color(1, 1, 1) })));
+  CAR_G = {
+    body: join([body, roof]), glass,
+    dark: join([...wheels.map(([x, z]) => at(tyre, x, 0.33, z)), at(bump, 2.3, 0.42, 0), at(bump, -2.3, 0.42, 0)]),
+    hub: join(wheels.map(([x, z]) => at(hub, x, 0.33, z))),
+    head: join([at(lamp, 2.31, 0.68, -0.58), at(lamp, 2.31, 0.68, 0.58)]), tail: join([at(lamp, -2.31, 0.7, -0.6), at(lamp, -2.31, 0.7, 0.6)]),
+  };
+  return CAR_G;
+}
+const CAR_COLORS = [0xb23a32, 0x2f5d8a, 0xdedad2, 0x3a3c41, 0x9aa3a8, 0x3f6b46, 0xd4a017, 0x7a2f4f, 0xe8e4da, 0x1f3b5c];
+const CAR_MATS = { glass: new THREE.MeshStandardMaterial({ color: 0x33475a, roughness: 0.1, metalness: 0.1 }), dark: new THREE.MeshStandardMaterial({ color: 0x161618, roughness: 0.85 }),
+  hub: new THREE.MeshStandardMaterial({ color: 0xb9bdc2, roughness: 0.35, metalness: 0.2 }), head: new THREE.MeshStandardMaterial({ color: 0xfff4da, emissive: 0xfff0c8, emissiveIntensity: 0.5 }) };
+const CARS = [], PEDS = [];
+function makeCar(P, s, vmax, rnd) {
+  const G = carGeos(), g = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({ color: CAR_COLORS[Math.floor(rnd() * CAR_COLORS.length)], roughness: 0.42, metalness: 0.05 });
+  const tail = new THREE.MeshStandardMaterial({ color: 0x8a1018, emissive: 0xd01a22, emissiveIntensity: 0.4 });
+  for (const [geo, mat, sh] of [[G.body, paint, true], [G.glass, CAR_MATS.glass, false], [G.dark, CAR_MATS.dark, true], [G.hub, CAR_MATS.hub, false], [G.head, CAR_MATS.head, false], [G.tail, tail, false]]) {
+    const m = new THREE.Mesh(geo, mat); m.castShadow = sh; m.receiveShadow = false; g.add(m); }
+  scene.add(g);
+  const c = { P, s, v: vmax * 0.8, vmax, x: 0, y: 0, z: 0, dx: 1, dz: 0, hx: 1, hz: 0, mesh: g, tail, vel: V(), waitT: 0, honkT: 0 };
+  // the speed it can take at each point: slow for the corners, and brake for them in time
+  const n = P.pts.length, lim = new Array(n).fill(vmax);
+  for (let i = 0; i < n; i++) { const a = P.pts[(i - 1 + n) % n], p = P.pts[i], b = P.pts[(i + 1) % n];
+    const t = Math.abs(Math.atan2((p.x - a.x) * (b.z - p.z) - (p.z - a.z) * (b.x - p.x), (p.x - a.x) * (b.x - p.x) + (p.z - a.z) * (b.z - p.z)));
+    if (t > 0.05) lim[i] = Math.min(vmax, 5.5); }
+  for (let pass = 0; pass < 2; pass++) for (let i = n - 1; i >= 0; i--) lim[i] = Math.min(lim[i], Math.sqrt(lim[(i + 1) % n] ** 2 + 2 * 3.2 * (P.cum[i + 1] - P.cum[i])));
+  P.lim = lim; pathAt(P, s); c.x = _pa.x; c.z = _pa.z; c.dx = c.hx = _pa.dx; c.dz = c.hz = _pa.dz; c.y = terrainH(c.x, c.z);
+  return c;
+}
+// how far ahead, in its lane, is the nearest thing to stop for (bumper to it); and whether that's you
+function carGap(c) {
+  let gap = 1e9, you = false;
+  const test = (x, z, half, len) => { const rx = x - c.x, rz = z - c.z; if (rx * rx + rz * rz > 900) return false;
+    const f = rx * c.hx + rz * c.hz, sd = Math.abs(rx * c.hz - rz * c.hx);
+    if (f > 0 && f < 30 && sd < 1.05 + half && f - len < gap) { gap = f - len; return true; } return false; };
+  if (Math.abs(S.pos.y - c.y) < 2.2 && !SHOP.active && test(S.pos.x, S.pos.z, 0.35, 2.5)) you = true;
+  for (const o of CARS) if (o !== c && o.hx * c.hx + o.hz * c.hz > 0.3 && test(o.x, o.z, 0.9, 4.7)) you = false;
+  for (const p of PEDS) if (test(p.x, p.z, 0.3, 2.5)) you = false;
+  for (const n of NPCS) if (test(n.x, n.z, 0.35, 2.5)) you = false;
+  return { gap, you };
+}
+function carStep(c, dt) {
+  const P = c.P; pathAt(P, c.s);
+  const { gap, you } = carGap(c);
+  const rem = P.cum[_pa.seg + 1] - (((c.s % P.L) + P.L) % P.L), lim = Math.sqrt(P.lim[(_pa.seg + 1) % P.pts.length] ** 2 + 2 * 3.2 * Math.max(0, rem)), stop = Math.sqrt(2 * 6 * Math.max(0, gap - 1.6));
+  const want = Math.min(c.vmax, lim, stop), braking = want < c.v - 0.2;
+  c.v = want < c.v ? Math.max(want, c.v - (gap < 6 ? 16 : 8) * dt) : Math.min(want, c.v + 2.4 * dt);
+  if (gap < 2 && c.v < 3) c.v = Math.min(c.v, Math.max(0, gap - 1.2) * 2);     // creeping up: stop right behind it
+  // sat waiting for you, or you jump out in front: a honk (only when you're near enough to hear it)
+  c.waitT = you && c.v < 0.5 ? c.waitT + dt : 0; c.honkT -= dt;
+  if (you && c.honkT <= 0 && ((braking && c.v > 4 && gap < 14) || c.waitT > 1.6)) { c.honkT = 4; if (Math.hypot(S.pos.x - c.x, S.pos.z - c.z) < 40) sfx.honk(); }
+  c.s += c.v * dt; pathAt(P, c.s);
+  const ox = c.x, oz = c.z; c.x = _pa.x; c.z = _pa.z; c.dx = _pa.dx; c.dz = _pa.dz;
+  c.vel.set(c.x - ox, 0, c.z - oz).divideScalar(Math.max(dt, 1e-4));
+  const k = 1 - Math.exp(-10 * dt); c.hx += (c.dx - c.hx) * k; c.hz += (c.dz - c.hz) * k; const hl = Math.hypot(c.hx, c.hz) || 1; c.hx /= hl; c.hz /= hl;
+  c.y = terrainH(c.x, c.z);
+  c.tail.emissiveIntensity = braking || c.v < 0.3 ? 2.4 : 0.4;
+}
+function poseCar(c) {
+  const far = camera.position.distanceToSquared(V(c.x, c.y, c.z)) > 170 * 170;
+  c.mesh.visible = !far; if (far) return;
+  c.mesh.position.set(c.x, c.y, c.z); c.mesh.rotation.y = Math.atan2(-c.hz, c.hx);
+}
+// you and a car: in front of a moving one you get hit; into a still one fast, you slam; slow, you just stop against it
+function carHitsYou(c) {
+  if (S.bail > 0 || SHOP.active) return;
+  const rx = S.pos.x - c.x, rz = S.pos.z - c.z; if (Math.abs(rx) > 4 || Math.abs(rz) > 4) return;
+  if (S.pos.y > c.y + 1.4 || S.pos.y < c.y - 0.4) return;
+  const f = rx * c.hx + rz * c.hz, sd = rx * c.hz - rz * c.hx, HL = 2.3 + 0.3, HW = 0.9 + 0.3;
+  if (Math.abs(f) > HL || Math.abs(sd) > HW) return;
+  const rel = Math.hypot(S.vel.x - c.vel.x, S.vel.z - c.vel.z);
+  if (c.v > 2.2 && rel > 2.5) {
+    const side = Math.sign(sd) || 1;
+    S.vel.set(c.hx * c.v * 1.15 + c.hz * side * 2.5, Math.max(S.vel.y, 2.5), c.hz * c.v * 1.15 - c.hx * side * 2.5);
+    doBail('Hit by a car'); c.v *= 0.3; c.honkT = 4; sfx.honk(); cam.shake = 1.2; return;
+  }
+  if (rel > Math.max(5, T.slamBail)) { doBail('Ran into a car'); cam.shake = 0.9; }
+  // push out the short way, and lose the speed going into it
+  const pf = HL - Math.abs(f), ps = HW - Math.abs(sd);
+  const nx = pf < ps ? c.hx * Math.sign(f) : c.hz * Math.sign(sd), nz = pf < ps ? c.hz * Math.sign(f) : -c.hx * Math.sign(sd), pen = Math.min(pf, ps);
+  S.pos.x += nx * pen; S.pos.z += nz * pen;
+  const into = (S.vel.x - c.vel.x) * nx + (S.vel.z - c.vel.z) * nz; if (into < 0) { S.vel.x -= into * nx; S.vel.z -= into * nz; }
+}
+
+/* ---------- people on foot ---------- */
+function makePed(P, s, dir, rnd) {
+  const st = randomStyle(rnd); if (rnd() < 0.55) st.capStyle = 'none';
+  const R = bakeRider(buildRider(st, 0), false); scene.add(R.skater);
+  const p = { R, P, s, dir, speed: 1.05 + rnd() * 0.55, cv: 0, keep: 0.45 + rnd() * 0.3, off: 0, dodge: 0, dodgeT: 0, x: 0, y: 0, z: 0, yaw: 0, ph: rnd() * 6, look: 0, lookT: rnd() * 4, bailT: 0, vel: V() };
+  pathAt(P, s); p.x = _pa.x; p.z = _pa.z; p.y = groundAt(p.x, p.z, 30).h; p.yaw = Math.atan2(-_pa.dx * dir, -_pa.dz * dir);
+  return p;
+}
+// something in the way at about waist height (a step, a kerb or a pad you just walk over)
+function blockedAt(x, z, y) {
+  for (const b of near(x, z)) if (!b.isHubba && x > b.min[0] - 0.25 && x < b.max[0] + 0.25 && z > b.min[2] - 0.25 && z < b.max[2] + 0.25 && b.max[1] > y + 0.32 && b.min[1] < y + 1.7) return true;
+  return false;
+}
+// is this point in the road in front of a moving car?
+function inCarPath(x, z) {
+  for (const c of CARS) { if (c.v < 0.6) continue; const rx = x - c.x, rz = z - c.z; if (Math.abs(rx) > 30 || Math.abs(rz) > 30) continue;
+    const f = rx * c.hx + rz * c.hz, sd = Math.abs(rx * c.hz - rz * c.hx); if (f > -2.6 && f < 3.5 + c.v * 1.7 && sd < 1.8) return true; }
+  return false;
+}
+function pedStep(p, dt) {
+  if (p.bailT > 0) { p.bailT -= dt; p.vel.set(0, 0, 0); p.cv = 0; return; }
+  const P = p.P; pathAt(P, p.s);
+  const tx = _pa.dx * p.dir, tz = _pa.dz * p.dir, rx = -_pa.dz, rz = _pa.dx;   // the way they're going; the path's right
+  const at = (ahead, off) => [_pa.x + tx * ahead + rx * off * p.dir, _pa.z + tz * ahead + rz * off * p.dir];
+  // step round whatever's in the way, you included
+  p.dodgeT -= dt;
+  const ydx = S.pos.x - p.x, ydz = S.pos.z - p.z, yf = ydx * tx + ydz * tz, ys = ydx * -tz + ydz * tx;
+  const youAhead = yf > 0 && yf < 3 && Math.abs(ys) < 0.9 && Math.abs(S.pos.y - p.y) < 1.5;
+  const [px, pz] = at(0.8, p.keep + p.dodge);
+  if (youAhead || blockedAt(px, pz, p.y)) {
+    if (p.dodgeT <= 0 || youAhead) {
+      let best = null;
+      for (const d of youAhead ? [ys > 0 ? -1.3 : 1.3, ys > 0 ? -2 : 2] : [0.9, -0.9, 1.6, -1.6, 2.4, -2.4]) { const [qx, qz] = at(0.8, p.keep + d); if (!blockedAt(qx, qz, p.y)) { best = d; break; } }
+      if (best === null) { if (!youAhead) p.dir *= -1; }        // nowhere to go: turn round
+      else { p.dodge = best; p.dodgeT = 1.4; }
+    }
+  } else if (p.dodgeT <= 0) p.dodge = 0;
+  p.off += (p.keep + p.dodge - p.off) * (1 - Math.exp(-3 * dt));
+  // at the kerb with a car coming: wait (once out in the road, keep going)
+  const [wx, wz] = at(1.6, p.off), wait = inCarPath(wx, wz) && !inCarPath(p.x, p.z);
+  const want = wait ? 0 : p.speed; p.cv += (want - p.cv) * (1 - Math.exp(-(want < p.cv ? 8 : 3) * dt));
+  p.s += p.cv * p.dir * dt; pathAt(P, p.s);
+  const ox = p.x, oz = p.z; [p.x, p.z] = at(0, p.off);
+  p.vel.set(p.x - ox, 0, p.z - oz).divideScalar(Math.max(dt, 1e-4));
+  const gy = groundAt(p.x, p.z, p.y + 0.45).h; p.y = gy < p.y ? Math.max(gy, p.y - 5 * dt) : gy;
+  p.yaw = dampAngle(p.yaw, Math.atan2(-_pa.dx * p.dir, -_pa.dz * p.dir), 7, dt);
+  p.ph += p.cv * dt * 4.7;
+  if ((p.lookT -= dt) <= 0) { p.lookT = 2 + Math.random() * 5; p.look = Math.random() < 0.5 ? 0 : (Math.random() - 0.5) * 1.2; }
+}
+const _pq = new THREE.Quaternion(), _pq2 = new THREE.Quaternion(), _Z = V(0, 0, 1);
+function posePed(p, dt) {
+  const R = p.R, amp = clamp(p.cv / 1.9, 0, 0.85), ph = p.ph;
+  R.skater.position.set(p.x, p.y, p.z); R.boardOrient.rotation.set(0, p.yaw, 0); R.torso.rotation.set(0, 0, 0);
+  _pq.setFromAxisAngle(UP, Math.PI / 2); _pq2.setFromAxisAngle(_Z, -0.04 * amp); R.pelvis.quaternion.copy(_pq).multiply(_pq2);
+  R.pelvis.position.set(0, 0.075 + 0.86 - Math.abs(Math.sin(ph)) * 0.03 * amp, 0);
+  R.head.rotation.y = damp(R.head.rotation.y, p.look, 3, dt);
+  // knocked over: fall back, lie there, get up
+  const b = p.bailT, fall = b > 0 ? clamp((2.6 - b) * 3, 0, 1) * clamp(b * 1.5, 0, 1) : 0;
+  R.rig.rotation.set(fall * 1.4, 0, 0); R.rig.position.set(0, fall * 0.12, 0);
+  const toR = l => l.clone().applyQuaternion(R.pelvis.quaternion).add(R.pelvis.position);
+  const feet = { front: V(-0.1, 0.075, -0.32 * Math.sin(ph) * amp), back: V(0.1, 0.075, 0.32 * Math.sin(ph) * amp) };
+  feet.front.y += Math.max(0, -Math.cos(ph)) * 0.11 * amp; feet.back.y += Math.max(0, Math.cos(ph)) * 0.11 * amp;
+  for (const side of ['front', 'back']) {
+    const L = R.LIMBS[side], foot = feet[side];
+    limbIK(L.thigh, L.shin, toR(V(0, -0.04, side === 'front' ? -0.09 : 0.09)), foot, V(0, 0.1, -1), THIGH, SHIN);
+    L.shoe.position.set(foot.x, foot.y - 0.04, foot.z - 0.03); L.shoe.rotation.set(0, Math.PI / 2, 0);
+  }
+  const shF = toR(V(0, 0.5, -0.19)), shB = toR(V(0, 0.5, 0.19)), sw = 0.2 * Math.sin(ph) * amp;
+  limbIK(R.LIMBS.front.upper, R.LIMBS.front.fore, shF, shF.clone().add(V(0.02, -0.55, sw)), V(0, -1, 0.6), UPPER_ARM, FOREARM);
+  limbIK(R.LIMBS.back.upper, R.LIMBS.back.fore, shB, shB.clone().add(V(-0.02, -0.55, -sw)), V(0, -1, 0.6), UPPER_ARM, FOREARM);
+}
+
+{ let seed = 4242; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  for (const def of LV.traffic || []) { const P = routePath(def.path, def.lane, def.dir, def.r ?? 7);
+    for (let k = 0; k < def.n; k++) CARS.push(makeCar(P, (k + rnd() * 0.4) / def.n * P.L, def.speed * (0.9 + rnd() * 0.15), rnd)); }
+  for (const def of LV.peds || []) { const P = routePath(def.path, 0, 1, 1.2);
+    for (let k = 0; k < def.n; k++) PEDS.push(makePed(P, (k + rnd() * 0.6) / def.n * P.L, k % 2 ? 1 : -1, rnd)); }
+}
+function trafficTick(dt) {
+  for (const c of CARS) { carStep(c, dt); poseCar(c); carHitsYou(c); }
+  for (const p of PEDS) {
+    pedStep(p, dt);
+    const far = camera.position.distanceToSquared(V(p.x, p.y, p.z)) > 85 * 85;
+    p.R.skater.visible = !far; if (!far) posePed(p, dt);
+    // skate into someone and you both go down; walk into them and you just bump
+    const dx = S.pos.x - p.x, dz = S.pos.z - p.z, d = Math.hypot(dx, dz);
+    if (d < 0.6 && Math.abs(S.pos.y - p.y) < 1.2 && p.bailT <= 0 && !SHOP.active) {
+      const rel = Math.hypot(S.vel.x - p.vel.x, S.vel.z - p.vel.z);
+      if (rel > 3 && !S.walking && S.bail <= 0) { doBail('Ran into someone'); p.bailT = 2.6; cam.shake = 0.7; }
+      else if (d > 1e-3) { const push = 0.6 - d; S.pos.x += dx / d * push; S.pos.z += dz / d * push; }
+    }
+  }
+}
+
+/* ============================================================
    Main loop: input once per frame, physics at a fixed 120 Hz
    ============================================================ */
 const DT = 1 / 120;
@@ -4123,7 +4389,7 @@ function frameBody(now) {
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
-  if (!introVisible) npcTick(Math.min(dt, 0.05), simTime);
+  if (!introVisible) { npcTick(Math.min(dt, 0.05), simTime); trafficTick(Math.min(dt, 0.05)); }
   const co = window.__camOverride; // test hook: a fixed camera for screenshots
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
   recordFrame(dt);
@@ -4133,7 +4399,7 @@ function frameBody(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

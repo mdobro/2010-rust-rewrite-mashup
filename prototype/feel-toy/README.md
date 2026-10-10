@@ -387,6 +387,34 @@ Run into one faster than about 2.5 m/s (counting both of your speeds) and you
 both slam. Slower than that and you just bump apart. They follow set lines
 rather than the full physics.
 
+## Traffic and people (Port City)
+
+Port City's streets are busy:
+- **Cars:** they drive both ways round the downtown ring and the boulevard
+  ring, keeping right. They slow for corners and stop behind whatever is in
+  front of them, including you if they see you in time, and they honk if you
+  stand in the road. Step out right in front of a moving car and it hits you.
+  Skate into a stopped car hard and you slam; slowly and you just stop
+  against it.
+- **People on foot:** they walk round the middle block, round the outside of
+  the downtown ring (over the crosswalks) and along the boulevard sidewalks.
+  They keep right, step round benches, dumpsters and you, and wait at the kerb
+  for a car that's coming. Skate into someone faster than about 3 m/s and you
+  both go down. On foot you just bump.
+
+## The skater
+
+Each skater has:
+- **A face:** eyes with whites, irises and lids, brows, a nose, lips and ears.
+- **Arms:** tapered, with elbows and hands with fingers and a thumb.
+- **Legs and shoes:** socks at the ankles and pant cuffs over shoes, with a
+  sole, collar, tongue and laces.
+- **A board:** a moulded deck with concave and kicked tips, and trucks with
+  baseplates, bushings and wheels.
+
+Other skaters and people on foot use a simpler copy of the model, merged into
+a few meshes so a crowd stays smooth on a phone.
+
 ## Replay
 
 **X**, **Replay** on a phone, or **Replay last 10 s** in the panel plays back
