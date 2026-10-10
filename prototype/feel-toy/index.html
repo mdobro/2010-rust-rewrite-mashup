@@ -565,7 +565,12 @@ function levelPark() {
     terrainH, regions, boxes, hubbas, rails,
     spawn: { pos: V(8, 0, 15), yaw: 0 }, bounds: [-48, 52, -40, 40], fog: [70, 170], sky: 0xa9d3ec,
     // the skate shop on the boardwalk, facing the park
-    shop: { name: 'Boardwalk Skate Shop', sign: [48.46, 3.9, 6, -Math.PI / 2, 7], awning: [47.2, 0.5, 48.5, 11.5, 2.9, 'x'], zone: [44.6, 3.2, 48.3, 8.8], door: [48.3, 0, 6] },
+    npcs: [
+      { kind: 'carve', c: [-21, -12], r: 3.3, speed: 6 },                                  // round the clover bowl
+      { kind: 'carve', c: [-21.4, 12.4], r: 2.5, speed: 5, dir: -1 },                      // the flow bowl
+      { kind: 'session', rail: [3, 3.5, 13, 3.5], start: 0, end: 16.5, back: 3.1, side: 1, speed: 5 },   // the flat bar in the street plaza
+    ],
+    shop: { name: 'Boardwalk Skate Shop', sign: [48.46, 4.3, 6, -Math.PI / 2, 7], awning: [47.2, 0.5, 48.5, 11.5, 2.9, 'x'], zone: [44.6, 3.2, 48.3, 8.8], door: [48.3, 0, 6] },
 
     drag: (x, z) => onPad(x, z) || (x > 40 && x < 48) ? 0 : 7,                    // sand
     decor(D) {
@@ -1057,7 +1062,7 @@ function buildDowntown(K) {
     //   a trench to gap, a dirt pile, a pipe on blocks, a scaffold plank, a slab, a dumpster
     building(52, 52, 70, 62, 2, 0xc98f6b, 'brick');
     // ...which is the skate shop: a sign, an awning, a mat at the door. Stop on the mat to go in.
-    K.shop = { name: 'Corner Skate Shop', sign: [61, G + 4.3, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
+    K.shop = { name: 'Corner Skate Shop', sign: [61, G + 4.75, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
     B(54, G - 1, 62, 68, G + 0.9, 65, 'plaza', { edges: 'ew' }); SET('z', 65, 1, 58, 64, G + 0.9, G, 3, 0.4); rails.push(handrail('z', 65, 1, 61, G + 0.9, G, 3, 0.4));
     for (const [x0, z0, x1, z1] of [[74, 52, 74.08, 64], [74, 76, 74.08, 118], [74, 52, 90, 52.08], [98, 52, 118, 52.08]]) B(x0, G - 0.1, z0, x1, G + 1.9, z1, 'fence');
     hubbas.push({ a: V(90.4, G + 0.6, 70), b: V(88, G + 0.02, 70), w: 1.4, noRails: true, color: 0xc49a5c });
@@ -1201,6 +1206,13 @@ function buildDowntown(K) {
     { id: 'trench-flip', hard: true, name: 'Flip the Trench', desc: 'Off the ply, flip trick over the trench and land beyond it', at: [91.5, G, 66], go: [80, G, 70, -Math.PI / 2], kind: 'trick', trick: FLIP, from: [85, 64, 92, 76, G - 0.2], to: [94.6, 60, 106, 80, G - 0.2, G + 2.5] },
     { id: 'city-legend', hard: true, name: 'Downtown Legend', desc: 'Land a 30,000 point line anywhere downtown', at: [-20, G, 40], go: [-20, G, 38, Math.PI], kind: 'score', pts: 30000, area: [-120, -120, 120, 120] },
   ];
+  // other skaters in town: two cruising the streets the opposite way round, two sessioning spots
+  K.npcs = [
+    { kind: 'loop', path: [[-41.5, -41.5], [-41.5, 41.5], [41.5, 41.5], [41.5, -41.5]], speed: 6.2 },
+    { kind: 'loop', path: [[-39.3, -39.3], [39.3, -39.3], [39.3, 39.3], [-39.3, 39.3]], speed: 5.6 },
+    { kind: 'session', rail: [10, 4.6, 24, 4.6], start: 3, end: 27, back: 3.4, side: 1, speed: 5.4 },     // a Central Plaza ledge
+    { kind: 'session', rail: [-6, 56, 6, 56], start: -12, end: 10, back: 3.8, side: 1, speed: 5 },         // the courthouse flat bar
+  ];
   // tapes hidden round the district: [x, z, roughly how high the surface there is]
   K.tapes = [[24, -110.5, G + 5.6], [-6, -116, G + 7], [-74, -72.5, G - 1.8], [114, -22, G + 1.6], [108, 100.3, G + 4.0], [0, 15, G - 1.4],
     [28, 94, G + 2.4], [-58, 0, G - 1.6], [80, 2, G + 1], [-110, -92, G + 1.8], [116, -86, G + 3], [-117, 112, G + 0.5]];
@@ -1233,7 +1245,7 @@ function levelCity() {
   const poolCol = (x, z, h) => { const g = 0.15; return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
-    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop,
+    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop, npcs: K.npcs,
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
   };
@@ -1570,7 +1582,7 @@ function levelMega() {
   ];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
-    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, npcs: K.npcs,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -3783,8 +3795,10 @@ if (LV.shop) {
   const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 144; const g = c.getContext('2d');
     g.fillStyle = '#16181c'; g.fillRect(0, 0, 512, 144); g.strokeStyle = '#ffc83d'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 132);
     g.fillStyle = '#ffc83d'; g.beginPath(); g.arc(70, 72, 40, 0, 7); g.fill(); g.fillStyle = '#16181c'; g.beginPath(); g.arc(70, 72, 16, 0, 7); g.fill();      // a wheel
-    g.fillStyle = '#f3f1ea'; g.font = '900 62px Impact, "Arial Black", sans-serif'; g.textBaseline = 'middle'; g.fillText('SKATE SHOP', 128, 66);
-    g.fillStyle = '#ff6f88'; g.font = '700 22px monospace'; g.fillText('BOARDS · WHEELS · SHOES · TEES', 132, 116);
+    // fit the words to the board, whatever fonts this device has
+    const fit = (text, font, size, maxW) => { let px = size; do { g.font = font.replace('%', px); px -= 2; } while (g.measureText(text).width > maxW && px > 10); };
+    g.fillStyle = '#f3f1ea'; g.textBaseline = 'middle'; fit('SKATE SHOP', '900 %px Impact, "Arial Black", sans-serif', 64, 350); g.fillText('SKATE SHOP', 132, 62);
+    g.fillStyle = '#ff6f88'; fit('BOARDS · WHEELS · SHOES · TEES', '700 %px monospace', 22, 350); g.fillText('BOARDS · WHEELS · SHOES · TEES', 132, 112);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw * 144 / 512), new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.35, roughness: 0.6 }));
   sign.position.set(sx, sy, sz); sign.rotation.y = srot; scene.add(sign);
@@ -3856,6 +3870,156 @@ $('shop-random').addEventListener('click', () => { PLAYER_STYLE = randomStyle();
 $('shop-reset').addEventListener('click', () => { PLAYER_STYLE = { ...STYLE_DEFAULT }; saveStyle(); buildShopRows(); });
 
 /* ============================================================
+   Other skaters: they cruise the streets, session a ledge or a rail, carve the bowls, and do
+   tricks as they go (ollieing whatever cone or pothole is in their way). They follow set lines
+   rather than the full physics. Hit one fast and you both go down.
+   ============================================================ */
+const NPC_TRICKS = [['Ollie', 0, 0], ['Kickflip', 1, 0], ['Heelflip', -1, 0], ['Pop Shuvit', 0, 1], ['360 Flip', 1, 2], ['Varial Kickflip', 1, 1], ['Hardflip', 1, -1]];
+const NPC_GRINDS = ['C', 'C', 'D', 'U', 'L', 'UL', 'D>L', 'R>U', 'L>U'];
+const NPCS = [];
+// round off a corner: replace it with a short curve from r before it to r after
+function filletPath(pts, r, closed) {
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]; if (!closed && (i === 0 || i === pts.length - 1) || p.mode !== 'ride' || p.sharp) { out.push(p); continue; }
+    const a = pts[(i - 1 + pts.length) % pts.length], b = pts[(i + 1) % pts.length];
+    const da = Math.hypot(p.x - a.x, p.z - a.z), db = Math.hypot(b.x - p.x, b.z - p.z), rr = Math.min(r, da / 2.2, db / 2.2);
+    const p0 = { x: p.x + (a.x - p.x) / da * rr, z: p.z + (a.z - p.z) / da * rr }, p1 = { x: p.x + (b.x - p.x) / db * rr, z: p.z + (b.z - p.z) / db * rr };
+    for (let k = 0; k <= 5; k++) { const t = k / 5, u = 1 - t; out.push({ x: u * u * p0.x + 2 * u * t * p.x + t * t * p1.x, z: u * u * p0.z + 2 * u * t * p.z + t * t * p1.z, mode: 'ride' }); }
+  }
+  return out;
+}
+function npcPath(def) {
+  if (def.kind === 'loop') return filletPath(def.path.map(([x, z]) => ({ x, z, mode: 'ride' })), 3, true);
+  // a session: roll up, pop on to the rail, grind it, drop off, ride round and line it up again
+  const [ax, az, bx, bz] = def.rail;
+  let rail = null, best = 1e9, flip = false;
+  for (const r of RAILS) { for (const fl of [false, true]) { const p = fl ? r.b : r.a, q = fl ? r.a : r.b, d = Math.hypot(p.x - ax, p.z - az) + Math.hypot(q.x - bx, q.z - bz); if (d < best) { best = d; rail = r; flip = fl; } } }
+  if (!rail || best > 1.5) return null;
+  const A = flip ? rail.b : rail.a, Bp = flip ? rail.a : rail.b, d = V(Bp.x - A.x, 0, Bp.z - A.z).normalize(), nrm = V(-d.z, 0, d.x).multiplyScalar(def.side || 1);
+  const along = Math.abs(d.x) > Math.abs(d.z) ? 'x' : 'z', ua = A[along], sg = Math.sign(Bp[along] - ua);
+  const at = (u, off) => ({ x: A.x + d.x * (u - ua) * sg + nrm.x * off, z: A.z + d.z * (u - ua) * sg + nrm.z * off });
+  const P = { ...at(ua - 1.5 * sg, 0.3), mode: 'pop' }, G0 = { x: A.x, z: A.z, mode: 'grind', y0: A.y, y1: Bp.y }, G1 = { x: Bp.x, z: Bp.z, mode: 'drop', y0: Bp.y };
+  const X = { ...at(Bp[along] + 1.5 * sg, 0.3), mode: 'ride', sharp: true };
+  const pts = [{ ...at(def.start, 0.35), mode: 'ride' }, P, G0, G1, X, { ...at(def.end, 0.35), mode: 'ride' }, { ...at(def.end, def.back), mode: 'ride' }, { ...at(def.start, def.back), mode: 'ride' }];
+  pts[0].mode = 'ride';
+  return filletPath(pts, 1.4, true);
+}
+function makeNpc(def, i) {
+  let seed = 1234 + i * 977; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const R = buildRider(randomStyle(rnd)); scene.add(R.skater);
+  const n = { def, R, rnd, x: 0, y: 0, z: 0, dir: V(0, 0, -1), up: UP.clone(), s: rnd() * 50, v: def.speed || 5, trick: null, manualT: 0, nextTrick: 1 + rnd() * 3, bailT: 0, grind: 'C',
+    pose: { gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, crouch: 0.2, grind: 0 }, vel: V() };
+  if (def.kind !== 'carve') {
+    n.path = npcPath(def); if (!n.path) return null;
+    n.cum = [0]; for (let k = 0; k < n.path.length; k++) { const a = n.path[k], b = n.path[(k + 1) % n.path.length]; n.cum.push(n.cum[k] + Math.hypot(b.x - a.x, b.z - a.z)); }
+    n.L = n.cum[n.cum.length - 1]; n.seg = 0; n.s %= n.L;
+  } else { n.th = rnd() * Math.PI * 2; n.s = 0; }
+  const g0 = n.path ? n.path[0] : { x: def.c[0] + def.r, z: def.c[1] };
+  n.y = groundAt(g0.x, g0.z, 30).h;
+  return n;
+}
+for (const [i, def] of (LV.npcs || []).entries()) { const n = makeNpc(def, i); if (n) NPCS.push(n); }
+function npcStartTrick(n, name) {
+  const t = name ? NPC_TRICKS.find(t => t[0] === name) : NPC_TRICKS[Math.floor(n.rnd() * NPC_TRICKS.length)];
+  n.trick = { name: t[0], flip: t[1], shuv: t[2], t: 0, dur: 0.62 };
+}
+function npcStep(n, dt) {
+  if (n.bailT > 0) { n.bailT -= dt; n.vel.set(0, 0, 0); return; }
+  const v = n.v * (n.mode === 'grind' ? 0.85 : 1);
+  if (n.def.kind === 'carve') {                                       // round and round the bowl, high on the walls
+    const dirSign = n.def.dir || 1, r = n.def.r * (1 + 0.12 * Math.sin(n.s * 0.6));
+    n.s += dt; n.th += dirSign * v / r * dt;
+    const x = n.def.c[0] + Math.cos(n.th) * r, z = n.def.c[1] + Math.sin(n.th) * r, g = groundAt(x, z, 30);
+    n.vel.set(x - n.x, 0, z - n.z).divideScalar(Math.max(dt, 1e-4)); n.x = x; n.z = z; n.y = g.h;
+    n.dir.set(-Math.sin(n.th) * dirSign, 0, Math.cos(n.th) * dirSign); n.up.lerp(g.n, 1 - Math.exp(-12 * dt)).normalize(); n.mode = 'ride';
+    return;
+  }
+  n.s += v * dt; if (n.s >= n.L) { n.s -= n.L; n.seg = 0; }
+  while (n.s > n.cum[n.seg + 1]) n.seg++;
+  const a = n.path[n.seg], b = n.path[(n.seg + 1) % n.path.length], t = (n.s - n.cum[n.seg]) / Math.max(1e-6, n.cum[n.seg + 1] - n.cum[n.seg]);
+  const x = lerp(a.x, b.x, t), z = lerp(a.z, b.z, t);
+  if (a.mode !== n.mode) { n.mode = a.mode; if (a.mode === 'pop') { n.trick = null; n.manualT = 0; n.grind = NPC_GRINDS[Math.floor(n.rnd() * NPC_GRINDS.length)]; n.popY = n.y; }
+    if (a.mode === 'drop' && n.rnd() < 0.35) npcStartTrick(n, n.rnd() < 0.5 ? 'Kickflip' : 'Pop Shuvit'); }     // sometimes flip out of the grind
+  n.vel.set(x - n.x, 0, z - n.z).divideScalar(Math.max(dt, 1e-4));
+  n.x = x; n.z = z; n.dir.set(b.x - a.x, 0, b.z - a.z).normalize();
+  const g = groundAt(x, z, (n.gy ?? n.y) + 0.6);
+  if (n.mode === 'pop') n.y = lerp(n.popY, b.y0 + 0.035, t) + Math.sin(t * Math.PI) * 0.45;
+  else if (n.mode === 'grind') n.y = lerp(a.y0, a.y1, t) + 0.035;
+  else if (n.mode === 'drop') { const gy = groundAt(b.x, b.z, a.y0 + 0.3).h; n.y = lerp(a.y0 + 0.035, gy, t) + Math.sin(t * Math.PI) * 0.35; }
+  else { const gy = n.gy ?? g.h; n.y = gy > g.h ? Math.max(g.h, gy - 6 * dt) : g.h; }
+  n.gy = n.y;                                                        // the rolling height, before any jump
+  n.up.lerp(n.mode === 'ride' ? g.n : UP, 1 - Math.exp(-12 * dt)).normalize();
+  // tricks while rolling: random ones on the straights, an ollie for anything in the way
+  if (n.mode === 'ride') {
+    if (!n.trick && n.manualT <= 0) {
+      for (const hz of HAZARDS) { const dx = hz.x - x, dz = hz.z - z, fwd = dx * n.dir.x + dz * n.dir.z, side = Math.abs(dx * n.dir.z - dz * n.dir.x);
+        if (fwd > 0.6 && fwd < 2.2 && side < 0.8) { npcStartTrick(n, 'Ollie'); break; } }
+      const left = n.cum[n.seg + 1] - n.s;
+      if (!n.trick && (n.nextTrick -= dt) <= 0 && left > v * 0.9) {
+        n.nextTrick = 2.5 + n.rnd() * 5;
+        if (n.rnd() < 0.25) n.manualT = 1 + n.rnd() * 1.5; else npcStartTrick(n);
+      }
+    }
+  }
+  if (n.manualT > 0) n.manualT -= dt;
+  if (n.trick && (n.trick.t += dt) >= n.trick.dur) n.trick = null;
+  if (n.trick && n.mode === 'ride') { const p = n.trick.t / n.trick.dur; n.y += Math.max(0, Math.sin(Math.min(1, (p - 0.08) / 0.92) * Math.PI)) * 0.5; }
+}
+const _f = V(), _r = V(), _q = new THREE.Quaternion(), _m4 = new THREE.Matrix4();
+function poseNpc(n, dt, time) {
+  const R = n.R, P = n.pose; R.skater.position.set(n.x, n.y, n.z);
+  _f.copy(n.dir).addScaledVector(n.up, -n.dir.dot(n.up)).normalize(); _r.crossVectors(_f, n.up).normalize();
+  _m4.makeBasis(_r, n.up, _f.clone().negate()); R.boardOrient.quaternion.setFromRotationMatrix(_m4); R.boardOrient.position.set(0, 0, 0);
+  const onRail = n.mode === 'grind', setup = n.mode === 'pop';
+  const gk = onRail || setup ? GRINDS[n.grind] : n.manualT > 0 ? MANUAL_POSE.Manual : GRINDS.C;
+  const rate = setup ? 11 : 16;
+  P.gYaw = dampAngle(P.gYaw, gk.yaw, rate, dt); P.gPitch = damp(P.gPitch, gk.pitch, rate, dt); P.gPivot = damp(P.gPivot, gk.pivot, rate, dt); P.gDrop = damp(P.gDrop, gk.drop, rate, dt);
+  if (Math.abs(P.gYaw) + Math.abs(P.gPitch) + P.gDrop > 1e-3) {
+    const piv = V(0, 0, P.gPivot), p0 = piv.clone().applyQuaternion(R.boardOrient.quaternion);
+    R.boardOrient.quaternion.multiply(_q.setFromEuler(new THREE.Euler(P.gPitch, P.gYaw, 0, 'YXZ')));
+    R.boardOrient.position.copy(p0).sub(piv.applyQuaternion(R.boardOrient.quaternion)); R.boardOrient.position.y -= P.gDrop;
+  }
+  R.boardFlip.rotation.set(0, 0, 0); R.boardFlip.position.set(0, 0, 0);
+  let crouchT = onRail ? (GRINDS[n.grind].slide ? 0.45 : 0.58) : setup || n.mode === 'drop' ? 0.35 : 0.18;
+  if (n.trick) { const p = n.trick.t / n.trick.dur;
+    if (p < 0.1) crouchT = 0.85; else { const q = (p - 0.1) / 0.9; R.boardFlip.rotation.set(0, n.trick.shuv * Math.PI * q, n.trick.flip * Math.PI * 2 * q, 'YXZ'); R.boardFlip.position.y = Math.sin(q * Math.PI) * 0.25; crouchT = 0.3; } }
+  P.crouch = damp(P.crouch, crouchT, 14, dt); P.grind = damp(P.grind, onRail ? 1 : 0, 10, dt);
+  const c = P.crouch, gb = P.grind, baseY = DECK_TOP + 0.075, ankleY = baseY + R.boardFlip.position.y;
+  // bail: topple off the heel side
+  R.rig.rotation.set(0, 0, n.bailT > 0 ? clamp((1.8 - n.bailT) * 3, 0, 1.35) : 0); R.rig.position.set(n.bailT > 0 ? -clamp((1.8 - n.bailT) * 0.6, 0, 0.4) : 0, 0, 0);
+  R.pelvis.quaternion.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * c));
+  R.pelvis.position.set(-0.05 - 0.07 * c, baseY + lerp(0.7, 0.46, c), gb * P.gPivot * 0.4);
+  const sway = Math.sin(time * 2.6 + n.s), slide = onRail && GRINDS[n.grind].slide;
+  R.torso.rotation.set(gb * (0.05 * sway + 0.08), -P.gYaw * 0.55 * gb, gb * 0.04 * sway, 'YXZ');
+  R.head.rotation.set(gb * 0.25, 1.15 - P.gYaw * 0.3 * gb, 0);
+  const toR = l => l.clone().applyQuaternion(R.pelvis.quaternion).add(R.pelvis.position), toT = l => toR(l.clone().applyQuaternion(R.torso.quaternion));
+  for (const [side, foot, hz, pole] of [['front', V(0.02, ankleY, -0.22), -0.09, V(1, 0.1, -0.35)], ['back', V(0.02, ankleY, 0.24), 0.09, V(1, 0.1, 0.35)]]) {
+    const L = R.LIMBS[side]; limbIK(L.thigh, L.shin, toR(V(0, -0.04, hz)), foot, pole, THIGH, SHIN);
+    L.shoe.position.set(foot.x + 0.03, foot.y - 0.04, foot.z); L.shoe.rotation.set(0, side === 'front' ? 0.25 : -0.15, 0);
+  }
+  const shF = toT(V(0, 0.5, -0.19)), shB = toT(V(0, 0.5, 0.19)), sw = Math.sin(time * 1.7 + n.s) * 0.03;
+  const fh = toT(V(0.14, 0.12 + sw, -0.52)).lerp(toT(slide ? V(0.3, 0.5, -0.56) : V(0.26, 0.4 + 0.07 * sway, -0.5)), gb);
+  const bh = toT(V(0.08, 0.1 - sw, 0.5)).lerp(toT(slide ? V(-0.06, 0.32, 0.56) : V(0.1, 0.08 - 0.07 * sway, 0.52)), gb);
+  limbIK(R.LIMBS.front.upper, R.LIMBS.front.fore, shF, fh, V(-0.3, -1, -0.4), UPPER_ARM, FOREARM);
+  limbIK(R.LIMBS.back.upper, R.LIMBS.back.fore, shB, bh, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
+}
+function npcTick(dt, time) {
+  for (const n of NPCS) {
+    npcStep(n, dt);
+    const far = camera.position.distanceToSquared(V(n.x, n.y, n.z)) > 110 * 110;
+    n.R.skater.visible = !far; if (!far) poseNpc(n, dt, time);
+    // running into one: fast, and you both slam; slow, and you just bump
+    const dx = S.pos.x - n.x, dz = S.pos.z - n.z, d = Math.hypot(dx, dz);
+    if (d < 0.7 && Math.abs(S.pos.y - n.y) < 1.1 && n.bailT <= 0 && !SHOP.active) {
+      const rel = Math.hypot(S.vel.x - n.vel.x, S.vel.z - n.vel.z);
+      if (rel > 2.6 && S.bail <= 0) { doBail(S.walking ? 'Knocked over' : 'Ran into a skater'); n.bailT = 1.8; cam.shake = 0.8; }
+      else if (d > 1e-3) { const push = (0.7 - d); S.pos.x += dx / d * push; S.pos.z += dz / d * push; }
+    }
+  }
+}
+
+/* ============================================================
    Main loop: input once per frame, physics at a fixed 120 Hz
    ============================================================ */
 const DT = 1 / 120;
@@ -3879,6 +4043,7 @@ function frameBody(now) {
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
+  if (!introVisible) npcTick(Math.min(dt, 0.05), simTime);
   const co = window.__camOverride; // test hook: a fixed camera for screenshots
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
   recordFrame(dt);
@@ -3888,7 +4053,7 @@ function frameBody(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

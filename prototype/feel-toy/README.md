@@ -217,6 +217,11 @@ can ollie or flip out of a manual into the next trick. Push all the way down
 and it's the ollie crouch instead. *Manual: trick stick tip from* sets where
 halfway starts.
 
+**Flipping out of a manual:** while you hold a manual, the stick's halfway
+position counts as the pull. Flick from there across the middle, or straight
+out to a side, and you flip or ollie out of the manual into the next trick.
+Pulling on down to the crouch first works too.
+
 Riding fakie turns it round, the same as grinds. Halfway down still lifts the
 leading end, which is now the nose, so you balance on the nose wheels for a
 **Fakie Nose Manual**. Halfway up is a **Fakie Manual** on the tail wheels.
@@ -345,6 +350,42 @@ either camera with a short shake (*Landing shake*).
   each challenge.
 - **Progress:** it's saved per level in this browser. **Reset progress**
   clears it.
+
+## The skate shop
+
+Every map has a skate shop:
+- **Downtown:** the corner store by the construction site, with a three-stair
+  out front.
+- **Port City:** the same shop, in its downtown.
+- **Beach Park:** a shopfront on the boardwalk.
+
+Look for the lit SKATE SHOP sign and the striped awning. Stop on the glowing
+mat at the door, then tap **Enter skate shop** (or press **E**). A sheet opens
+over a slow turntable view of your skater, where you can change:
+- shirt, pants, shoes and soles;
+- the cap (forward, backwards or none) and its colour;
+- skin and hair;
+- the board graphic (stripe, solid, split, checker, dots, bolt or fade) and its
+  two colours;
+- wheels and wheel cores.
+
+**Random** deals a random look and **Reset** goes back to the default. Your
+look is kept in this browser.
+
+## Other skaters
+
+Other skaters ride around the maps, each with a random look:
+- **Downtown (and Port City's):** two cruise the streets in opposite
+  directions. They ollie the cones and potholes in their way and throw flips,
+  shuvits and manuals. Two more session spots: one keeps grinding a Central
+  Plaza ledge and the other the courthouse flat bar. They pick a different
+  grind each pass and sometimes flip out of it.
+- **Beach Park:** two carve the bowls high on the walls, and one sessions the
+  flat bar in the street plaza.
+
+Run into one faster than about 2.5 m/s (counting both of your speeds) and you
+both slam. Slower than that and you just bump apart. They follow set lines
+rather than the full physics.
 
 ## Replay
 
