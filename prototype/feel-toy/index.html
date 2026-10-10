@@ -1206,6 +1206,13 @@ function buildDowntown(K) {
     { id: 'city-legend', hard: true, name: 'Downtown Legend', desc: 'Land a 30,000 point line anywhere downtown', at: [-20, G, 40], go: [-20, G, 38, Math.PI], kind: 'score', pts: 30000, area: [-120, -120, 120, 120] },
   ];
   // other skaters in town: two cruising the streets the opposite way round, two sessioning spots
+  // traffic both ways round the ring, keeping right; people round the middle block and round the outside of the ring (over the crossings)
+  const sq = h => [[-h, -h], [h, -h], [h, h], [-h, h]];
+  K.traffic = [{ path: sq(40), lane: 1.05, dir: 1, n: 3, speed: 8.5, r: 6 }, { path: sq(40), lane: 1.05, dir: -1, n: 3, speed: 8.5, r: 6 }];
+  K.peds = [{ path: sq(33.5), n: 6 }, { path: sq(46.5), n: 9 }];
+  // the boulevard ring round the outside (both levels have one at 130): cars both ways, people on both sidewalks
+  K.ringTraffic = [{ path: sq(130), lane: 2.8, dir: 1, n: 6, speed: 13, r: 9 }, { path: sq(130), lane: 2.8, dir: -1, n: 6, speed: 13, r: 9 }];
+  K.ringPeds = [{ path: sq(122), n: 5 }, { path: sq(138), n: 4 }];
   K.npcs = [
     { kind: 'loop', path: [[-41.5, -41.5], [-41.5, 41.5], [41.5, 41.5], [41.5, -41.5]], speed: 6.2 },
     { kind: 'loop', path: [[-39.3, -39.3], [39.3, -39.3], [39.3, 39.3], [-39.3, 39.3]], speed: 5.6 },
@@ -1245,6 +1252,7 @@ function levelCity() {
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
     terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop, npcs: K.npcs,
+    traffic: [...K.traffic, ...K.ringTraffic], peds: [...K.peds, ...K.ringPeds],
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
   };
@@ -1579,14 +1587,7 @@ function levelMega() {
     { id: 'reservoir-60', hard: true, name: 'Reservoir 60', desc: 'Hit 60 km/h in the reservoir bowl', at: [-400, 24, 358], go: [-400, 24, 254, Math.PI], kind: 'speed', speed: 60 / 3.6, area: [-438, 254, -358, 358] },
     { id: 'uni-rail', hard: true, name: 'University Handrail', desc: 'Grind a handrail on one of the university triple sets', at: [212, 6, -172], go: [212, 6, -180, Math.PI], kind: 'grind', rail: 'Handrail', area: [203, -172.5, 217, -155] },
   ];
-  // traffic: both ways round the downtown ring and the boulevard ring, keeping right. People walk round
-  // the middle block, round the outside of the ring (over the crossings), and along the boulevards.
-  const sq = h => [[-h, -h], [h, -h], [h, h], [-h, h]];
-  const traffic = [
-    { path: sq(40), lane: 1.05, dir: 1, n: 3, speed: 8.5, r: 6 }, { path: sq(40), lane: 1.05, dir: -1, n: 3, speed: 8.5, r: 6 },
-    { path: sq(130), lane: 2.8, dir: 1, n: 6, speed: 13, r: 9 }, { path: sq(130), lane: 2.8, dir: -1, n: 6, speed: 13, r: 9 },
-  ];
-  const peds = [{ path: sq(33.5), n: 6 }, { path: sq(46.5), n: 9 }, { path: sq(122), n: 5 }, { path: sq(138), n: 4 }];
+  const traffic = [...K.traffic, ...K.ringTraffic], peds = [...K.peds, ...K.ringPeds];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
     terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, npcs: K.npcs, traffic, peds,
@@ -2411,6 +2412,7 @@ function limbIK(upper, lower, root, target, pole, L1, L2) {
   _j.copy(root).addScaledVector(_d, Math.cos(ang) * L1).addScaledVector(pl, Math.sin(ang) * L1);
   _e.copy(root).addScaledVector(_d, dist);
   placeBone(upper, root, _j); placeBone(lower, _j, _e);
+  target.copy(_e);                    // out of reach: the hand or foot goes where the limb actually ends, so a shoe never floats off the leg
 }
 const toRig = local => local.clone().applyQuaternion(pelvis.quaternion).add(pelvis.position);
 const toRigT = local => toRig(local.clone().applyQuaternion(torso.quaternion));   // from the torso's space
@@ -3319,6 +3321,11 @@ function updateVisuals(dt, time) {
   head.rotation.set(gb * 0.25, 1.15 * pose.lookFwd - 1.35 * pb * ps - pose.gYaw * 0.3 * gb, 0);   // on a rail, chin down, eyes down the rail
   // legs: knees bend out over the toes; while pushing both knees point at the nose
   const frontPole = V(lerp(1, 0.15, pb), 0.1, lerp(-0.35, -ps, pb)), backPole = V(lerp(1, 0.15, pb), lerp(0.1, 0.3, pb), lerp(0.35, -ps, pb));
+  // a foot reaching further than the leg can (the push reaching back): sink the hips until it reaches
+  for (const [foot, hz] of [[frontFoot, -0.09], [backFoot, 0.09]]) {
+    const hip = toRig(V(0, -0.04, hz)), dx = foot.x - hip.x, dz = foot.z - hip.z, reach = THIGH + SHIN - 0.02;
+    const dy = hip.y - foot.y; if (dx * dx + dy * dy + dz * dz > reach * reach) pelvis.position.y -= Math.min(0.2, dy - Math.sqrt(Math.max(0, reach * reach - dx * dx - dz * dz)));
+  }
   for (const [side, foot, hz, pole] of [['front', frontFoot, -0.09, frontPole], ['back', backFoot, 0.09, backPole]]) {
     const L = LIMBS[side];
     limbIK(L.thigh, L.shin, toRig(V(0, -0.04, hz)), foot, pole, THIGH, SHIN);

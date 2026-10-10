@@ -387,9 +387,10 @@ Run into one faster than about 2.5 m/s (counting both of your speeds) and you
 both slam. Slower than that and you just bump apart. They follow set lines
 rather than the full physics.
 
-## Traffic and people (Port City)
+## Traffic and people (Downtown and Port City)
 
-Port City's streets are busy:
+The downtown streets are busy, on both the Downtown level and in Port City's
+downtown:
 - **Cars:** they drive both ways round the downtown ring and the boulevard
   ring, keeping right. They slow for corners and stop behind whatever is in
   front of them, including you if they see you in time, and they honk if you
