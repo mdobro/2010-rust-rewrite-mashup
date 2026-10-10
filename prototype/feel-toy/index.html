@@ -819,6 +819,7 @@ function buildDowntown(K) {
   const isClear = (x0, z0, x1, z1) => !CLEAR.some(([a, b, c, d]) => x1 > a && x0 < c && z1 > b && z0 < d);
   const top = (y, x0, z0, x1, z1, hgt, mat = 'marble', edges) => B(x0, y - 0.3, z0, x1, y + hgt, z1, mat, { edges: edges ?? (Math.abs(x1 - x0) > Math.abs(z1 - z0) ? 'ns' : 'ew') }); // on a podium
   const spots = [];
+  K.shops = [null];                                                           // the corner shop goes first
   const spot = (name, x, y, z, yaw, area) => spots.push({ name, pos: V(x, y, z), yaw, area });
 
   /* ---------- the streets ---------- */
@@ -981,6 +982,8 @@ function buildDowntown(K) {
     B(cx - 10, f - 0.2, cz - 3, cx - 3, f + 0.45, cz - 2.4, 'marble', { edges: 'ns' }); B(cx + 5, f - 0.2, cz - 4, cx + 10, f + 0.2, cz, 'pad', { edges: 'nswe' });
     for (const z of [-110, -100, -80, -60]) bench(-118, z, -117.4, z + 4);
     tree(-114, -84); tree(-114, -64); tree(-56, -84); tree(-56, -64);
+    // a skate shop in the west end of the library front, up on the deck
+    K.shops.push({ name: 'Library Lane Skates', sign: [-106, T + 3.85, -97.96, 0, 7], awning: [-112, -98, -100, -96.4, T + 2.2], zone: [-111.5, -97.8, -100.5, -95.6], door: [-106, T, -97.8] });
     spot('Library', -88, T, -94, Math.PI, [-120, -120, -49, -49]);
   }
 
@@ -996,6 +999,8 @@ function buildDowntown(K) {
     top(T, -94, -14.3, -76, -13.7, 0.55); top(T, -94, 13.7, -76, 14.3, 0.55); top(T, -96, -4, -92, 4, 0.6, 'ledge', 'nswe');
     fountainBowl(-58, 0, 5, 1.6);
     bench(-62, -12, -54, -11.4); bench(-62, 11.4, -54, 12); pad(-66, -29, -56, -26, 0.2); pad(-66, 26, -56, 29, 0.2);
+    // and one in the bank building, its door on to the south end of the deck
+    K.shops.push({ name: 'Bank Street Boards', sign: [-97.96, T + 3.85, 19.5, Math.PI / 2, 7], awning: [-98, 13.5, -96.4, 25.5, T + 2.2, 'x'], zone: [-97.8, 15.2, -94.6, 23.6], door: [-97.8, T, 19.5] });
     spot('Bank Plaza', -84, T, 0, -Math.PI / 2, [-120, -31, -49, 31]);
   }
 
@@ -1061,7 +1066,7 @@ function buildDowntown(K) {
     //   a trench to gap, a dirt pile, a pipe on blocks, a scaffold plank, a slab, a dumpster
     building(52, 52, 70, 62, 2, 0xc98f6b, 'brick');
     // ...which is the skate shop: a sign, an awning, a mat at the door. Stop on the mat to go in.
-    K.shop = { name: 'Corner Skate Shop', sign: [61, G + 4.75, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
+    K.shop = K.shops[0] = { name: 'Corner Skate Shop', sign: [61, G + 4.75, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
     B(54, G - 1, 62, 68, G + 0.9, 65, 'plaza', { edges: 'ew' }); SET('z', 65, 1, 58, 64, G + 0.9, G, 3, 0.4); rails.push(handrail('z', 65, 1, 61, G + 0.9, G, 3, 0.4));
     for (const [x0, z0, x1, z1] of [[74, 52, 74.08, 64], [74, 76, 74.08, 118], [74, 52, 90, 52.08], [98, 52, 118, 52.08]]) B(x0, G - 0.1, z0, x1, G + 1.9, z1, 'fence');
     hubbas.push({ a: V(90.4, G + 0.6, 70), b: V(88, G + 0.02, 70), w: 1.4, noRails: true, color: 0xc49a5c });
@@ -1251,7 +1256,7 @@ function levelCity() {
   const poolCol = (x, z, h) => { const g = 0.15; return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
   const regions = K.regionsFor({ x0: -152, x1: 152, z0: -152, z1: 152 }, 4, groundCol, poolCol);
   return {
-    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop, npcs: K.npcs,
+    terrainH, surface: K.dtSurface, regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards, districts: spots, spots, challenges: K.challenges, tapes: K.tapes, shop: K.shop, shops: K.shops, npcs: K.npcs,
     traffic: [...K.traffic, ...K.ringTraffic], peds: [...K.peds, ...K.ringPeds],
     spawn: spots.find(s => s.name === 'Central Plaza'), bounds: [-146, 146, -146, 146], fog: [70, 230], far: 260, sky: 0xa9c8de,
     decor(D) { for (const f of decorFns) f(D); },
@@ -1590,7 +1595,7 @@ function levelMega() {
   const traffic = [...K.traffic, ...K.ringTraffic], peds = [...K.peds, ...K.ringPeds];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
-    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, npcs: K.npcs, traffic, peds,
+    terrainH, surface: (x, z) => K.dtSurface(x, z) || 'smooth', regions, boxes, hubbas, rails, hazards, districts, spots: dtSpots, challenges, tapes, shop: K.shop, shops: K.shops, npcs: K.npcs, traffic, peds,
     spawn: districts[0], bounds: [-438, 438, -438, 438], fog: [110, 330], far: 360, sky: 0xa9c8de,
     decor(D) {
       for (const f of decorFns) f(D);
@@ -2236,7 +2241,8 @@ function graphicTexture(st) {
 const GEO = new Map(), geo = (key, make) => { if (!GEO.has(key)) GEO.set(key, make()); return GEO.get(key); };
 const lathe = (prof, seg = 20) => new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), seg);
 // a limb along +y, centred on its middle (the way the IK places bones): a profile of [radius, 0..1 along it]
-const limbGeo = (len, prof) => { const g = lathe(prof.map(([r, t]) => [r, t * len]), 18); g.translate(0, -len / 2, 0); return g; };
+// (closed at both ends, so you never see inside a limb)
+const limbGeo = (len, prof) => { const e = [prof[0], prof[prof.length - 1]], g = lathe([[0, e[0][1] * len], ...prof.map(([r, t]) => [r, t * len]), [0, e[1][1] * len]], 18); g.translate(0, -len / 2, 0); return g; };
 // the deck: one moulded piece, a popsicle outline with kicked-up ends, a little concave, bevelled edges
 function deckOutline() {
   const s = new THREE.Shape(), W = 0.105, L = 0.41 - W;
@@ -2308,6 +2314,7 @@ function buildRider(style, detail = 1) {
   const pelvis = new THREE.Group(); rig.add(pelvis);
   // (the rider faces +x, the toe edge; shoulders run along z)
   { const hips = capsule(0.105, 0.32, M.pants); hips.rotation.x = Math.PI / 2; hips.scale.set(0.95, 1, 0.85); hips.position.y = 0.02; pelvis.add(hips);
+    for (const z of [-0.075, 0.075]) { const seat = mesh(geo('seat', () => new THREE.SphereGeometry(0.1, 18, 14)), M.pants); seat.scale.set(0.9, 0.85, 0.95); seat.position.set(-0.035, -0.035, z); pelvis.add(seat); }   // the seat of the pants
     const belt = mesh(geo('belt', () => new THREE.CylinderGeometry(0.118, 0.118, 0.035, 24)), M.belt, false); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
   const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
   // the torso: one smooth shape, a loose tee hanging at the hips, narrow at the waist, broad and rounded at the shoulders
@@ -2356,7 +2363,7 @@ function buildRider(style, detail = 1) {
     upper: geo('uarm', () => limbGeo(UPPER_ARM, [[0.042, -0.06], [0.06, 0.02], [0.063, 0.25], [0.056, 0.65], [0.048, 0.95], [0.036, 1.04]])),
     fore: geo('farm', () => limbGeo(FOREARM, [[0.036, -0.05], [0.048, 0.02], [0.052, 0.28], [0.044, 0.7], [0.034, 0.95], [0.031, 1.02]])),
     sleeve: geo('sleeve', () => limbGeo(0.16, [[0.0, -0.05], [0.058, -0.04], [0.064, 0.2], [0.062, 0.8], [0.06, 1.0], [0.052, 1.0]])),
-    elbow: geo('elbow', () => new THREE.SphereGeometry(0.048, 16, 12)), knee: geo('knee', () => new THREE.SphereGeometry(0.08, 16, 12)),
+    elbow: geo('elbow', () => new THREE.SphereGeometry(0.048, 16, 12)), knee: geo('knee', () => new THREE.SphereGeometry(0.08, 16, 12)), hip: geo('hip', () => new THREE.SphereGeometry(0.094, 18, 14)),
     cuff: geo('cuff', () => lathe([[0.068, 0], [0.086, 0.01], [0.088, 0.06], [0.082, 0.075], [0.06, 0.075]], 18)),
     sock: geo('sock', () => lathe([[0.036, 0], [0.043, 0.01], [0.044, 0.09], [0.036, 0.1]], 16)),
   };
@@ -2377,6 +2384,7 @@ function buildRider(style, detail = 1) {
       const th = mesh(geo('thumb', () => new THREE.CapsuleGeometry(0.0095, 0.03, 4, 8)), M.skin, false); th.position.set(0.03, 0.035, 0.012); th.rotation.set(0.3, 0, -0.7); hand.add(th);
     } else { const mitt = mesh(geo('mitt', () => new THREE.CapsuleGeometry(0.022, 0.03, 4, 8)), M.skin, false); mitt.position.y = 0.07; mitt.scale.set(1.2, 1, 0.6); hand.add(mitt); }
     const knee = mesh(G.knee, M.pants, false); knee.position.y = -SHIN / 2 + 0.01; L.shin.add(knee);
+    const hipBall = mesh(G.hip, M.pants); hipBall.scale.set(1, 0.9, 1); hipBall.position.y = -THIGH / 2 + 0.03; L.thigh.add(hipBall);   // the hip joint: rounds off the top of the leg as it swings
     const cuff = mesh(G.cuff, M.cuff); cuff.position.y = SHIN / 2 - 0.115; L.shin.add(cuff);               // the hem, ending above the shoe
     const sock = mesh(G.sock, M.sock, false); sock.position.y = SHIN / 2 - 0.06; L.shin.add(sock);          // the sock at the ankle
     const S2 = shoeGeos();
@@ -3886,9 +3894,10 @@ $('tb-replay').addEventListener('click', startReplay);
    The skate shop: a storefront on each map. Stop on the mat at the door and go in to change
    your clothes and your board. The look is kept in this browser.
    ============================================================ */
-const SHOP = { active: false, ang: 0, here: false };
-if (LV.shop) {
-  const sh = LV.shop, [sx, sy, sz, srot, sw] = sh.sign;
+const SHOP = { active: false, ang: 0, here: false, cur: null, mats: [] };
+const SHOPS = (LV.shops || (LV.shop ? [LV.shop] : [])).filter(Boolean);
+for (const sh of SHOPS) {
+  const [sx, sy, sz, srot, sw] = sh.sign;
   const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 144; const g = c.getContext('2d');
     g.fillStyle = '#16181c'; g.fillRect(0, 0, 512, 144); g.strokeStyle = '#ffc83d'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 132);
     g.fillStyle = '#ffc83d'; g.beginPath(); g.arc(70, 72, 40, 0, 7); g.fill(); g.fillStyle = '#16181c'; g.beginPath(); g.arc(70, 72, 16, 0, 7); g.fill();      // a wheel
@@ -3906,21 +3915,21 @@ if (LV.shop) {
   const aw = new THREE.Mesh(new THREE.BoxGeometry(along === 'x' ? ax1 - ax0 : 0.06, 0.06, along === 'x' ? 0.06 : az1 - az0), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
   const awPlane = new THREE.Mesh(new THREE.PlaneGeometry(along === 'x' ? ax1 - ax0 : az1 - az0, 1.7), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
   awPlane.position.set((ax0 + ax1) / 2, ay, (az0 + az1) / 2);
-  awPlane.rotation.set(along === 'x' ? -Math.PI / 2 + 0.45 : 0, along === 'x' ? 0 : Math.PI / 2, along === 'x' ? 0 : 0, 'YXZ');
-  if (along !== 'x') { awPlane.rotation.set(-Math.PI / 2 - 0.45, Math.PI / 2, 0, 'YXZ'); }
+  awPlane.rotation.set(-Math.PI / 2 + 0.45, srot, 0, 'YXZ');                  // sloping down and out, the way the sign faces
   awPlane.castShadow = true; scene.add(awPlane); void aw;
   // a glowing mat at the door: stop on it to go in
   const [zx0, zz0, zx1, zz1] = sh.zone, my = groundAt(sh.door[0], sh.door[2], sh.door[1] + 0.5).h;
   const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.0), new THREE.MeshBasicMaterial({ color: 0xffc83d, transparent: true, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
-  mat.rotation.x = -Math.PI / 2; mat.rotation.z = srot; mat.position.set(sh.door[0] + Math.sin(srot) * 0.7, my + 0.015, sh.door[2] + Math.cos(srot) * 0.7); scene.add(mat); SHOP.mat = mat;
+  mat.rotation.x = -Math.PI / 2; mat.rotation.z = srot; mat.position.set(sh.door[0] + Math.sin(srot) * 0.7, my + 0.015, sh.door[2] + Math.cos(srot) * 0.7); scene.add(mat); SHOP.mats.push(mat);
   void zx0; void zz0; void zx1; void zz1;
 }
 function shopTick(dt) {
-  if (!LV.shop) return;
-  const [x0, z0, x1, z1] = LV.shop.zone, p = S.pos;
-  SHOP.here = !SHOP.active && !RP.active && S.bail <= 0 && (S.grounded || S.walking) && !S.rail && p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1;
+  if (!SHOPS.length) return;
+  const p = S.pos, at = SHOPS.find(({ zone: [x0, z0, x1, z1], door }) => p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1 && Math.abs(p.y - door[1]) < 1.5);
+  SHOP.here = !!at && !SHOP.active && !RP.active && S.bail <= 0 && (S.grounded || S.walking) && !S.rail;
+  if (!SHOP.active) SHOP.cur = SHOP.here ? at : null;
   $('shop-btn').hidden = !SHOP.here;
-  if (SHOP.mat) SHOP.mat.material.opacity = 0.4 + 0.25 * Math.sin(performance.now() / 300);
+  for (const m of SHOP.mats) m.material.opacity = 0.4 + 0.25 * Math.sin(performance.now() / 300);
 }
 function buildShopRows() {
   const host = $('shop-rows'); host.innerHTML = '';
@@ -3942,10 +3951,10 @@ function buildShopRows() {
 }
 function saveStyle() { applyStyle(PLAYER, PLAYER_STYLE); try { localStorage.setItem(STYLE_KEY, JSON.stringify(PLAYER_STYLE)); } catch (_) {} }
 function openShop() {
-  if (!LV.shop || SHOP.active) return;
+  if (!SHOP.cur || SHOP.active) return;
   SHOP.active = true; SHOP.ang = S.yaw + Math.PI / 2; S.vel.set(0, 0, 0);
   if (S.walking) toggleWalk();
-  $('shop-name').textContent = LV.shop.name; buildShopRows(); $('shop').hidden = false; document.body.classList.add('shopping');
+  $('shop-name').textContent = SHOP.cur.name; buildShopRows(); $('shop').hidden = false; document.body.classList.add('shopping');
   if (!$('panel').hidden) togglePanel();
 }
 function closeShop() { if (!SHOP.active) return; SHOP.active = false; $('shop').hidden = true; document.body.classList.remove('shopping'); camera.clearViewOffset(); camera.updateProjectionMatrix(); }
@@ -3953,7 +3962,7 @@ function closeShop() { if (!SHOP.active) return; SHOP.active = false; $('shop').
 // skater stands in the part of the screen the shop sheet doesn't cover
 function shopCamera(dt) {
   SHOP.t = (SHOP.t || 0) + dt;
-  const out = LV.shop.sign[3], ang = out + 1.0 * Math.sin(SHOP.t * 0.35), landscape = innerWidth > innerHeight, d = landscape ? 2.9 : 5.4;
+  const out = SHOP.cur.sign[3], ang = out + 1.0 * Math.sin(SHOP.t * 0.35), landscape = innerWidth > innerHeight, d = landscape ? 2.9 : 5.4;
   const at = S.pos.clone().add(V(0, 0.82, 0));
   camera.position.copy(at).add(V(Math.sin(ang) * d, 0.3, Math.cos(ang) * d));
   camera.lookAt(at); camera.fov = 50;

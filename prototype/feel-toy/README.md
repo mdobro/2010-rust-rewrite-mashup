@@ -353,10 +353,14 @@ either camera with a short shake (*Landing shake*).
 
 ## The skate shop
 
-Every map has a skate shop:
-- **Downtown:** the corner store by the construction site, with a three-stair
-  out front.
-- **Port City:** the same shop, in its downtown.
+Every map has a skate shop, and Downtown has three:
+- **Downtown:**
+  - **Corner Skate Shop:** the corner store by the construction site, with a
+    three-stair out front.
+  - **Library Lane Skates:** up on the library deck, at its west end.
+  - **Bank Street Boards:** in the bank building, opening on to the south end
+    of the Bank Plaza deck.
+- **Port City:** the same three, in its downtown.
 - **Beach Park:** a shopfront on the boardwalk.
 
 Look for the lit SKATE SHOP sign and the striped awning. Stop on the glowing
