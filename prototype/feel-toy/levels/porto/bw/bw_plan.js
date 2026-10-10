@@ -9,7 +9,9 @@ function bw_plan() {
     : z <= 1128 ? lerp(YN, YS, (z - 1096) / 32)
     : YS;
   const Q = (x, z) => z > 1096 ? lerp(YN, Qz(z), clamp((x + 824) / 40, 0, 1)) : Qz(z);
-  const ground = (x, z, base) => z > 1180 ? base : Q(x, z) + (base - Bz(z));
+  /* past the quay the base drops 10 m in 6 m; from the 1184 grid row on, the sea bed falls in a straight line to the 1192 row so
+     the 8 m mesh draws exactly what is there (it sits under the water either way) */
+  const ground = (x, z, base) => z > 1184 ? (z < 1192 ? lerp(Bz(1184), Bz(1192), (z - 1184) / 8) : base) : z > 1180 ? base : Q(x, z) + (base - Bz(z));
   /* a circular transition: height gained d metres from the foot of an arc of radius R that tops out at width w */
   const arc = (d, R, w) => { const t = Math.min(Math.max(d, 0), w); return R - Math.sqrt(Math.max(R * R - t * t, 0)); };
   /* ---- the Spillway Outlet ---- */
@@ -73,7 +75,7 @@ function bw_plan() {
     [-648, -596, 1048, 1080, 0.5],   // Lido
     [-560, -536, 944, 968, 0.5],     // Mini ramp
     [-1000, -968, 910, 1176, 2],     // the edge hill (base rises 22 m over 30 m here)
-    [-16, 0, 910, 1180, 2],          // the east band (base and ground blend over 12 m)
+    [-16, 0, 910, 1200, 2],          // the east band (base and ground blend over 12 m), on past the quay
   ];
   return { YN, YS, T1, T2, T3, YF, Bz, Qz, Q, ground, col, surface, arc, outletFloor, outlet, snake: { pts, s, D, h: snakeH }, REGIONS };
 }

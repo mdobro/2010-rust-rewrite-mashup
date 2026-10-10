@@ -43,18 +43,18 @@ function bw_east(K, P, PL) {
 function bw_east_streets(K, P, PL, S) {
   const { YN, YS } = PL;
   // Steep Street: the 952 crossing opens a curb-free mouth (z 944..960) into the Eel Run head. It starts at 943.9 so the first cut falls inside the street.
-  K.street('z', -200, 943.9, 1096, YN, [952, 1020], { rw: 5, sw: 3 });
+  bw_index_street(K, 'z', -200, 943.9, 1096, YN, [952, 1020], { rw: 5, sw: 3 });
   // z 1096..1128: the road follows the 3.75 % ramp (the ground colour is the asphalt); sloped Curb hubba sidewalks either side
   K.strip(-206.5, 1096, -206.5, 1128, 0.15, 3, { kind: 'Curb', color: 0xb9b5ab, seg: 4 });
   K.strip(-193.5, 1096, -193.5, 1128, 0.15, 3, { kind: 'Curb', color: 0xb9b5ab, seg: 4 });
   K.lamp(-209, 1104, 1); K.lamp(-191, 1120, -1);
   // Harbour Road east (it stops at x -12: the gate band beyond is P.col only), Ice House Lane
   // (the stretch x -134..-106 in front of the Terminal Bank has no sidewalk on the south side: a kerbless mouth, so the bank is open and no lamp stands in front of it)
-  K.street('x', 1020, -212, -134, YN, [-200], { rw: 6, sw: 4 });
-  K.street('x', 1020, -134, -106, YN, [], { rw: 6, sw: 4, noCurb: true });
-  K.street('x', 1020, -106, -12, YN, [-40], { rw: 6, sw: 4 });
+  bw_index_street(K, 'x', 1020, -212, -134, YN, [-200], { rw: 6, sw: 4 });
+  bw_index_street(K, 'x', 1020, -134, -106, YN, [], { rw: 6, sw: 4, noCurb: true });
+  bw_index_street(K, 'x', 1020, -106, -12, YN, [-40], { rw: 6, sw: 4 });
   K.B(-134, YN - 0.6, 1010, -106, YN + 0.15, 1014, 'sidewalk', { edges: 's' });
-  K.street('z', -40, 944, 1096, YN, [1020], { rw: 4, sw: 3 });
+  bw_index_street(K, 'z', -40, 944, 1096, YN, [1020], { rw: 4, sw: 3 });
   // Quay Road is kerbless (the ground slopes 1.4 %): a broken centre line only
   for (let x = -186; x < -30; x += 8) if (x > -92 || x < -98) K.dash(x, 930, x + 3, 930);
   for (let z = 934; z < 944; z += 6) K.dash(-40, z, -40, z + 3);
@@ -176,7 +176,7 @@ function bw_east_front(K, P, PL, S) {
   }
   // the quay wall with coping, a gap at each pier mouth; a bollard every 12 m
   for (const [a, b] of [[-212, -152], [-104, -64], [-48, -0.5]]) { K.B(a, -47, 1176, b, YS + 0.1, 1180, 'plaza', { edges: 's' }); S.take(a, 1176, b, 1180); }
-  for (let x = -206; x < -26; x += 12) if (!(x > -156 && x < -100) && !(x > -68 && x < -44)) K.B(x - 0.25, YS + 0.1, 1176.75, x + 0.25, YS + 0.75, 1177.25, 'metal', { edges: 'nswe' });
+  for (let x = -206; x < -26; x += 24) if (!(x > -156 && x < -100) && !(x > -68 && x < -44)) K.B(x - 0.25, YS + 0.1, 1176.75, x + 0.25, YS + 0.75, 1177.25, 'metal');
   for (const x of [-170, -100, -40]) P.spot('Boardwalk East ' + Math.abs(x), x, YS, 1148, Math.PI, [x - 18, 1140, x + 18, 1166]);
   P.spot('Slappy Strip East', -110, YS, 1156, Math.PI / 2, [-150, 1160, -70, 1166]);
   P.spot('Boardwalk Gate', -34, YS, 1148, -Math.PI / 2, [-50, 1142, -24, 1166]);
@@ -192,10 +192,9 @@ function bw_east_piers(K, P, PL, S) {
   K.B(-152, YS - 0.8, 1176, -104, Y, 1262, 'wood'); S.take(-134, 1232, -122, 1248);
   // Ferry Pier x -64..-48, z 1176..1236, rails along both sides and a ticket kiosk
   K.B(-64, YS - 0.8, 1176, -48, Y, 1236, 'wood'); S.take(-62, 1226, -50, 1234);
-  for (const x of [-63.5, -48.5]) for (let z = 1184; z < 1226 - 0.1; z += 14) K.rail(x, YS + 1.0, z, x, YS + 1.0, z + 14, 'Handrail', true);
+  for (const x of [-63.5, -48.5]) K.rail(x, YS + 1.0, 1184, x, YS + 1.0, 1226, 'Handrail', true);
   K.B(-152, YS, 1261.2, -104, YS + 0.5, 1262, 'wood', { edges: 'ns' }); K.B(-64, YS, 1235.2, -48, YS + 0.5, 1236, 'wood', { edges: 'ns' });   // end curbs
   K.B(-62, YS, 1226, -50, YS + 3.0, 1234, 'building', { color: 0x3f6b8a, tex: 'wood' });
-  K.decorFns.push(D => D.sign('FERRY', -56, YS + 2.4, 1225.9, 5, 0.9, Math.PI, '#f2f4f6', '#a42f2a'));
   for (const z of [1190, 1208]) { K.bench(-62.8, z, -62.0, z + 3); K.bench(-50.0, z + 6, -49.2, z + 9); }
   K.lamp(-63, 1200, 1); K.lamp(-49, 1218, -1);
   // pilings under both decks

@@ -24,7 +24,7 @@ function bw_gardens(K, P, PL) {
 /* ---------- Harbour Road, x -672..-212, the zebra at -510 ---------- */
 function bw_gardens_road(K, P, PL, S) {
   const { YN } = PL;
-  K.street('x', 1020, -672, -212, YN, [-510], { rw: 6, sw: 4 });
+  bw_index_street(K, 'x', 1020, -672, -212, YN, [-510], { rw: 6, sw: 4 });
   K.zebra(-510, 1020, 'z', 8);
   // parked cars in the kerb lanes, clear of the two traffic lanes
   for (const [x, z] of [[-640, 1015.2], [-455, 1024.8], [-395, 1015.2], [-285, 1024.8]]) K.car(x, z, true);
@@ -41,8 +41,7 @@ function bw_gardens_baths(K, P, PL, S) {
     return YN + poolDepth(e, D);
   }, 'min');
   const cope = (ax, az, bx, bz) => K.rails.push({ a: V(ax, YN, az), b: V(bx, YN, bz), kind: 'Coping', coping: true });
-  for (let x = X0; x < X1 - 0.1; x += 6) { cope(x, Z0, x + 6, Z0); cope(x, Z1, x + 6, Z1); }
-  for (let z = Z0; z < Z1 - 0.1; z += 5) { cope(X0, z, X0, z + 5); cope(X1, z, X1, z + 5); }
+  cope(X0, Z0, X1, Z0); cope(X0, Z1, X1, Z1); cope(X0, Z0, X0, Z1); cope(X1, Z0, X1, Z1);   // one coping line a side
   S.take(-650, 1052, -595, 1077);
   // the bath-house wings with the gate gap between them and the name over it
   K.building(-664, 1036, -636, 1046, 1, 0xe8e4da, 'stone');
@@ -171,9 +170,12 @@ function bw_gardens_front(K, P, PL, S) {
     const px = x + 15;
     if (px < -222 && S.free(px - 1.6, 1142.6, px + 1.6, 1144.2)) { K.B(px - 1.6, YS - 0.4, 1142.6, px + 1.6, YS + 0.5, 1144.2, 'ledge', { edges: 'nswe' }); S.take(px - 1.6, 1142.6, px + 1.6, 1144.2); }
   }
+  // the seam with the west part (x -672): a ledge at the boardwalk edge, clear of the outlet's x -700 lane; a garden wall by the Gardens Path
+  K.ledge(-671, 1146, -665, 1146.6, 0.45); S.take(-671, 1146, -665, 1146.6);
+  K.ledge(-578.6, 1056, -578, 1070, 0.45); S.take(-578.6, 1056, -578, 1070);
   // the sea wall: coping on the quay edge (gap at the Long Pier mouth), a bollard every 12 m
   for (const [a, b] of [[-672, -344], [-328, -212]]) { K.B(a, -47, 1176, b, YS + 0.1, 1180, 'plaza', { edges: 's' }); S.take(a, 1176, b, 1180); }
-  for (let x = -666; x < -214; x += 12) if (Math.abs(x + 336) > 9) K.B(x - 0.25, YS + 0.1, 1176.75, x + 0.25, YS + 0.75, 1177.25, 'metal', { edges: 'nswe' });
+  for (let x = -666; x < -214; x += 24) if (Math.abs(x + 336) > 9) K.B(x - 0.25, YS + 0.1, 1176.75, x + 0.25, YS + 0.75, 1177.25, 'metal');
   // spots along the strip
   for (const x of [-640, -520, -410, -280]) P.spot('Boardwalk Bench ' + Math.abs(x), x, YS, 1146, Math.PI, [x - 20, 1138, x + 20, 1166]);
   P.spot('Slappy Strip Middle', -450, YS, 1156, Math.PI / 2, [-570, 1160, -330, 1166]);
@@ -185,7 +187,7 @@ function bw_gardens_pier(K, P, PL, S) {
   const { YS } = PL, Y = YS + 0.02;
   K.B(-342, YS - 0.9, 1176, -330, Y, 1274, 'wood');
   K.B(-358, YS - 0.9, 1274, -308, Y, 1290, 'wood');
-  for (const x of [-341.7, -330.3]) for (let z = 1182; z < 1274 - 0.1; z += 23) K.rail(x, YS + 1.0, z, x, YS + 1.0, z + 23, 'Handrail', true);
+  for (const x of [-341.7, -330.3]) K.rail(x, YS + 1.0, 1182, x, YS + 1.0, 1274, 'Handrail', true);   // one 92 m rail a side
   K.rail(-358, YS + 1.0, 1289.6, -324, YS + 1.0, 1289.6, 'Handrail', true);
   K.rail(-357.6, YS + 1.0, 1275, -357.6, YS + 1.0, 1289.6, 'Handrail', true);
   K.B(-322, YS, 1280, -312, YS + 3.4, 1290, 'building', { color: 0xd4a017, tex: 'wood' });

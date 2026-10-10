@@ -70,12 +70,12 @@ function bw_park(K, P, PL) {
   // Deep End clover, Kidney, Tidepool
   const DE = [[-500, 968, 9.5, 3.4], [-484, 958, 6.5, 2.4], [-484, 980, 6.5, 2.4]];
   K.pool(-511, -476.5, 947.5, 989.5, DE.map(([x, z, r, d]) => [K.poolS.circle(x, z, r), d]), YN, 0.5);
-  bw_park_ring(K, DE.map(([x, z, r]) => [x, z, r]), YN, 1.6);
+  bw_park_ring(K, DE.map(([x, z, r]) => [x, z, r]), YN, 3);
   const KD = [[-454, 962, 6, 2.0], [-446, 975, 7, 2.8]];
   K.pool(-460.5, -438.5, 955.5, 982.5, KD.map(([x, z, r, d]) => [K.poolS.circle(x, z, r), d]), YN, 0.5);
-  bw_park_ring(K, KD.map(([x, z, r]) => [x, z, r]), YN, 1.6);
+  bw_park_ring(K, KD.map(([x, z, r]) => [x, z, r]), YN, 3);
   K.pool(-546, -534, 984, 996, [[K.poolS.circle(-540, 990, 5.5), 1.5]], YN, 0.5);
-  bw_park_ring(K, [[-540, 990, 5.5]], YN, 1.6);
+  bw_park_ring(K, [[-540, 990, 5.5]], YN, 3);
   // Park House and its sign
   K.building(-428, 990, -414, 1002, 1, 0x5c8fb8, 'stone');
   K.decorFns.push(D => D.sign('HARBOUR BOWL', -421, YN + 4.4, 989.9, 10, 1.2, Math.PI, '#f0ece2', '#2e3f5c'));
@@ -89,7 +89,7 @@ function bw_park(K, P, PL) {
       const a = p[i - 1], b = p[i], len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uz = (b[1] - a[1]) / len, nx = -uz, nz = ux;
       const trimA = (i === 2 || i === 4 || i === 6) ? 5 : 5, trimB = i === 7 ? 4 : 5;
       for (const side of [-1, 1]) {
-        const n = Math.max(1, Math.round((len - trimA - trimB) / 3));
+        const n = Math.max(1, Math.round((len - trimA - trimB) / 12));
         for (let k = 0; k < n; k++) {
           const q = [0, 1].map(e => { const t = trimA + (len - trimA - trimB) * (k + e) / n, sv = S.s[i - 1] + t, off = bw_park_lip(S.D(sv));
             return V(a[0] + ux * t + nx * side * off, YN, a[1] + uz * t + nz * side * off); });
@@ -98,7 +98,7 @@ function bw_park(K, P, PL) {
       }
     }
     // the pocket ring round S7, on the far side only
-    { const p6 = p[6], a0 = Math.atan2(L7[1] - p6[1], L7[0] - p6[0]), r = 3 + Math.sqrt(16 - 0.36), n = 16;
+    { const p6 = p[6], a0 = Math.atan2(L7[1] - p6[1], L7[0] - p6[0]), r = 3 + Math.sqrt(16 - 0.36), n = 8;
       for (let k = 0; k < n; k++) { const t0 = a0 - Math.PI / 2 + Math.PI * k / n, t1 = a0 - Math.PI / 2 + Math.PI * (k + 1) / n;
         K.rails.push({ a: V(L7[0] + Math.cos(t0) * r, YN, L7[1] + Math.sin(t0) * r), b: V(L7[0] + Math.cos(t1) * r, YN, L7[1] + Math.sin(t1) * r), kind: 'Coping', coping: true }); } }
   }

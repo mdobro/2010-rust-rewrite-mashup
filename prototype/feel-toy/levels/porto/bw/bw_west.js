@@ -93,11 +93,11 @@ function bw_west_drydock(K, P, PL) {
     K.B(x0 - 0.2, YF - 0.2, 1137.8, x0 + 0.2, YF + 0.55, 1138.2, 'metal', { color: 0x4a4f55 }); K.B(x1 - 0.2, YF - 0.2, 1137.8, x1 + 0.2, YF + 0.55, 1138.2, 'metal', { color: 0x4a4f55 });
     K.rail(x0 + 0.2, YF + 0.5, 1138, x1 - 0.2, YF + 0.5, 1138, 'Chain', false);
   }
-  // mooring chains along the east rim between bollards
+  // mooring chains along the east rim, every other bay between bollards
   const zs = []; for (let z = 1062; z <= 1162; z += 14.3) zs.push(z);
   zs.forEach((z, i) => {
     K.B(-870.2, YN - 0.1, z - 0.25, -869.6, YN + 0.55, z + 0.25, 'metal', { color: 0x4a4f55 });
-    if (i) K.rail(-869.9, YN + 0.5, zs[i - 1] + 0.3, -869.9, YN + 0.5, z - 0.3, 'Chain', false);
+    if (i % 2) K.rail(-869.9, YN + 0.5, zs[i - 1] + 0.3, -869.9, YN + 0.5, z - 0.3, 'Chain', false);
   });
   // a gantry over the gap carries the name
   K.prop(-917.2, YN, 1043.6, -916.6, YN + 4.6, 1044.4, 0x6c7479); K.prop(-907.4, YN, 1043.6, -906.8, YN + 4.6, 1044.4, 0x6c7479);
@@ -156,8 +156,8 @@ function bw_west_yard(K, P, PL) {
 /* ---------- streets: Harbour Road west, Net Loft Lane ---------- */
 function bw_west_streets(K, P, PL) {
   const { YN } = PL;
-  K.street('x', 1020, -968, -730, YN, [-790], { rw: 6, sw: 4 });
-  K.street('z', -790, 944, 1096, YN, [1020], { rw: 5, sw: 3 });
+  bw_index_street(K, 'x', 1020, -968, -730, YN, [-790, -912], { rw: 6, sw: 4 });
+  bw_index_street(K, 'z', -790, 944, 1096, YN, [1020], { rw: 5, sw: 3 });
   // pines on the edge hill behind the Boatyard
   for (const [x, z] of [[-992, 950], [-988, 985], [-994, 1020], [-990, 1060], [-993, 1100], [-989, 1135]]) K.tree(x, z);
   P.spot('Net Loft Corner', -790, YN, 1030, Math.PI, [-800, 1022, -780, 1040]);
@@ -183,7 +183,7 @@ function bw_west_front(K, P, PL) {
   K.B(-972, -48, 1176, -824, YN, 1180, 'garage', { edges: 's' });
   for (let x = -824; x < -784; x += 4) { const y = Q(x + 2, 1178); K.B(x, -48, 1176, x + 4, y, 1180, 'garage', { edges: 's' }); }
   K.B(-784, -48, 1176, -672, YS, 1180, 'garage', { edges: 's' });
-  for (let x = -966; x < -676; x += 12) { if (x > -970 && x < -960) continue; const y = Q(x, 1177); K.B(x - 0.2, y, 1176.8, x + 0.2, y + 0.6, 1177.2, 'metal', { color: 0x3a3d42 }); }
+  for (let x = -966; x < -676; x += 24) { if (x > -970 && x < -960) continue; const y = Q(x, 1177); K.B(x - 0.2, y, 1176.8, x + 0.2, y + 0.6, 1177.2, 'metal', { color: 0x3a3d42 }); }
   // boats moored off the quay (look only)
   K.decorFns.push(D => { const g = new THREE.SphereGeometry(1, 12, 8); const cols = [0xe8e4da, 0x2f5d8a, 0xb23a32, 0xd4a017, 0x3f6b46];
     [[-940, 1196], [-905, 1210], [-860, 1192], [-818, 1224], [-775, 1200], [-735, 1216], [-696, 1194]].forEach(([x, z], i) => {
@@ -240,6 +240,7 @@ function bw_west_filler(K, P, PL) {
   // Quay Road, north and south of the asphalt (the spillway corridor stays open)
   for (let x = -950, i = 0; x < -740; x += 26, i++) if (Math.abs(x + 790) > 12) put(x, i % 2 ? 923.6 : 938.4, true);
   K.construction(-862, 939.2, true);
+  put(-812, 938.4, true, 'kick');                                      // the Net Loft corner: the 'news' slot above isn't skateable
   put(-722, 937.6, true, 'long'); put(-678, 937.6, true, 'long');   // either side of the spillway corridor
   // Boatyard Lane (x -960) and the yard's south lane (z 1010)
   for (let z = 940; z < 1010; z += 24) put(-965.5, z, false);
