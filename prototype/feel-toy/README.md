@@ -315,7 +315,9 @@ either camera with a short shake (*Landing shake*).
   - Gap from the garage to the roof.
   - Grind the courthouse handrail.
   - Hit 40 km/h down the hill.
-  - Land a 5,000-point line that starts in Central Plaza.
+  - Land a 3,500-point line that starts in Central Plaza.
+  - Land a 6,000-point line that starts anywhere downtown (any block, plaza or
+    street). Its beam is on the Central Plaza deck.
 
   Land it and the beam turns green. Downtown has 15. Port City adds six of its
   own: the spillway, the freeway gap, the dry dock, a dirt gap, the reservoir
@@ -332,7 +334,7 @@ either camera with a short shake (*Landing shake*).
     - bluntslide the DIY coping;
     - varial kickflip a Hill Park flight;
     - flip the construction trench;
-    - a 30,000-point line anywhere.
+    - a 15,000-point line that starts anywhere downtown.
   - **Port City adds:**
     - kickflip the spillway;
     - heelflip the freeway gap;

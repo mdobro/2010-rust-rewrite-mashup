@@ -1199,8 +1199,8 @@ function buildDowntown(K) {
     { id: 'bank-ledge', name: 'Bank Plaza Ledges', desc: 'Grind one of the long ledges on the bank deck', at: [-85, G + 1.45, -14], go: [-95, G + 0.9, -18, -Math.PI / 2], kind: 'grind', area: [-95, -15, -75, 15, G + 1.2] },
     { id: 'deck-drop', name: 'Half-Built Drop', desc: 'Drop off the half-built deck with a flip', at: [108, G + 3.6, 86], go: [108, G + 3.6, 100, 0], kind: 'trick', trick: FLIP, from: [100, 86, 117, 106, G + 3.2], to: [90, 60, 120, 86, -1, G + 2.5] },
     { id: 'hill-bomb', name: 'Hill Bomb', desc: 'Hit 40 km/h coming down the knoll', at: [-92, G + 6, 86], go: [-92, G + 6.2, 92, 0], kind: 'speed', speed: 40 / 3.6, area: [-112, 44, -70, 92] },
-    { id: 'plaza-score', name: 'Own Central Plaza', desc: 'Land a 5,000 point line that starts in Central Plaza', at: [-14, G + 1.5, -24], go: [-14, G + 1.5, -24, Math.PI], kind: 'score', pts: 5000, area: [-31, -31, 31, 31] },
-    { id: 'city-score', name: 'Downtown Line', desc: 'Land a 12,000 point line anywhere downtown', at: [0, G, 40], go: [0, G, 38, Math.PI], kind: 'score', pts: 12000, area: [-120, -120, 120, 120] },
+    { id: 'plaza-score', name: 'Own Central Plaza', desc: 'Land a 3,500 point line that starts in Central Plaza', at: [-14, G + 1.5, -24], go: [-14, G + 1.5, -24, Math.PI], kind: 'score', pts: 3500, area: [-31, -31, 31, 31] },
+    { id: 'city-score', name: 'Downtown Line', desc: 'Land a 6,000 point line that starts anywhere downtown: any block, plaza or street', at: [-4, G + 1.5, -14], go: [-4, G + 1.5, -12, Math.PI], kind: 'score', pts: 6000, area: [-120, -120, 120, 120] },
     // the hard ones: one per spot, and very particular about it
     { id: 'garage-kf', hard: true, name: 'Kickflip the Garage Gap', desc: 'Kickflip from the garage deck on to the first roof', at: [-6, G + 7, -108], go: [-16, G + 7, -100, -Math.PI / 2], kind: 'trick', tricks: ['Kickflip'], from: [-23, -118, -4, -66, G + 6.5], to: [-1, -116, 12, -92, G + 5.5] },
     { id: 'plaza-tre', hard: true, name: '360 Flip the Plaza Gap', desc: 'A 360 flip off the plaza deck edge', at: [21, G + 1.5, -8], go: [21, G + 1.5, -20, Math.PI], kind: 'trick', tricks: ['360 Flip'], from: [6.7, -14, 26, -5.8, G + 1.2], to: [6, -5.8, 28, 12, -1, G + 0.4] },
@@ -1211,7 +1211,7 @@ function buildDowntown(K) {
     { id: 'diy-blunt', hard: true, name: 'Bluntslide the DIY Coping', desc: 'Bluntslide (or nose blunt) the quarterpipe coping', at: [108.4, G + 1.6, -20], go: [100, G, -18, -Math.PI / 2], kind: 'grind', rail: 'Coping', grind: 'Blunt', area: [107, -25, 110, 3] },
     { id: 'hill-varial', hard: true, name: 'Varial Kickflip the Hill Stairs', desc: 'Varial kickflip down a flight of the Hill Park stairway', at: [-84, K.hillStairTop, 94], go: [-90, K.hillStairTop + 0.3, 94, -Math.PI / 2], kind: 'trick', tricks: ['Varial Kickflip'], drop: 1.2, from: [-87.5, 91, -66, 97, G + 0.4], to: [-87.5, 90, -55, 98, -1, 7] },
     { id: 'trench-flip', hard: true, name: 'Flip the Trench', desc: 'Off the ply, flip trick over the trench and land beyond it', at: [91.5, G, 66], go: [80, G, 70, -Math.PI / 2], kind: 'trick', trick: FLIP, from: [85, 64, 92, 76, G - 0.2], to: [94.6, 60, 106, 80, G - 0.2, G + 2.5] },
-    { id: 'city-legend', hard: true, name: 'Downtown Legend', desc: 'Land a 30,000 point line anywhere downtown', at: [-20, G, 40], go: [-20, G, 38, Math.PI], kind: 'score', pts: 30000, area: [-120, -120, 120, 120] },
+    { id: 'city-legend', hard: true, name: 'Downtown Legend', desc: 'Land a 15,000 point line that starts anywhere downtown: any block, plaza or street', at: [8, G + 1.5, -14], go: [8, G + 1.5, -12, Math.PI], kind: 'score', pts: 15000, area: [-120, -120, 120, 120] },
   ];
   // other skaters in town: two cruising the streets the opposite way round, two sessioning spots
   // traffic both ways round the ring, keeping right; people round the middle block and round the outside of the ring (over the crossings)
