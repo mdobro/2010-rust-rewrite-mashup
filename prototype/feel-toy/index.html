@@ -3364,8 +3364,18 @@ function flickFeed(f, nx, ny, now) {
   f.active = m > 0.05; f.lastM = m;
   if (f.needCenter) { if (m < 0.35) f.needCenter = false; else return; }
   if (now < f.settleUntil) return;
+  // holding a manual (stick halfway down, or up for a nose manual) is already the wind-up: a flick from
+  // there across the middle, or straight out to a side, flips out of it without pulling right down first
+  if (m > 0.05) f.lastA = angOf(nx, ny);
+  if (S.manual && S.grounded) manualWind(f, now);
   if (m >= T.flickRim) {
     const raw = angOf(nx, ny);
+    if (!f.rim.length && !f.windup && f.manWind && (S.manual || S.bankT > 0) && now - f.manLeftT <= T.flickTime * 1000) {
+      const w = f.manWind; f.manWind = null;
+      const name = nameFlick(w, raw);                               // pulling on down from the manual isn't a flick: that's the crouch
+      if (name) { flickFire(f, name, now, now - f.manLeftT); return; }
+    }
+    f.manWind = null;
     if (!f.rim.length && f.windup) {                               // arriving after crossing the middle
       const w = f.windup; f.windup = null;
       if (now - f.leftT <= T.flickTime * 1000) {
@@ -3392,10 +3402,17 @@ function flickRelease(f, now) {
   f.lastM = 0;
   if (f.pending) flickFire(f, f.pending.name, now, 60);
   if (f.loaded) { if (T.holdReleasePops) { FL.popNow = true; f.loaded = false; FL.ollie = false; } else flickCancel(f); }
-  f.rim = []; f.windup = null; f.pending = null; f.active = false; f.onLoaded && f.onLoaded(false);
+  f.rim = []; f.windup = null; f.pending = null; f.active = false; f.manWind = null; f.onLoaded && f.onLoaded(false);
+}
+// while a manual is held, the stick's spot (halfway down, or up) stands in for the pull of a flick
+function manualWind(f, now) {
+  if (!(f.lastM >= T.manualMin * 0.8 && f.lastM < T.flickRim) || f.lastA == null) return;
+  const sn = Math.sin(f.lastA / DEGS); if (Math.abs(sn) <= 0.7) return;
+  f.manWind = [{ a: f.lastA, t: now, sin: Math.sign(sn), m: f.lastM }]; f.manLeftT = now;
 }
 function flickTick(f, now) {
   if (f.rim.length) f.heldT = now;
+  if (S.manual && S.grounded) manualWind(f, now);                     // a thumb held still in the manual sends no events
   // resting in the middle (or let go) for a moment arms late flips
   if ((f.lastM || 0) < 0.3) { if (f.neutralT == null) f.neutralT = now; else if (now - f.neutralT >= T.lateArm * 1000) f.airArmed = true; } else f.neutralT = null;
   // a sweep that settled on a side is a shuvit
