@@ -2160,7 +2160,8 @@ function collideBoxes(p, v) {
   for (const b of near(p.x, p.z)) {
     // where a ramp's top meets a deck or a curb, a fast rider is a frame behind the slope: let them over
     const tol = v.y > 0.5 ? 0.2 : b.mat === 'sidewalk' ? 0.1 : 0.08;
-    if (b.isHubba || p.y >= b.max[1] - tol || p.y + 1.6 < b.min[1]) continue;
+    // and like a sloped ledge's low side, anything under 20 cm (a sidewalk, a pad) you just roll up on to
+    if (b.isHubba || p.y >= b.max[1] - Math.max(tol, 0.2) || p.y + 1.6 < b.min[1]) continue;
     const x0 = b.min[0] - r, x1 = b.max[0] + r, z0 = b.min[2] - r, z1 = b.max[2] + r;
     if (p.x <= x0 || p.x >= x1 || p.z <= z0 || p.z >= z1) continue;
     const pens = [[p.x - x0, -1, 0], [x1 - p.x, 1, 0], [p.z - z0, 0, -1], [z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0]);

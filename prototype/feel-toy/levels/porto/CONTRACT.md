@@ -221,8 +221,9 @@ Look at `buildDowntown` in `levels/dt.js` (lines ~389–435) for working example
 
 * The skater: pushes to 8.5 m/s, an ollie clears about 0.9 m, gravity is 14. Rolling down a 6 %
   street settles at about 16 m/s (58 km/h); the 13 % slopes of the Heights at about 21 m/s.
-  Anything **up to 0.3 m tall is stepped up on its own** (curbs, pads), so keep sidewalk curbs at
-  0.15 m and you never get stuck on one. Ledges to ollie on to: 0.4–0.6 m. Handrails: 0.8–1 m over
+  Anything **up to 0.2 m above the rider is rolled up on to** (sidewalks, low pads, boxes and
+  sloped ledges alike), so keep sidewalk curbs at 0.15 m and you never get stuck on one. From
+  0.2 m up you have to ollie: a 0.3 m step catches you. Ledges to ollie on to: 0.4–0.6 m. Handrails: 0.8–1 m over
   the nosing.
 * **Keep it rolling downhill.** Streets that run downhill at 3–6 %; flat only where you mean it
   (plazas, landings, the harbour). Cross streets flatten out briefly ("benched" intersections).
