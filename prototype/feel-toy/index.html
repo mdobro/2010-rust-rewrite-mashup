@@ -2888,7 +2888,7 @@ const SURF = { sidewalk: 'smooth', plaza: 'smooth', marble: 'smooth', ledge: 'sm
 function surfaceUnder() {
   const p = S.pos;
   for (const b of near(p.x, p.z)) if (!b.isHubba && p.x >= b.min[0] && p.x <= b.max[0] && p.z >= b.min[2] && p.z <= b.max[2] && Math.abs(b.max[1] - p.y) < 0.06) return SURF[b.mat] || 'smooth';
-  const h = hubbaAt(p.x, p.z); if (h && Math.abs(hubbaTopAt(h, hubbaLocal(h, p.x, p.z)[0]) - p.y) < 0.08) return h.color === 0xc49a5c ? 'wood' : 'smooth';
+  const hb = hubbaAt(p.x, p.z); if (hb && Math.abs(hubbaTopAt(hb.h, hb.u) - p.y) < 0.08) return hb.h.color === 0xc49a5c ? 'wood' : 'smooth';
   return LV.surface ? LV.surface(p.x, p.z) : LV.drag && LV.drag(p.x, p.z) > 0 ? 'rough' : 'smooth';
 }
 const METAL_RAILS = new Set(['Rail', 'Handrail', 'Pipe', 'Coping']);
@@ -3546,7 +3546,12 @@ $('tb-replay').addEventListener('click', startReplay);
 const DT = 1 / 120;
 let acc = 0, last = performance.now(), simTime = 0;
 respawn();
+let frameErr = 0;
 function frame(now) {
+  requestAnimationFrame(frame);                                       // first, so one bad frame can never stop the game
+  try { frameBody(now); } catch (e) { if (frameErr++ < 3) console.error(e); }
+}
+function frameBody(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (touch.active) touchTick(dt, now);
   sampleInput();
@@ -3554,7 +3559,7 @@ function frame(now) {
   if (labelT > 0 && !touch.active) { labelT -= dt; if (labelT <= 0) stickLabel.style.opacity = 0; }
   if (EDGE_IN.panel) { EDGE_IN.panel = false; togglePanel(); }
   if (EDGE_IN.replay) { EDGE_IN.replay = false; RP.active ? stopReplay() : startReplay(); }
-  if (RP.active) { replayTick(dt); chalTick(dt, simTime); renderer.render(scene, camera); requestAnimationFrame(frame); return; }
+  if (RP.active) { replayTick(dt); chalTick(dt, simTime); renderer.render(scene, camera); return; }
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime);
@@ -3564,7 +3569,6 @@ function frame(now) {
   chalTick(dt, simTime);
   updateHud(dt);
   renderer.render(scene, camera);
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 window.__toy = { RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
