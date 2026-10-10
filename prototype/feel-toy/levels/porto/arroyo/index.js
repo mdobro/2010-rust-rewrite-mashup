@@ -12,6 +12,7 @@ function porto_arroyo(K, P) {
   if (typeof arroyo_lower === 'function') arroyo_lower(K, P, PL);
   if (typeof arroyo_west === 'function') arroyo_west(K, P, PL);
   if (typeof arroyo_east === 'function') arroyo_east(K, P, PL);
+  arroyo_budget_small(K); arroyo_budget_merge(K); arroyo_budget_mergeSlabs(K); arroyo_budget_mergeRails(K);
   arroyo_index_lines(P, PL);
   arroyo_index_life(P, PL);
   arroyo_index_landmarks(P, PL);
@@ -39,12 +40,18 @@ function arroyo_index_lines(P, PL) {
   // the tributary down to the confluence
   P.line('Planter Run', [[-420, -40], [-480, -40], [-560, -40], [-640, -40], [-680, -40], [-698, -40]], 'push', true);
   // the doc's named lines (section 5)
-  P.line('The Full Run', [[-700, -228], [-700, -190], [-716, -130], [-716, -30], [-702, 0], [-700, 40], [-712, 60], [-712, 98], [-704, 106], [-704, 216],
-    [-714, 240], [-700, 262], [-686, 282], [-700, 300], [-714, 322], [-700, 360], [-684, 382], [-682, 468], [-686, 500], [-686, 545], [-694, 560],
-    [-700, 580], [-712, 592], [-712, 604], [-700, 622], [-694, 656], [-700, 700], [-698, 742], [-704, 788], [-700, 860], [-700, 905]], 'bomb', true);
-  P.line('Viaduct Line', [[-780, 160], [-736, 160], [-664, 160], [-656, 160], [-656, 140], [-690, 126], [-700, 116]], 'push', true);
-  P.line('Footbridge Line', [[-420, 520], [-664, 520], [-686, 520], [-686, 545], [-700, 590], [-700, 612], [-694, 660], [-694, 700]], 'push', true);
-  P.line('Yard Line', [[-910, -195], [-910, -155], [-924, -120], [-924, 75], [-880, 30], [-800, 0], [-783, -20], [-783, 40], [-760, 80], [-744, 100], [-720, 108], [-714, 108]], 'push', true);
+  // The Full Run weaves the floor and crosses the trickle slot only over grates, square enough to stay on the 3 m grate
+  const g = (z, we) => we ? [[-707, z + 1.5 - 3.5], [-693, z + 1.5 + 3.5]] : [[-693, z + 1.5 - 3.5], [-707, z + 1.5 + 3.5]];
+  P.line('The Full Run', [[-700, -228], [-700, -190], [-716, -130], [-716, -30], [-708, 0], [-708, 40], [-708, 60], [-708, 98], [-704, 106], [-704, 140], [-708, 148], [-708, 172], [-702, 180], [-702, 192], [-704, 216],
+    [-712, 232], ...g(248, true), [-686, 282], [-690, 296], ...g(312, false), [-712, 328], ...g(344, true), [-681, 366], [-681, 376], [-681, 466], [-684, 480],
+    [-692, 500], [-692, 548], ...g(568, false), [-712, 584], [-712, 604], [-712, 628], ...g(640, true), [-692, 660], [-692, 756], ...g(768, false),
+    [-710, 790], [-710, 820], ...g(832, true), [-694, 846], [-696, 860], [-700, 905]], 'bomb', true);
+  // the Viaduct Line drops in through the Levee Path guardrail's gap at z 138..144
+  P.line('Viaduct Line', [[-780, 160], [-736, 160], [-664, 160], [-656, 160], [-656, 150], [-664, 141], [-690, 126], [-700, 116]], 'push', true);
+  // down the stair tower, then the east side of the floor under the water mains (the sump is west of x -696)
+  P.line('Footbridge Line', [[-420, 520], [-664, 520], [-686, 520], [-686, 545], [-692, 560], [-692, 640], [-694, 660], [-694, 700]], 'push', true);
+  // the Yard Line rolls off the boxcars and east to the DIY; the Freight Platform (its own spot) is a branch off it; in over the levee through the guardrail gap at z 108..114
+  P.line('Yard Line', [[-910, -195], [-910, -155], [-924, -120], [-924, 75], [-924, 96], [-890, 116], [-800, 116], [-750, 112], [-736, 111], [-720, 110], [-714, 108]], 'push', true);
 }
 /* traffic on the two road loops, peds, and the session skaters (spots the parts build at the doc's coordinates) */
 function arroyo_index_life(P, PL) {
@@ -61,6 +68,8 @@ function arroyo_index_life(P, PL) {
 /* far silhouettes (the parts model the real thing close up) */
 function arroyo_index_landmarks(P, PL) {
   P.landmark({ at: [-905, portoBaseH(-905, 705), 705], near: 140, parts: [{ shape: 'cyl', at: [0, 32, 0], size: [2.5, 64, 2.5], color: 0x8a5a44 }] });
-  P.landmark({ at: [-532, 0, 62], near: 140, parts: [{ shape: 'cyl', at: [0, 13, 0], size: [22, 26, 22], color: 0x6f7378 }] });
+  // the gasholder is an empty frame (the bell is long gone): six of its twelve columns and its two ring girders
+  const gas = [0, 1, 2, 3, 4, 5].map(k => { const a = (15 + 60 * k) * Math.PI / 180; return { shape: 'cyl', at: [Math.cos(a) * 22, 13, Math.sin(a) * 22], size: [0.8, 26, 0.8], color: 0x7a5a45 }; });
+  P.landmark({ at: [-532, 0, 62], near: 140, parts: [...gas, { shape: 'cyl', at: [0, 13, 0], size: [44.6, 0.7, 44.6], color: 0x6b5545 }, { shape: 'cyl', at: [0, 26, 0], size: [44.6, 0.6, 44.6], color: 0x6b5545 }] });
   P.landmark({ at: [-550, 0, -175], near: 140, parts: [{ shape: 'box', at: [0, 7, 0], size: [100, 14, 50], color: 0xa9a49a }] });
 }

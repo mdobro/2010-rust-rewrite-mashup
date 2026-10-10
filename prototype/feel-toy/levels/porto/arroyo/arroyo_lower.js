@@ -90,7 +90,7 @@ function arroyo_lower(K, P, PL) {
     let lo = 361; const cuts = [...zones, [892, 892]];
     for (const [a, b] of cuts) {
       for (let z = lo; z < a - 3; z += 34) {
-        const e = Math.min(z + 28, a - 0.5), n = Math.ceil((e - z) / 12);
+        const e = Math.min(z + 28, a - 0.5); let n = 1; while (n < 4 && [...Array(n).keys()].some(i => { const z0 = z + (e - z) * i / n, z1 = z + (e - z) * (i + 1) / n; return Math.abs(B((z0 + z1) / 2) - (B(z0) + B(z1)) / 2) > 0.03; })) n++;   // as few chords as hug the bank top to 3 cm
         for (let i = 0; i < n; i++) { const z0 = z + (e - z) * i / n, z1 = z + (e - z) * (i + 1) / n; K.rail(x, B(z0) + 0.9, z0, x, B(z1) + 0.9, z1, 'Rail', true); }
         if (x < -700 && e - z > 10) K.prop(x - 0.1, B((z + e) / 2) + 0.9, z, x + 0.1, B((z + e) / 2) + 2.4, e, 0x8a9096);   // chain-link above it
       }

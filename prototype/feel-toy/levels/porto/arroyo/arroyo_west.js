@@ -105,9 +105,9 @@ function arroyo_west_streets(K, P, PL) {
   K.building(-830, 172, -812, 196, 2, 0x8a6a4a, 'brick');
   P.shop({ name: 'Railyard Boardworks', sign: [-811.96, 4.0, 184, Math.PI / 2, 7], awning: [-812, 178, -810.4, 190, 2.35, 'x'],
     zone: [-811.8, 180, -808.6, 188], door: [-811.8, 0.15, 184] });
-  P.travel('Railyard Boardworks', -806, 0.15, 184, -Math.PI / 2, 'spot');
+  P.travel('Railyard Boardworks', -806, 0.15, 184, Math.PI / 2, 'spot');
   K.bikeRack(-809, 174.5, false); K.trashCan(-808.8, 192); K.newsBoxes(-809.2, 196.6, false, 2);
-  P.spot('Railyard Boardworks', -806, 0.15, 184, -Math.PI / 2, [-814, 168, -792, 200]);
+  P.spot('Railyard Boardworks', -806, 0.15, 184, Math.PI / 2, [-814, 168, -792, 200]);
   // the units along Mill Street's west frontage, z 228..534
   const HC = [0xa3856b, 0x8d9a8f, 0xb59a7a, 0x8b8f96, 0x9b7a62, 0xa8a08a];
   [[228, 256], [270, 302], [316, 346], [372, 404], [430, 462], [486, 534]].forEach(([z0, z1], i) => K.building(-832, z0, -814, z1, 2, HC[i], i % 2 ? 'stone' : 'brick'));
@@ -118,14 +118,21 @@ function arroyo_west_yard(K, P, PL) {
   const T = K.terrainH;
   /* the six tracks: two rails each, in 10 m pieces over the hump and long pieces on the flat; cut where stock stands */
   const cut = { '-924': [[-62, 72]], '-896': [[-62, 18], [158, 192]], '-952': [[-82, 28]], '-882': [[44, 108]], '-910': [[158, 192]], '-938': [] };
+  const drawn = [];
   for (const tx of PL.tracks) for (const rx of [tx - 0.75, tx + 0.75]) {
-    const zs = []; for (let z = -198; z < -100; z += 14) zs.push(z); for (let z = -100; z < 198; z += 75) zs.push(z); zs.push(198);
-    for (let i = 0; i + 1 < zs.length; i++) {
-      const a = zs[i], b = zs[i + 1];
-      if ((cut[tx] || []).some(([c0, c1]) => b > c0 && a < c1)) continue;
-      K.rail(rx, T(rx, a) + 0.15, a, rx, T(rx, b) + 0.15, b, 'Rail', false);
+    // runs between the cuts, each in as few chords as stay within 12 cm of the ground (the hump bends, the flat doesn't)
+    const runs = []; let lo = -198; for (const [c0, c1] of [...(cut[tx] || [])].sort((p, q) => p[0] - q[0])) { if (c0 > lo) runs.push([lo, c0]); lo = Math.max(lo, c1); } if (lo < 198) runs.push([lo, 198]);
+    const fits = (a, b) => { for (let z = a + 1; z < b; z += 1) if (Math.abs(T(rx, z) - (T(rx, a) + (T(rx, b) - T(rx, a)) * (z - a) / (b - a))) > 0.12) return false; return true; };
+    for (const [r0, r1] of runs) for (let a = r0; a < r1 - 0.01;) {
+      let b = r1; while (b - a > 4 && !fits(a, b)) b = Math.max(a + 4, b - 2);
+      let lift = 0; for (let z = a + 1; z < b; z += 1) lift = Math.max(lift, T(rx, z) - (T(rx, a) + (T(rx, b) - T(rx, a)) * (z - a) / (b - a)));   // over a crest the chord is raised to clear it
+      if (rx < tx) K.rail(rx, T(rx, a) + 0.15 + lift, a, rx, T(rx, b) + 0.15 + lift, b, 'Rail', false);   // the west rail of each track grinds
+      else drawn.push([rx, T(rx, a) + 0.12 + lift, a, T(rx, b) + 0.12 + lift, b]);                            // the east one is drawn only (grind-line budget)
+      a = b;
     }
   }
+  K.decorFns.push(D => { const cyl = new THREE.CylinderGeometry(0.035, 0.035, 1, 6);
+    for (const [x, ya, za, yb, zb] of drawn) { const L = Math.hypot(yb - ya, zb - za); D.add(cyl, 0x9aa0a6, [x, (ya + yb) / 2, (za + zb) / 2], [Math.acos((yb - ya) / L), 0, 0], [1, L, 1], { metalness: 0.6, roughness: 0.4 }); } });
   for (const tx of PL.tracks) K.B(tx - 1.2, T(tx, 200) - 0.3, 200, tx + 1.2, T(tx, 200) + 1.0, 201.2, 'metal', { color: 0x6b4a32 });   // buffer stops
   /* Boxcar Run, track -924 */
   const cars = [-36, -19, -2, 15, 32], RUST = 0x8a4a32, GREEN = 0x4f6a52;
@@ -147,7 +154,7 @@ function arroyo_west_yard(K, P, PL) {
   K.decorFns.push(D => { const g = new THREE.CylinderGeometry(1.4, 1.4, 14, 14); [67, 85].forEach(zc => D.add(g, 0x3d4247, [-881.9, T(-882, zc) + 1.4, zc], [Math.PI / 2, 0, 0], [1, 1, 1], { metalness: 0.4, roughness: 0.6 })); });
   /* the turntable: a 1.6 m bowl with its coping ring (K.fountainBowl) and a pivot block on the floor */
   K.pool(-912, -888, 163, 187, [[K.poolS.circle(-900, 175, 11), 1.6]], 0, 0.5);
-  for (let i = 0; i < 24; i++) { const a0 = i / 24 * Math.PI * 2, a1 = (i + 1) / 24 * Math.PI * 2;
+  for (let i = 0; i < 20; i++) { const a0 = i / 20 * Math.PI * 2, a1 = (i + 1) / 20 * Math.PI * 2;
     K.rails.push({ a: V(-900 + Math.cos(a0) * 11, 0, 175 + Math.sin(a0) * 11), b: V(-900 + Math.cos(a1) * 11, 0, 175 + Math.sin(a1) * 11), kind: 'Coping', coping: true }); }
   K.B(-901, -1.6, 174, -899, -1.0, 176, 'metal', { edges: 'nswe', color: 0x55504a });
   /* the engine shed (x -975..-962, z -100..100), roller doors on its east face; yard huts */
@@ -175,6 +182,9 @@ function arroyo_west_yard(K, P, PL) {
   /* a few more in the north and the south of the yard so the tracks are not the only thing there */
   K.pad(-858, -100, -850, -97.6, 0.2); K.Bg(-836, -70, -830, -69, 0.45, 'ledge', { edges: 'ns' }); K.jersey(-846, -20, -840, -19.5);
   K.pad(-858, 70, -850, 72.4, 0.2); K.Bg(-834, 90, -828, 91.2, 0.45, 'ledge', { edges: 'ns' }); K.Bg(-852, 140, -849, 143, 0.55, 'ledge', { edges: 'ns' });
+  /* the yard hut pocket, where the Yard Line turns east for the DIY: a pad, a ledge and a jersey off the line's north side */
+  K.pad(-864, 121, -858, 123.4, 0.2); K.Bg(-836, 121, -830, 122.2, 0.45, 'ledge', { edges: 'ns' }); K.jersey(-822, 121.5, -816, 122);
+  P.spot('Yard Hut', -836, 0, 118, Math.PI / 2, [-870, 110, -812, 132]);
   K.lamp(-868, -120, 1); K.lamp(-868, 0, 1); K.lamp(-868, 120, 1); K.lamp(-818, -30, -1); K.lamp(-818, 60, -1);
 }
 

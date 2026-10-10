@@ -87,9 +87,9 @@ function arroyo_east(K, P, PL) {
   for (const x of [-538, -532]) hub(x, 1.0, -142, x, 0.02, -134, 3, { noRails: true, color: 0xc4bfb3 });   // the two banks off the terrace
   K.bench(-600, -110.6, -594, -109.8); K.bench(-548, -86.6, -542, -85.8);
   K.ledge(-586, -70.6, -570, -70, 0.45, 'plaza');
-  { const fx = -520, fz = -100;   // the drained fountain: a bowl with a 24-piece coping
+  { const fx = -520, fz = -100;   // the drained fountain: a bowl with an 18-piece coping
     K.pool(fx - 8, fx + 8, fz - 8, fz + 8, [[K.poolS.circle(fx, fz, 7), 1.6]], 0, 0.25);
-    for (let i = 0; i < 24; i++) { const a0 = i / 24 * PI * 2, a1 = (i + 1) / 24 * PI * 2;
+    for (let i = 0; i < 18; i++) { const a0 = i / 18 * PI * 2, a1 = (i + 1) / 18 * PI * 2;
       K.rails.push({ a: V(fx + Math.cos(a0) * 7, 0, fz + Math.sin(a0) * 7), b: V(fx + Math.cos(a1) * 7, 0, fz + Math.sin(a1) * 7), kind: 'Coping', coping: true }); } }
   K.building(-506, -146, -490, -124, 2, 0xb5ad9d, 'brick');                                     // Water Board annex
   for (const [x, z] of [[-606, -140], [-606, -108], [-606, -76], [-494, -100], [-494, -72], [-548, -64]]) K.tree(x, z);
