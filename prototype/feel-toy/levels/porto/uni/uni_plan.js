@@ -8,8 +8,8 @@ function uni_plan() {
   const c01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
   const mix = (a, b, t) => a + (b - a) * t;
   const boxD = (x, z, r) => Math.hypot(Math.max(r[0] - x, 0, x - r[1]), Math.max(r[2] - z, 0, z - r[3]));
-  // the lowland: 0 at the west / north / south borders, 2.0 in the middle
-  const low = (x, z) => 2 * Math.min(ramp(x, 380, 500, 10), 1 - ramp(z, 40, 200, 10), ramp(z, -200, -140, 10));
+  // the lowland: 0 at the north border and under Gown Street (x < 408) and Mill Lane (z > 192), so both streets are flat across; 2.0 in the middle
+  const low = (x, z) => 2 * Math.min(ramp(x, 408, 500, 4), 1 - ramp(z, 40, 188, 4), ramp(z, -200, -140, 10));
   const BENCH = [[512, 624, 40, 108, 1.8], [736, 904, 56, 144, 1.25]];   // the Commons, Alumni Field
   const T = z => U * ramp(z, -190, -130, 10);            // the north face: 0 at z -200, 10 % from -180 to -140, U from -120
   const A = x => U * ramp(x, 404, 504, 8);               // University Avenue: 0 at x 396, 6 % from 412 to 496, U at 512
@@ -62,6 +62,8 @@ function uni_plan() {
     // 6. Alumni Field
     if (inB(x, z, 736, 904, 56, 144)) {
       const d = ovalD(x, z); if (d <= 34) return 'pitch'; if (d <= 42) return 'track'; return 'lawn'; }
+    // the Bike Shed DIY's slab (a concrete yard, not grass)
+    if (inB(x, z, 914, 968, 152, 191)) return 'walk';
     // 7. courts
     if (inB(x, z, 680, 728, 150, 190)) return 'court';
     // Brow Walk, then 8. lawns
@@ -90,4 +92,22 @@ function uni_plan() {
     OVAL: { cx0: 780, cx1: 860, cz: 100, r: 34 },
     CAMPANILE: { x: 810, z: 23 },
   };
+}
+/* lean street furniture (the grind-line budget): planters and pads grind on their two long edges only, picnic tables on the table top,
+   wheel stops not at all (a 0.16 m block you roll over). Same arguments as the K versions, plus K first. */
+function uni_planter(K, x0, z0, x1, z1, hgt = 0.55) {
+  return K.Bg(x0, z0, x1, z1, hgt, 'ledge', { edges: Math.abs(x1 - x0) >= Math.abs(z1 - z0) ? 'ns' : 'ew' });
+}
+function uni_pad(K, x0, z0, x1, z1, hgt = 0.18) {
+  return K.Bg(x0, z0, x1, z1, hgt, 'pad', { edges: Math.abs(x1 - x0) >= Math.abs(z1 - z0) ? 'ns' : 'ew' });
+}
+function uni_picnic(K, x, z, alongX = true) {
+  const hx = alongX ? 1.0 : 0.4, hz = alongX ? 0.4 : 1.0;
+  K.Bg(x - hx, z - hz, x + hx, z + hz, 0.76, 'wood', { edges: alongX ? 'ns' : 'ew' });
+  for (const s of [-1, 1]) { const sx = alongX ? x : x + s * 0.75, sz = alongX ? z + s * 0.75 : z, ax = alongX ? 1.0 : 0.14, az = alongX ? 0.14 : 1.0;
+    K.Bg(sx - ax, sz - az, sx + ax, sz + az, 0.45, 'wood', { edges: '' }); }
+}
+function uni_stop(K, x, z, alongX = true) {
+  const hx = alongX ? 0.9 : 0.075, hz = alongX ? 0.075 : 0.9;
+  return K.Bg(x - hx, z - hz, x + hx, z + hz, 0.16, 'ledge', { edges: '' });
 }

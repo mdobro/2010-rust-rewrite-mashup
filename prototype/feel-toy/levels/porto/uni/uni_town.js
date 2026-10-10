@@ -60,16 +60,16 @@ function uni_town_frontage(K, P, keep) {
   K.building(444, -112, 484, -72, 2, 0xa86b55, 'brick');
   const gk = T(464, -70);
   K.prop(446, gk + 2.4, -73, 482, gk + 2.7, -70, 0x9a3f36);
-  K.picnic(452, -67.6, true); K.picnic(462, -67.6, true); K.picnic(472, -67.6, true);
+  uni_picnic(K, 452, -67.6, true); uni_picnic(K, 462, -67.6, true); uni_picnic(K, 472, -67.6, true);
 }
 
 /* S17 the Car Park and the Garage. */
 function uni_town_carpark(K, P, keep) {
   const T = (x, z) => K.terrainH(x, z);
   const deck = K.garage(420, -190, 470, -150, 5, 1);
-  for (let z = -196; z < -124; z += 6.4) { K.parkingBlock(477, z, false); K.parkingBlock(486, z, false); }   // a wheel stop every other stall (box budget)
-  for (let z = -146; z < -124; z += 6.4) { K.parkingBlock(411, z, false); K.parkingBlock(418, z, false); }
-  K.planter(440, -140, 470, -137, 0.5); K.planter(440, -128, 470, -125, 0.5);
+  for (let z = -196; z < -124; z += 6.4) { uni_stop(K, 477, z, false); uni_stop(K, 486, z, false); }   // a wheel stop every other stall (box budget)
+  for (let z = -146; z < -124; z += 6.4) { uni_stop(K, 411, z, false); uni_stop(K, 418, z, false); }
+  uni_planter(K, 440, -140, 470, -137, 0.5); uni_planter(K, 440, -128, 470, -125, 0.5);
   K.rail(442, T(442, -132) + 0.5, -132, 468, T(468, -132) + 0.5, -132, 'Rail', true);   // cart rail between the islands
   for (const k of [2, 5, 6, 11, 15, 19]) K.car(480, -196 + 3.2 * k + 1.6, true);
   P.tape(466, -154, deck);
@@ -81,9 +81,9 @@ function uni_town_carpark(K, P, keep) {
 function uni_town_yard(K, P, keep) {
   const T = (x, z) => K.terrainH(x, z);
   K.ledge(452, -60, 476, -59.4); K.ledge(452, -32.6, 476, -32);
-  const pad = K.pad(456, -50, 470, -42, 0.2);    // the manual pad sits straight ahead of the Thirteen's roll-away: a ply ramp on its east end rolls you on
+  const pad = uni_pad(K, 456, -50, 470, -42, 0.2);    // the manual pad sits straight ahead of the Thirteen's roll-away: a ply ramp on its east end rolls you on
   K.hubbas.push({ a: V(470, pad.max[1], -46), b: V(472.8, T(472.8, -46) + 0.02, -46), w: 8, noRails: true, color: 0xc49a5c });
-  K.picnic(480, -36, true); K.picnic(480, -58, true); K.bikeRack(446, -30, true);
+  uni_picnic(K, 480, -36, true); uni_picnic(K, 480, -58, true); K.bikeRack(446, -30, true);
   P.spot('Thirteen Yard', 486, T(486, -44), -44, Math.PI / 2, [440, -64, 495.5, -28]);
   keep.push([440, -66, 496, -26]);
 }
@@ -99,7 +99,7 @@ function uni_town_square(K, P, keep) {
     D.add(new THREE.SphereGeometry(0.45, 8, 6), 0x6b7a5e, [470, y + 2.35, 68]);
   });
   for (const z of [60, 76]) for (const x0 of [444, 454, 486]) K.bench(x0, z, x0 + 6, z + 0.6);
-  for (const [x, z] of [[441, 37], [490.5, 37], [441, 94.5], [490.5, 94.5]]) K.planter(x, z, x + 4.5, z + 4.5, 0.55);
+  for (const [x, z] of [[441, 37], [490.5, 37], [441, 94.5], [490.5, 94.5]]) uni_planter(K, x, z, x + 4.5, z + 4.5, 0.55);
   for (const [x, z] of [[441.5, 52], [441.5, 84], [457, 40], [457, 97], [466, 48], [466, 90]]) K.tree(x, z);
   P.spot('Scholars Square', 470, T(470, 42), 42, Math.PI, [440, 36, 495.5, 100]);
   keep.push([440, 36, 496, 100]);
@@ -120,7 +120,7 @@ function uni_town_books(K, P, keep) {
   K.prop(452, gL + 3.2, 157.5, 492, gL + 3.6, 160, 0xd9c27a);
   K.decorFns.push(D => D.sign('THE LYCEUM', 472, gL + 5.2, 159.95, 14, 1.8, Math.PI, '#f3e6b8', '#5a2f2a'));
   // the alley from Gown Street to the Bookstacks lawn (z 100..108): ledges and a manual pad on its edges, the middle stays open
-  K.ledge(410, 100.4, 424, 101); K.pad(428, 106, 438, 107.8, 0.2); K.planter(441, 106, 445, 108, 0.5);
+  K.ledge(410, 100.4, 424, 101); uni_pad(K, 428, 106, 438, 107.8, 0.2); uni_planter(K, 441, 106, 445, 108, 0.5);
   keep.push([408, 99, 446, 109]);
 }
 
@@ -131,12 +131,12 @@ function uni_town_filler(K, P, keep) {
   // Gown Street, east sidewalk (x 403..407): a different small thing every ~24 m
   const X = 405.2;
   const east = {
-    strip: z => { K.strip(X, z - 7, X, z + 7, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 }); hold(X - 1, z - 7, X + 1, z + 7); },
+    strip: z => { K.strip(X, z - 7, X, z + 7, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 }); hold(X - 1, z - 7, X + 1, z + 7); },
     bench: z => { K.bench(X - 0.3, z - 1.8, X + 0.3, z + 1.8); hold(X - 1, z - 2, X + 1, z + 2); },
     rack: z => { K.bikeRack(X, z - 1.5, false); K.newsBoxes(X, z + 1.8, false, 2); K.trashCan(X + 1.2, z - 3); hold(X - 1.5, z - 4, X + 1.5, z + 3); },
-    planter: z => { K.planter(X - 1, z - 1.5, X + 1, z + 1.5, 0.5); hold(X - 1, z - 1.5, X + 1, z + 1.5); },
-    pad: z => { K.pad(X - 1.2, z - 4, X + 1.2, z + 4, 0.18); hold(X - 1.2, z - 4, X + 1.2, z + 4); },
-    hydrant: z => { K.hydrant(X + 1.2, z); K.planter(X - 1, z + 2, X + 0.6, z + 5, 0.45); hold(X - 1, z - 1, X + 1.5, z + 5); },
+    planter: z => { uni_planter(K, X - 1, z - 1.5, X + 1, z + 1.5, 0.5); hold(X - 1, z - 1.5, X + 1, z + 1.5); },
+    pad: z => { uni_pad(K, X - 1.2, z - 4, X + 1.2, z + 4, 0.18); hold(X - 1.2, z - 4, X + 1.2, z + 4); },
+    hydrant: z => { K.hydrant(X + 1.2, z); uni_planter(K, X - 1, z + 2, X + 0.6, z + 5, 0.45); hold(X - 1, z - 1, X + 1.5, z + 5); },
     works: z => { K.construction(X, z, false); hold(X - 2, z - 6, X + 2, z + 6); },
   };
   for (const [z, t] of [[-200, 'strip'], [-176, 'bench'], [-152, 'rack'], [-128, 'works'], [-104, 'planter'], [-85, 'strip'], [-52, 'pad'], [-34, 'hydrant'],
@@ -150,29 +150,32 @@ function uni_town_filler(K, P, keep) {
   // Gown Street, west side: ledges in the alleys between the terraces
   for (const z of [-165, -115, -65, 65, 115, 165]) { K.ledge(386.6, z - 3, 387.2, z + 3, 0.45); hold(386, z - 3, 388, z + 3); }
   // University Avenue (bomb): small things on the sidewalk edges, the road itself stays clear
-  K.planter(380, -11, 384.5, -9.2, 0.5);
-  K.strip(412, 9.9, 428, 9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
-  K.strip(440, -9.9, 456, -9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
-  K.strip(468, 9.9, 484, 9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
+  uni_planter(K, 380, -11, 384.5, -9.2, 0.5);
+  K.strip(412, 9.9, 428, 9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
+  K.strip(440, -9.9, 456, -9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
+  K.strip(468, 9.9, 484, 9.9, 0.4, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
   K.bench(432, -10.6, 438, -10.0);
   // Mill Lane (x 396..496): north sidewalk z 191..194, south 206..209
   K.bench(404, 192, 410, 192.6);
-  K.strip(420, 207.6, 436, 207.6, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
+  K.strip(420, 207.6, 436, 207.6, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
   K.bikeRack(448, 192.4, true); K.newsBoxes(452, 192.4, true, 2);
-  K.planter(460, 206.4, 464, 208.4, 0.5);
-  K.strip(472, 192.6, 486, 192.6, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
+  uni_planter(K, 460, 206.4, 464, 208.4, 0.5);
+  K.strip(472, 192.6, 486, 192.6, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
   K.bench(490, 207.2, 495.5, 207.8);
   // Rampart Lane (x 488..496): the lane under the west wall, things at its west edge
-  K.strip(490.6, -118, 490.6, -105, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 4 });
+  K.strip(490.6, -118, 490.6, -105, 0.42, 0.6, { kind: 'Ledge', color: 0xa9a59c, seg: 8 });
   K.bench(490.4, -98, 491, -93);
-  K.planter(489.5, -84, 492.5, -81, 0.5);
-  K.pad(489, -75, 491.6, -67, 0.18);
+  uni_planter(K, 489.5, -84, 492.5, -81, 0.5);
+  uni_pad(K, 489, -75, 491.6, -67, 0.18);
 }
 
 /* dashes, lamps and trees on the Avenue, Gown Street and Mill Lane (x <= 496). */
 function uni_town_streets(K, keep) {
   const T = (x, z) => K.terrainH(x, z);
   const free = (x, z, m = 1.6) => x >= 373 && x <= 495.5 && !keep.some(r => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m);
+  // the avenue gate handshake (CONTRACT 9): fin's Metro Avenue sidewalks stop at x 359.5 at 0.15 over the road; ours are flush,
+  // so ours chamfer up to meet them over the first 2.4 m
+  for (const s of [1, -1]) K.hubbas.push({ a: V(359.6, 0.15, s * 9), b: V(362, 0.01, s * 9), w: 4, noRails: true, color: 0xb9b5ab });
   // centre lines
   for (let x = 363; x < 494; x += 6) if (!(x + 3 > 387 && x < 405)) K.dash(x, 0, x + 3, 0);
   for (let z = -207; z < 192; z += 6) if (!(z + 3 > -12 && z < 12) && !(z + 3 > 187)) K.dash(396, z, 396, z + 3);

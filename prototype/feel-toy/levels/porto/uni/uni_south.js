@@ -73,11 +73,11 @@ function uni_south_stands(K, P, PL) {
 function uni_south_commons(K, P, PL) {
   K.fountainBowl(568, 72, 7, 1.6);
   K.ledge(524, 60, 548, 60.6); K.ledge(617, 60, 624, 60.6); K.ledge(524, 86, 548, 86.6); K.ledge(588, 86, 612, 86.6);
-  K.planter(514, 42, 520, 46, 0.55); K.planter(619, 42, 623, 46, 0.55); K.planter(514, 98, 520, 102, 0.55); K.planter(614, 94, 620, 98, 0.55);
+  uni_planter(K, 514, 42, 520, 46, 0.55); uni_planter(K, 619, 42, 623, 46, 0.55); uni_planter(K, 514, 98, 520, 102, 0.55); uni_planter(K, 614, 94, 620, 98, 0.55);
   K.bench(553, 83, 553.6, 91); K.bench(583, 83, 583.6, 91);
-  K.picnic(530, 74, true); K.picnic(606, 74, true);
+  uni_picnic(K, 530, 74, true); uni_picnic(K, 606, 74, true);
   // the south edge (z 100..108): a manual pad and a bank up to the Union Deck
-  K.pad(524, 96, 538, 99, 0.2); K.pad(617.5, 80, 623.5, 83, 0.2);
+  uni_pad(K, 524, 96, 538, 99, 0.2); uni_pad(K, 617.5, 80, 623.5, 83, 0.2);
   for (const [x, z] of [[518, 52], [518, 78], [618, 52], [618, 78], [543, 66], [601, 66]]) K.lamp(x, z, 1);
   P.spot('The Commons', 568, 1.8, 90, 0, [512, 40, 624, 108]);
 }
@@ -92,7 +92,7 @@ function uni_south_union(K, P, PL) {
   K.hubbas.push({ a: V(556, 2.4, 102), b: V(556, 1.82, 98.6), w: 6, noRails: true, color: 0xc4bfb3 });
   // a flatbar and a ledge on the deck, clear of the shop's zone
   K.rail(526, 3.1, 103.4, 542, 3.1, 103.4, 'Flatbar', true);
-  K.planter(570, 103, 576, 106, 0.5); K.planter(606, 100, 612, 103, 0.5);
+  uni_planter(K, 570, 103, 576, 106, 0.5); uni_planter(K, 606, 100, 612, 103, 0.5);
   K.decorFns.push(D => D.sign('STUDENT UNION', 560, 10.0, 107.95, 14, 1.6, Math.PI, '#f0ece2', '#2e3f5c'));
   P.shop({ name: 'Bluebook Boards', sign: [590, 2.4 + 3.85, 107.96, Math.PI, 7],
     awning: [584, 106.4, 596, 108, 2.4 + 2.2], zone: [586, 104.8, 594, 107.8], door: [590, 2.4, 107.8] });
@@ -163,7 +163,7 @@ function uni_south_diy(K, P, PL) {
   K.rail(960.4, T(960.4, 156), 156, 960.4, T(960.4, 186), 186, 'Coping', false);     // the feat already holds the 1.6 (built after it)
   K.B(963, 0, 155, 965, 3.2, 187, 'plaza');
   K.kicker(940, 170, 1, 0, 2.4, 0.6, 1.3);
-  K.pad(926, 160, 932, 166, 0.25);
+  uni_pad(K, 926, 160, 932, 166, 0.25);
   K.rail(924, T(924, 182) + 0.45, 182, 944, T(944, 182) + 0.45, 182, 'Flatbar', true);
   K.jersey(946, 156, 952, 156.8);
   const g = T(930, 188);

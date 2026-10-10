@@ -82,10 +82,10 @@ function uni_hill_library(K, P, PL) {
     D.add(new THREE.CylinderGeometry(9, 9, 4, 24), 0xcdbf9f, [810, 25, -108]);                          // the drum
     D.add(new THREE.SphereGeometry(10, 24, 12), 0x6b7a5e, [810, 29, -108]);                             // the dome
   });
-  P.landmark({ at: [810, 6, -108], near: 140, parts: [
-    { shape: 'box', at: [0, 8.5, 0], size: [132, 17, 16], color: 0xd8cbb0 },
-    { shape: 'cyl', at: [0, 19, 0], size: [18, 4, 18], color: 0xcdbf9f },
-    { shape: 'sphere', at: [0, 23, 0], size: [20, 14, 20], color: 0x6b7a5e }] });
+  P.landmark({ at: [810, 6, -108], near: 140, parts: [   // each part a little inside the real model, so the two never z-fight
+    { shape: 'box', at: [0, 8.3, 0], size: [131.2, 16.6, 15.2], color: 0xd8cbb0 },
+    { shape: 'cyl', at: [0, 19, 0], size: [17.4, 3.8, 17.4], color: 0xcdbf9f },
+    { shape: 'sphere', at: [0, 23, 0], size: [19.4, 19.4, 19.4], color: 0x6b7a5e }] });
 }
 
 /* ---- S7 the Quad: ledges, the Wishing Well, benches, trees and lamps ---- */
@@ -130,7 +130,7 @@ function uni_hill_arts(K, P, PL) {
   P.tape(619, -58, 8.7);
   // Scholar's Wave: a bank to a wall facing the Avenue, a bronze knot, two pads
   K.bankToWall(540, -24, 580, 1.4, 4);
-  K.pad(588, -20, 600, -14, 0.25); K.pad(524, -20, 532, -14, 0.25);
+  uni_pad(K, 588, -20, 600, -14, 0.25); uni_pad(K, 524, -20, 532, -14, 0.25);
   K.decorFns.push(D => D.add(new THREE.TorusKnotGeometry(0.9, 0.28, 48, 8), 0x6b7a5e, [560, 9.5, -25.3], [0, 0, 0], [1, 1, 1], { metalness: 0.5, roughness: 0.5 }));
   P.spot("Scholar's Wave", 560, 6, -8, 0, [536, -28, 584, -4]);
   // Hallam Gallery (the plateau's south-west corner)
@@ -142,8 +142,8 @@ function uni_hill_arts(K, P, PL) {
 function uni_hill_science(K, P, PL) {
   K.building(672, -116, 706, -74, 4, 0xd8cbb0, 'office');
   K.loadingDock(676, -74, 696, 1);
-  K.rail(696, 6.42, -24, 712, 6.42, -24, 'Flatbar', true);
-  K.pad(678, -44, 692, -38, 0.2); K.pad(678, -10, 692, -4, 0.2);
+  K.rail(697, 6.42, -32, 697, 6.42, -16, 'Flatbar', true);   // along the Twelve's run-up, 7 m west of its lane (across it, it was a hurdle)
+  uni_pad(K, 678, -44, 692, -38, 0.2); uni_pad(K, 678, -10, 692, -4, 0.2);
   K.ledge(700, -60, 716, -59.4); K.ledge(714, 8, 730, 8.6);
   P.spot('Science Hall Dock', 690, 6, -64, Math.PI, [672, -72, 720, -30]);
 }
@@ -183,9 +183,9 @@ function uni_hill_campanile(K, P, PL) {
     D.add(new THREE.CylinderGeometry(0, 8, 9, 20), 0x6b7a5e, [810, 59.5, 23]);
   });
   P.landmark({ at: [810, 6, 23], near: 140, parts: [
-    { shape: 'box', at: [0, 22, 0], size: [14, 44, 14], color: 0xd8cbb0 },
-    { shape: 'box', at: [0, 46.5, 0], size: [16, 5, 16], color: 0xcdbf9f },
-    { shape: 'cone', at: [0, 53.5, 0], size: [16, 9, 16], color: 0x6b7a5e }] });
+    { shape: 'box', at: [0, 22, 0], size: [13.4, 43.6, 13.4], color: 0xd8cbb0 },
+    { shape: 'box', at: [0, 46.5, 0], size: [15.4, 4.6, 15.4], color: 0xcdbf9f },
+    { shape: 'cone', at: [0, 53.4, 0], size: [15.4, 8.6, 15.4], color: 0x6b7a5e }] });
 }
 
 /* ---- Hillside Halls: three dorms on the north-face slope ---- */
@@ -215,7 +215,7 @@ function uni_hill_trees(K, P, PL, keep) {
 /* ---- filler: the small skateable things that keep every street, path and line from going dead (CONTRACT 7) ---- */
 function uni_hill_filler(K, P, PL) {
   const T = K.terrainH, B = K.B;
-  const wall = (ax, az, bx, bz, h = 0.45, w = 0.6) => K.strip(ax, az, bx, bz, h, w, { kind: 'Ledge', color: 0xa39d90, seg: 4 });
+  const wall = (ax, az, bx, bz, h = 0.45, w = 0.6) => K.strip(ax, az, bx, bz, h, w, { kind: 'Ledge', color: 0xa39d90, seg: 8 });
   // Ridge Road (10 % up from the gate): low garden walls beside the sidewalks, alternating sides, then a pull-off pocket at the brow
   wall(641.1, -212, 641.1, -198); wall(659, -188, 659, -174); wall(641.1, -164, 641.1, -150);
   // the Ridge Brow pocket: a bench, a ledge and a small bank off the road's east side
@@ -230,12 +230,14 @@ function uni_hill_filler(K, P, PL) {
   for (const x of [526, 556, 586, 616]) swl(x, 9.6, x + 9, 10.2);
   for (const x of [540, 570, 600, 628]) swl(x, -10.2, x + 9, -9.6);
   // Gallery Forecourt planters and benches at the ends, the run-up (x 548..596) stays open
-  K.planter(528, 15, 536, 17.4, 0.55); K.planter(606, 15, 614, 17.4, 0.55); K.planter(624, 15, 632, 17.4, 0.55);
+  uni_planter(K, 528, 15, 536, 17.4, 0.55); uni_planter(K, 606, 15, 614, 17.4, 0.55); uni_planter(K, 624, 15, 632, 17.4, 0.55);
   K.bench(540, 14, 546, 14.5); K.bench(598, 14, 604, 14.5);
   // Rampart Lane (x 496): ledges along the wall's foot, clear of the West Thirteen's roll-out (z -56..-32)
   for (const [z0, z1] of [[-116, -104], [-92, -80], [-70, -60], [-28, -24.5]]) K.ledge(500.4, z0, 501, z1, 0.45, 'ledge');
   // the Long Lane (z -58..-32): manual pads on its flanks keep the 84 m run-up from going dead, the middle stays clear
-  K.pad(528, -53.5, 538, -50.5, 0.2); K.pad(554, -37.5, 564, -34.5, 0.2); K.pad(580, -53.5, 590, -50.5, 0.2);
+  uni_pad(K, 528, -53.5, 538, -50.5, 0.2); uni_pad(K, 554, -37.5, 564, -34.5, 0.2); uni_pad(K, 580, -53.5, 590, -50.5, 0.2);
+  // Science Plaza, the Kinked Twelve's run-up (x 704): a ledge on the run-up's east flank, 8.6 m off the lane
+  K.ledge(712.6, -6, 713.2, 6, 0.45, 'ledge');
   // Brow Walk (z -126..-120): ledges on its north edge
   for (const x of [668, 694, 720]) K.ledge(x, -127.2, x + 10, -126.6, 0.45, 'ledge');
 }
