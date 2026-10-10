@@ -81,7 +81,7 @@
   #shop .sw.on { border-color: #ffc83d; box-shadow: 0 0 0 2px #ffc83d; }
   #shop .opt { font: 600 11px var(--font-mono); color: var(--ink); background: rgba(243,241,234,.08); border: 1px solid var(--panel-line); border-radius: 4px; padding: 6px 9px; margin: 0 6px 6px 0; }
   #shop .opt.on { border-color: #ffc83d; color: #ffc83d; }
-  body.shopping .hud, body.shopping #combo, body.shopping #chal-prompt, body.shopping #touch, body.shopping #shop-btn, body.shopping #banner, body.shopping .tbar, body.shopping #rotate-hint, body.shopping #stick-base, body.shopping #stick-knob, body.shopping #tstick-base, body.shopping #tstick-knob, body.shopping #tstick-trail { visibility: hidden; }
+  body.shopping .hud, body.shopping #combo, body.shopping #chal-prompt, body.shopping #touch, body.shopping #shop-btn, body.shopping #banner, body.shopping .tbar, body.shopping #stick-base, body.shopping #stick-knob, body.shopping #tstick-base, body.shopping #tstick-knob, body.shopping #tstick-trail { visibility: hidden; }
   #replay-ui { position: fixed; inset: 0; pointer-events: none; }
   #replay-ui::before, #replay-ui::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
   #replay-ui::before { top: 0; } #replay-ui::after { bottom: 0; }
@@ -267,7 +267,6 @@
   <div id="stick-base" class="idle"></div><div id="stick-knob" hidden></div><div id="stick-label"></div>
   <canvas id="tstick-trail"></canvas><div id="tstick-base" class="idle"></div><div id="tstick-knob" hidden></div>
   <div class="tbar"><button type="button" id="tb-walk">Walk</button><button type="button" id="tb-cam">Cam</button><button type="button" id="tb-replay">Replay</button><button type="button" id="tb-spot">Set spot</button><button type="button" id="tb-respawn">Return</button><button type="button" id="tb-tune">Tuning</button></div>
-  <div id="rotate-hint" hidden>Turn your phone sideways for more room</div>
 </div>
 <div id="error" hidden></div>
 
@@ -2222,78 +2221,159 @@ function graphicTexture(st) {
 }
 // A skater on a board. The rider lives in the board's space (x toe side, y up, -z the nose), so feet
 // stay planted through ramps. Regular stance: left foot forward, chest facing the toe edge.
-function buildRider(style) {
+// geometry shared by every skater: built once
+const GEO = new Map(), geo = (key, make) => { if (!GEO.has(key)) GEO.set(key, make()); return GEO.get(key); };
+const lathe = (prof, seg = 20) => new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+// a limb along +y, centred on its middle (the way the IK places bones): a profile of [radius, 0..1 along it]
+const limbGeo = (len, prof) => { const g = lathe(prof.map(([r, t]) => [r, t * len]), 18); g.translate(0, -len / 2, 0); return g; };
+// the deck: one moulded piece, a popsicle outline with kicked-up ends, a little concave, bevelled edges
+function deckOutline() {
+  const s = new THREE.Shape(), W = 0.105, L = 0.41 - W;
+  s.moveTo(-W, -L); s.lineTo(-W, L); s.absarc(0, L, W, Math.PI, 0, true); s.lineTo(W, -L); s.absarc(0, -L, W, 0, Math.PI, true); return s;
+}
+const KICK_AT = 0.27, KICK_SLOPE = 0.21;
+function bendDeck(g) {   // kick the nose and tail up, and dish the middle
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), u = Math.max(0, Math.abs(z) - KICK_AT);
+    p.setY(i, p.getY(i) + u * KICK_SLOPE + u * u * 0.35 + 0.0045 * (x / 0.105) ** 2); }
+  p.needsUpdate = true; g.computeVertexNormals(); return g;
+}
+function deckGeos() {
+  return geo('deck', () => {
+    const sh = deckOutline(), T = 0.016, B = 0.003;
+    const body = new THREE.ExtrudeGeometry(sh, { depth: T, bevelEnabled: true, bevelThickness: B, bevelSize: B, bevelSegments: 2, curveSegments: 16 });
+    body.rotateX(Math.PI / 2); body.translate(0, 0.083 + T + B, 0); bendDeck(body);       // (x, y, z) -> width, up, length
+    const skin = (up, y) => { const g = new THREE.ShapeGeometry(sh, 16); g.rotateX(up ? -Math.PI / 2 : Math.PI / 2); g.translate(0, y, 0);
+      const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 0.105) / 0.21, (p.getZ(i) + 0.41) / 0.82);
+      return bendDeck(g); };
+    return { body, grip: skin(true, 0.083 + T + 2 * B + 0.0006), graphic: skin(false, 0.083 - 0.0006) };
+  });
+}
+// a skate shoe, pointing along +x: a cupsole with a rounded toe, a suede upper that slopes down to the toe,
+// a padded collar and tongue, laces, a stripe down each side
+function shoeGeos() {
+  return geo('shoe', () => {
+    const outline = (L, W, r) => { const s = new THREE.Shape(); s.moveTo(-L / 2 + r, -W / 2); s.lineTo(L / 2 - W / 2, -W / 2); s.absarc(L / 2 - W / 2, 0, W / 2, -Math.PI / 2, Math.PI / 2, false);
+      s.lineTo(-L / 2 + r, W / 2); s.absarc(-L / 2 + r, W / 2 - r, r, Math.PI / 2, Math.PI, false); s.lineTo(-L / 2, -W / 2 + r); s.absarc(-L / 2 + r, -W / 2 + r, r, Math.PI, Math.PI * 1.5, false); return s; };
+    const ext = (shape, h, bevel) => { const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 }); g.rotateX(-Math.PI / 2); return g; };
+    const sole = ext(outline(0.272, 0.104, 0.03), 0.016, 0.004); sole.translate(0, -0.038, 0);
+    const upper = ext(outline(0.255, 0.092, 0.035), 0.05, 0.008); upper.translate(0, -0.02, 0);
+    { const p = upper.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), k = clamp((x - 0.02) / 0.11, 0, 1); if (y > -0.012) p.setY(i, -0.012 + (y + 0.012) * (1 - 0.62 * k * k)); } upper.computeVertexNormals(); }
+    const collar = lathe([[0.034, 0], [0.047, 0.004], [0.049, 0.03], [0.044, 0.042], [0.036, 0.044]], 16); collar.scale(1.05, 1, 1.0); collar.translate(-0.07, 0.026, 0);
+    const tongue = new THREE.BoxGeometry(0.075, 0.012, 0.05); tongue.rotateZ(-0.5); tongue.translate(-0.012, 0.05, 0);
+    return { sole, upper, collar, tongue };
+  });
+}
+// A skater on a board. The rider lives in the board's space (x toe side, y up, -z the nose), so feet
+// stay planted through ramps. Regular stance: left foot forward, chest facing the toe edge.
+// detail 0 is a lighter build for the other skaters in town
+function buildRider(style, detail = 1) {
   const mat = (color, roughness, extra) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
   const M = { grip: mat(0x1d1d20, 0.95), ply: mat(0xcfa871, 0.7), graphic: mat(0xffffff, 0.55), metal: mat(0xb9bec4, 0.35, { metalness: 0.85 }), wheels: mat(0xf3efe2, 0.45), cores: mat(0xd04a35, 0.5),
-    shirt: mat(0x3f7fbf, 0.7), pants: mat(0x2b3440, 0.8), skin: mat(0xd9a77f, 0.6), soles: mat(0xf1efe8, 0.6), shoes: mat(0x34383f, 0.95), cap: mat(0xc8432f, 0.7),
-    hair: mat(0x3b2a20, 0.9), dark: mat(0x1b1b1e, 0.5), belt: mat(0x1f1d1b, 0.6), cuff: mat(0x232a33, 0.85) };
+    bushing: mat(0xd4a017, 0.6), shirt: mat(0x3f7fbf, 0.7), pants: mat(0x2b3440, 0.8), skin: mat(0xd9a77f, 0.55), lip: mat(0xb9786a, 0.5), soles: mat(0xf1efe8, 0.6), shoes: mat(0x34383f, 0.95),
+    cap: mat(0xc8432f, 0.7), hair: mat(0x3b2a20, 0.9), dark: mat(0x1b1b1e, 0.4), white: mat(0xf4f1ea, 0.3), iris: mat(0x5a3b22, 0.3), belt: mat(0x1f1d1b, 0.6), cuff: mat(0x232a33, 0.85), sock: mat(0xeeeae0, 0.9) };
+  const mesh = (g, m, shadow = true) => { const o = new THREE.Mesh(g, m); o.castShadow = shadow; return o; };
   const skater = new THREE.Group(), boardOrient = new THREE.Group(), boardFlip = new THREE.Group(); skater.add(boardOrient); boardOrient.add(boardFlip);
-  { // the deck: a flat middle and two kicked-up tails; grip tape on top, maple on the edges, the graphic underneath
-    const deckMats = [M.ply, M.ply, M.grip, M.graphic, M.ply, M.ply];
-    const mid = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.022, 0.56), deckMats)); mid.position.y = 0.094; boardFlip.add(mid);
-    for (const s of [-1, 1]) {                      // -1 the nose, +1 the tail
-      const KICK = 0.2, KL = 0.13;                    // about 11°, like a real popsicle deck
-      const kick = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.022, KL), deckMats));
-      kick.rotation.x = -s * KICK; kick.position.set(0, 0.094 + Math.sin(KICK) * KL / 2, s * (0.28 + Math.cos(KICK) * KL / 2 - 0.002)); boardFlip.add(kick);
-      const round = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.1025, 0.1025, 0.022, 18, 1, false, s < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), [M.ply, M.grip, M.graphic]));
-      round.rotation.x = -s * KICK; round.position.set(0, 0.094 + Math.sin(KICK) * KL, s * (0.28 + Math.cos(KICK) * KL - 0.004)); boardFlip.add(round);   // the rounded end
-    }
-    // trucks: baseplate, hanger and kingpin block; four wheels
-    const wheelGeo = new THREE.CylinderGeometry(0.029, 0.029, 0.034, 14); wheelGeo.rotateZ(Math.PI / 2);
-    const coreGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.036, 10); coreGeo.rotateZ(Math.PI / 2);
+  { // the board
+    const D = deckGeos();
+    boardFlip.add(mesh(D.body, M.ply), mesh(D.grip, M.grip, false), mesh(D.graphic, M.graphic, false));
+    // trucks: baseplate, kingpin and bushings, the hanger, the axle; four wheels with rounded lips and a bearing in the core
+    const base = geo('base', () => new THREE.BoxGeometry(0.062, 0.01, 0.08)), bush = geo('bush', () => new THREE.CylinderGeometry(0.012, 0.012, 0.016, 12));
+    const hanger = geo('hanger', () => { const g = new THREE.CylinderGeometry(0.016, 0.02, 0.12, 8); g.rotateZ(Math.PI / 2); g.scale(1, 1, 0.8); return g; });
+    const axle = geo('axle', () => new THREE.CylinderGeometry(0.004, 0.004, 0.21, 6).rotateZ(Math.PI / 2));
+    const wheel = geo('wheel', () => lathe([[0.012, -0.017], [0.025, -0.017], [0.0285, -0.013], [0.0295, -0.004], [0.0295, 0.004], [0.0285, 0.013], [0.025, 0.017], [0.012, 0.017]], 22).rotateZ(Math.PI / 2));
+    const core = geo('core', () => new THREE.CylinderGeometry(0.0125, 0.0125, 0.0345, 14).rotateZ(Math.PI / 2)), bearing = geo('bearing', () => new THREE.CylinderGeometry(0.006, 0.006, 0.036, 10).rotateZ(Math.PI / 2));
     for (const z of [-0.255, 0.255]) {
-      const base = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.075), M.metal); base.position.set(0, 0.077, z); boardFlip.add(base);
-      const hanger = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.018, 0.15, 10).rotateZ(Math.PI / 2), M.metal)); hanger.position.set(0, 0.047, z); boardFlip.add(hanger);
-      const neck = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), M.metal); neck.position.set(0, 0.062, z); boardFlip.add(neck);
-      for (const x of [-0.094, 0.094]) { const w = shadowed(new THREE.Mesh(wheelGeo, M.wheels)); w.position.set(x, 0.03, z); boardFlip.add(w);
-        const c = new THREE.Mesh(coreGeo, M.cores); c.position.set(x, 0.03, z); boardFlip.add(c); }
+      const b = mesh(base, M.metal, false); b.position.set(0, 0.078, z); boardFlip.add(b);
+      for (const dy of [0.064, 0.048]) { const k = mesh(bush, M.bushing, false); k.position.set(0, dy, z + (z < 0 ? 0.012 : -0.012)); boardFlip.add(k); }
+      const h = mesh(hanger, M.metal); h.position.set(0, 0.034, z); boardFlip.add(h);
+      const ax = mesh(axle, M.metal, false); ax.position.set(0, 0.03, z); boardFlip.add(ax);
+      for (const x of [-0.094, 0.094]) { const w = mesh(wheel, M.wheels); w.position.set(x, 0.03, z); boardFlip.add(w);
+        const c = mesh(core, M.cores, false); c.position.set(x, 0.03, z); boardFlip.add(c);
+        if (detail) { const br = mesh(bearing, M.dark, false); br.position.set(x, 0.03, z); boardFlip.add(br); } }
     }
   }
   const rig = new THREE.Group(); boardOrient.add(rig);
   const pelvis = new THREE.Group(); rig.add(pelvis);
   // (the rider faces +x, the toe edge; shoulders run along z)
   { const hips = capsule(0.105, 0.32, M.pants); hips.rotation.x = Math.PI / 2; hips.scale.set(0.95, 1, 0.85); hips.position.y = 0.02; pelvis.add(hips);
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.118, 0.035, 16), M.belt); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
+    const belt = mesh(geo('belt', () => new THREE.CylinderGeometry(0.118, 0.118, 0.035, 24)), M.belt, false); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
   const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
   // the torso: one smooth shape, a loose tee hanging at the hips, narrow at the waist, broad and rounded at the shoulders
-  const chest = shadowed(new THREE.Mesh(new THREE.LatheGeometry([[0, 0.05], [0.128, 0.05], [0.134, 0.09], [0.124, 0.17], [0.126, 0.26], [0.138, 0.36], [0.146, 0.43], [0.142, 0.48], [0.122, 0.525], [0.085, 0.56], [0.05, 0.58], [0, 0.585]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M.shirt));
+  const chest = mesh(geo('chest', () => lathe([[0, 0.05], [0.128, 0.05], [0.134, 0.09], [0.124, 0.17], [0.126, 0.26], [0.138, 0.36], [0.146, 0.43], [0.142, 0.48], [0.122, 0.525], [0.085, 0.56], [0.05, 0.58], [0, 0.585]], 32)), M.shirt);
   chest.scale.set(0.8, 1, 1.3); torso.add(chest);
-  for (const z of [-0.168, 0.168]) { const sh = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), M.shirt)); sh.scale.set(0.9, 0.85, 1); sh.position.set(0, 0.49, z); torso.add(sh); }   // rounded shoulders
-  { const neck = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10), M.skin)); neck.position.y = 0.6; torso.add(neck);
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.014, 6, 16), M.shirt); collar.rotation.x = Math.PI / 2; collar.position.y = 0.565; torso.add(collar); }
+  for (const z of [-0.168, 0.168]) { const sh = mesh(geo('shoulder', () => new THREE.SphereGeometry(0.062, 20, 14)), M.shirt); sh.scale.set(0.9, 0.85, 1); sh.position.set(0, 0.49, z); torso.add(sh); }   // rounded shoulders
+  { const neck = mesh(geo('neck', () => lathe([[0.05, 0], [0.046, 0.05], [0.047, 0.1], [0.052, 0.13]], 16)), M.skin); neck.position.y = 0.54; torso.add(neck);
+    const collar = mesh(geo('collar', () => new THREE.TorusGeometry(0.058, 0.014, 8, 24)), M.shirt, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.565; torso.add(collar); }
+  // the head: a skull and jaw, a proper nose, eyes with whites, irises and lids, lips, ears, brows
   const head = new THREE.Group(); head.position.set(0, 0.71, 0); torso.add(head);
   const capParts = new THREE.Group(); head.add(capParts);
-  { const skull = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), M.skin)); skull.scale.set(1, 1.08, 0.93); head.add(skull);
-    const jaw = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), M.skin)); jaw.scale.set(1.05, 0.85, 1.15); jaw.position.set(0.03, -0.055, 0); head.add(jaw);
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), M.skin); nose.scale.set(1.2, 1, 0.9); nose.position.set(0.104, -0.012, 0); head.add(nose);
-    for (const z of [-0.036, 0.036]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), M.dark); eye.position.set(0.094, 0.016, z); head.add(eye);
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.008, 0.034), M.hair); brow.position.set(0.1, 0.038, z); head.add(brow); }
-    for (const z of [-0.098, 0.098]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 6), M.skin); ear.scale.set(0.7, 1.1, 0.5); ear.position.set(-0.005, -0.005, z); head.add(ear); }
-    const hair = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12, -Math.PI * 0.45, Math.PI * 0.9, Math.PI * 0.22, Math.PI * 0.5), M.hair)); hair.scale.set(1, 1.04, 0.97); hair.position.set(-0.008, 0.006, 0); head.add(hair);  // the back and sides, under the cap
-    const top = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.108, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.hair)); top.scale.set(1, 0.85, 0.95); top.position.y = 0.012; head.add(top);    // hair on top, seen with no cap
-    const cap = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.115, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), M.cap)); cap.scale.set(1, 0.92, 0.97); cap.position.y = 0.022; capParts.add(cap);
-    const brim = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.01, 18, 1, false, 0, Math.PI), M.cap)); brim.scale.set(1.15, 1, 1); brim.position.set(0.075, 0.026, 0); brim.rotation.z = -0.12; capParts.add(brim);
-    const button = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), M.cap); button.position.y = 0.128; capParts.add(button); }
+  { const sph = (r, ws = 24, hs = 18) => geo(`s${r}_${ws}`, () => new THREE.SphereGeometry(r, ws, hs));
+    const skull = mesh(sph(0.105, 32, 24), M.skin); skull.scale.set(1, 1.08, 0.92); head.add(skull);
+    const jaw = mesh(sph(0.072, 28, 20), M.skin); jaw.scale.set(1.0, 0.8, 1.12); jaw.position.set(0.02, -0.056, 0); head.add(jaw);
+    const chin = mesh(sph(0.032, 16, 12), M.skin, false); chin.scale.set(1, 0.85, 1.25); chin.position.set(0.07, -0.086, 0); head.add(chin);
+    // the nose: a bridge running down to a rounded tip, with nostril wings
+    const bridge = mesh(geo('bridge', () => new THREE.CapsuleGeometry(0.0115, 0.032, 6, 12)), M.skin, false); bridge.position.set(0.1045, 0.0, 0); bridge.rotation.z = 0.32; head.add(bridge);
+    const tip = mesh(sph(0.0165, 16, 12), M.skin, false); tip.position.set(0.113, -0.02, 0); head.add(tip);
+    if (detail) for (const z of [-0.0125, 0.0125]) { const w = mesh(sph(0.0105, 12, 10), M.skin, false); w.position.set(0.104, -0.025, z); head.add(w); }
+    for (const z of [-0.036, 0.036]) {
+      const eye = new THREE.Group(); eye.position.set(0.089, 0.014, z * 1.03); head.add(eye);
+      const white = mesh(sph(0.0165, 16, 12), M.white, false); white.scale.set(0.62, 0.95, 1.1); eye.add(white);
+      const iris = mesh(sph(0.0092, 14, 10), M.iris, false); iris.position.x = 0.0085; iris.scale.set(0.45, 1, 1); eye.add(iris);
+      const pupil = mesh(sph(0.0045, 10, 8), M.dark, false); pupil.position.x = 0.0115; pupil.scale.set(0.4, 1, 1); eye.add(pupil);
+      if (detail) { const lid = mesh(geo('lid', () => new THREE.SphereGeometry(0.0178, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.42)), M.skin, false); lid.scale.set(0.66, 0.95, 1.04); lid.rotation.z = -0.25; eye.add(lid); }
+      const brow = mesh(geo('brow', () => new THREE.CapsuleGeometry(0.0048, 0.026, 4, 8).rotateX(Math.PI / 2)), M.hair, false); brow.position.set(0.099, 0.038, z * 1.06); brow.rotation.x = z > 0 ? 0.12 : -0.12; head.add(brow);
+    }
+    // lips: an upper and a fuller lower, a line between
+    const lipG = geo('lip', () => new THREE.CapsuleGeometry(0.0072, 0.028, 4, 10).rotateX(Math.PI / 2));
+    const up = mesh(lipG, M.lip, false); up.position.set(0.097, -0.047, 0); up.scale.set(0.8, 0.75, 1); head.add(up);
+    const lo = mesh(lipG, M.lip, false); lo.position.set(0.093, -0.057, 0); lo.scale.set(0.85, 0.9, 0.9); head.add(lo);
+    const line = mesh(geo('mline', () => new THREE.CapsuleGeometry(0.0026, 0.03, 3, 8).rotateX(Math.PI / 2)), M.dark, false); line.position.set(0.1015, -0.0522, 0); head.add(line);
+    // ears: a rim and a bowl
+    for (const z of [-0.096, 0.096]) { const ear = new THREE.Group(); ear.position.set(-0.008, -0.008, z); ear.scale.set(0.85, 1.25, 1); head.add(ear);
+      const rim = mesh(geo('earrim', () => new THREE.TorusGeometry(0.019, 0.0075, 8, 16)), M.skin, false); ear.add(rim);
+      const bowl = mesh(sph(0.016, 12, 10), M.skin, false); bowl.scale.set(1, 1, 0.4); bowl.position.z = z > 0 ? -0.003 : 0.003; ear.add(bowl); }
+    const hair = mesh(geo('hairback', () => new THREE.SphereGeometry(0.11, 24, 16, -Math.PI * 0.45, Math.PI * 0.9, Math.PI * 0.22, Math.PI * 0.5)), M.hair); hair.scale.set(1, 1.04, 0.97); hair.position.set(-0.008, 0.006, 0); head.add(hair);  // the back and sides, under the cap
+    const top = mesh(geo('hairtop', () => new THREE.SphereGeometry(0.108, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2)), M.hair); top.scale.set(1, 0.85, 0.95); top.position.y = 0.012; head.add(top);    // hair on top, seen with no cap
+    const cap = mesh(geo('cap', () => new THREE.SphereGeometry(0.115, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2)), M.cap); cap.scale.set(1, 0.92, 0.97); cap.position.y = 0.032; capParts.add(cap);
+    const brim = mesh(geo('brim', () => new THREE.CylinderGeometry(0.085, 0.085, 0.01, 24, 1, false, 0, Math.PI)), M.cap); brim.scale.set(1.15, 1, 1); brim.position.set(0.078, 0.044, 0); brim.rotation.z = -0.06; capParts.add(brim);
+    const button = mesh(sph(0.013, 12, 8), M.cap, false); button.position.y = 0.128; capParts.add(button); }
+  // limbs: tapered, with elbows, wrists and hands; loose pants down to socks and real shoes
+  const G = {
+    thigh: geo('thigh', () => limbGeo(THIGH, [[0.07, -0.02], [0.088, 0.05], [0.09, 0.4], [0.084, 0.8], [0.078, 1], [0.05, 1.04]])),
+    shin: geo('shin', () => limbGeo(SHIN, [[0.06, -0.06], [0.08, 0.02], [0.08, 0.5], [0.078, 0.88], [0.082, 0.95], [0.07, 1.0]])),
+    upper: geo('uarm', () => limbGeo(UPPER_ARM, [[0.042, -0.06], [0.06, 0.02], [0.063, 0.25], [0.056, 0.65], [0.048, 0.95], [0.036, 1.04]])),
+    fore: geo('farm', () => limbGeo(FOREARM, [[0.036, -0.05], [0.048, 0.02], [0.052, 0.28], [0.044, 0.7], [0.034, 0.95], [0.031, 1.02]])),
+    sleeve: geo('sleeve', () => limbGeo(0.16, [[0.0, -0.05], [0.058, -0.04], [0.064, 0.2], [0.062, 0.8], [0.06, 1.0], [0.052, 1.0]])),
+    elbow: geo('elbow', () => new THREE.SphereGeometry(0.048, 16, 12)), knee: geo('knee', () => new THREE.SphereGeometry(0.08, 16, 12)),
+    cuff: geo('cuff', () => lathe([[0.068, 0], [0.086, 0.01], [0.088, 0.06], [0.082, 0.075], [0.06, 0.075]], 18)),
+    sock: geo('sock', () => lathe([[0.036, 0], [0.043, 0.01], [0.044, 0.09], [0.036, 0.1]], 16)),
+  };
   const LIMBS = {};
   for (const side of ['front', 'back']) {
-    LIMBS[side] = {
-      thigh: capsule(0.085, THIGH, M.pants), shin: capsule(0.074, SHIN, M.pants),                // loose pants
-      upper: capsule(0.047, UPPER_ARM, M.skin), fore: capsule(0.04, FOREARM, M.skin),
-      shoe: new THREE.Group(),
-    };
+    LIMBS[side] = { thigh: mesh(G.thigh, M.pants), shin: mesh(G.shin, M.pants), upper: mesh(G.upper, M.skin), fore: mesh(G.fore, M.skin), shoe: new THREE.Group() };
     for (const m of Object.values(LIMBS[side])) rig.add(m);
     const L = LIMBS[side];
     // bones run from the joint nearer the body (-y) to the far one (+y)
-    const sleeve = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.055, 0.15, 12), M.shirt)); sleeve.position.y = -UPPER_ARM / 2 + 0.065; L.upper.add(sleeve);
-    const hand = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), M.skin)); hand.scale.set(0.85, 1.25, 0.65); hand.position.y = FOREARM / 2 + 0.03; L.fore.add(hand);
-    const cuff = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.084, 0.07, 12), M.cuff)); cuff.position.y = SHIN / 2 - 0.05; L.shin.add(cuff);
-    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), M.pants); knee.position.y = -SHIN / 2 + 0.02; L.shin.add(knee);
-    // a skate shoe: suede upper, a sole and toe cap, laces (the foot points along x)
-    const upperS = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.07, 0.1), M.shoes)); upperS.position.y = 0.015; L.shoe.add(upperS);
-    const sole = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.025, 0.106), M.soles)); sole.position.y = -0.0225; L.shoe.add(sole);
-    const toe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.104), M.soles); toe.position.set(0.105, 0.0, 0); L.shoe.add(toe);
-    const laces = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.008, 0.05), M.soles); laces.position.set(0.02, 0.051, 0); L.shoe.add(laces);
-    const collarS = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.035, 0.104), M.shoes); collarS.position.set(-0.07, 0.065, 0); L.shoe.add(collarS);
+    const sleeve = mesh(G.sleeve, M.shirt); sleeve.position.y = -UPPER_ARM / 2 + 0.07; L.upper.add(sleeve);
+    const elbow = mesh(G.elbow, M.skin, false); elbow.position.y = UPPER_ARM / 2; L.upper.add(elbow);
+    // a hand: palm, four fingers curled a little, and a thumb
+    const hand = new THREE.Group(); hand.position.y = FOREARM / 2 + 0.012; L.fore.add(hand);
+    const palm = mesh(geo('palm', () => new THREE.SphereGeometry(0.034, 16, 12)), M.skin); palm.scale.set(1.0, 1.2, 0.55); palm.position.y = 0.03; hand.add(palm);
+    if (detail) {
+      const fg = geo('finger', () => new THREE.CapsuleGeometry(0.0085, 0.04, 4, 8));
+      for (let k = 0; k < 4; k++) { const f = mesh(fg, M.skin, false); f.position.set(-0.021 + k * 0.014, 0.078 - Math.abs(k - 1.5) * 0.004, 0.004); f.rotation.x = 0.35; hand.add(f); }
+      const th = mesh(geo('thumb', () => new THREE.CapsuleGeometry(0.0095, 0.03, 4, 8)), M.skin, false); th.position.set(0.03, 0.035, 0.012); th.rotation.set(0.3, 0, -0.7); hand.add(th);
+    } else { const mitt = mesh(geo('mitt', () => new THREE.CapsuleGeometry(0.022, 0.03, 4, 8)), M.skin, false); mitt.position.y = 0.07; mitt.scale.set(1.2, 1, 0.6); hand.add(mitt); }
+    const knee = mesh(G.knee, M.pants, false); knee.position.y = -SHIN / 2 + 0.01; L.shin.add(knee);
+    const cuff = mesh(G.cuff, M.cuff); cuff.position.y = SHIN / 2 - 0.115; L.shin.add(cuff);               // the hem, ending above the shoe
+    const sock = mesh(G.sock, M.sock, false); sock.position.y = SHIN / 2 - 0.06; L.shin.add(sock);          // the sock at the ankle
+    const S2 = shoeGeos();
+    L.shoe.add(mesh(S2.sole, M.soles), mesh(S2.upper, M.shoes), mesh(S2.collar, M.shoes, false), mesh(S2.tongue, M.shoes, false));
+    if (detail) {
+      for (let k = 0; k < 4; k++) { const lace = mesh(geo('lace', () => new THREE.BoxGeometry(0.006, 0.004, 0.04)), M.soles, false); lace.position.set(0.035 - k * 0.018, 0.034 - k * 0.004 + (k === 0 ? -0.006 : 0), 0); lace.rotation.z = -0.25; L.shoe.add(lace); }
+      for (const z of [-0.0505, 0.0505]) { const st = mesh(geo('stripe', () => new THREE.BoxGeometry(0.11, 0.012, 0.002)), M.soles, false); st.position.set(-0.01, 0.0, z); st.rotation.z = 0.28; L.shoe.add(st); }
+    }
   }
   const R = { skater, boardOrient, boardFlip, rig, pelvis, torso, head, LIMBS, M, capParts };
   applyStyle(R, style);
@@ -2302,7 +2382,7 @@ function buildRider(style) {
 function applyStyle(R, st) {
   st = { ...STYLE_DEFAULT, ...st }; const M = R.M;
   for (const k of ['shirt', 'pants', 'shoes', 'soles', 'cap', 'skin', 'hair', 'wheels', 'cores']) M[k].color.set(st[k]);
-  M.cuff.color.set(st.pants).multiplyScalar(0.8);
+  M.cuff.color.set(st.pants).multiplyScalar(0.8); M.lip.color.set(st.skin).lerp(new THREE.Color(0xb05a50), 0.35).multiplyScalar(0.92);
   if (M.graphic.map) M.graphic.map.dispose(); M.graphic.map = graphicTexture(st); M.graphic.needsUpdate = true;
   R.capParts.visible = st.capStyle !== 'none'; R.capParts.rotation.y = st.capStyle === 'back' ? Math.PI : 0;
   R.style = st;
@@ -3553,7 +3633,7 @@ function enableTouch() {
   }
   setDevice('touch'); startAudio();
 }
-function updateRotateHint() { $('rotate-hint').hidden = !(touch.active && innerHeight > innerWidth); }
+function updateRotateHint() {}
 addEventListener('resize', () => { if (touch.active) { updateRotateHint(); if (touch.stickId === null) placeIdleStick(); if (ts.id === null) placeIdleTrickStick(); } });
 addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('#panel, #intro')) e.preventDefault(); }, { passive: false });
 addEventListener('gesturestart', e => e.preventDefault());
@@ -3907,7 +3987,7 @@ function npcPath(def) {
 }
 function makeNpc(def, i) {
   let seed = 1234 + i * 977; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const R = buildRider(randomStyle(rnd)); scene.add(R.skater);
+  const R = buildRider(randomStyle(rnd), 0); scene.add(R.skater);
   const n = { def, R, rnd, x: 0, y: 0, z: 0, dir: V(0, 0, -1), up: UP.clone(), s: rnd() * 50, v: def.speed || 5, trick: null, manualT: 0, nextTrick: 1 + rnd() * 3, bailT: 0, grind: 'C',
     pose: { gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, crouch: 0.2, grind: 0 }, vel: V() };
   if (def.kind !== 'carve') {
