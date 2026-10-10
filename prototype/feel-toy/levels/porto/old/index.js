@@ -1,16 +1,59 @@
 /* Old Town (old): a limewashed hill town that falls to the harbour in four steps. Design: levels/porto/design/old.md.
    Parts (spliced before this file): old_upper, old_market, old_harbour, each called as old_x(K, P, O) with O = old_plan(P.baseH). */
 function porto_old(K, P) {
-  const O = old_plan(P.baseH);
+  const O = old_plan(P.baseH), b0 = K.boxes.length, r0 = K.rails.length;
   P.ground(O.ground); P.col(O.col); P.surface(O.surface);
   for (const r of O.regions) P.region(...r);
   if (typeof old_upper === 'function') old_upper(K, P, O);
   if (typeof old_market === 'function') old_market(K, P, O);
   if (typeof old_harbour === 'function') old_harbour(K, P, O);
+  old_index_trim(K, O, b0, r0);
   old_index_life(P);
   old_index_lines(P);
   P.travel('Old Town', -100, K.terrainH(-100, 430), 430, Math.PI, 'district');
   old_index_landmarks(P);
+}
+
+/* the grind-line budget (CONTRACT 8): a box side shorter than 2.4 m (a bench end, a pad's short side, a bollard) does not
+   grind; and rails of one kind that meet end to end and stay within 2 cm (a curb: 8 cm, lowered so it never stands over the curb top) of one straight line (curbs and ledges laid in
+   chords down a vertical curve) become one rail. Neither changes what is skateable, only how many lines the engine indexes. */
+function old_index_trim(K, O, b0, r0) {
+  const zs = [250, 420, 435, 520, 560, 660, 750, 872], nearest = (arr, v) => arr.reduce((a, c) => Math.abs(c - v) < Math.abs(a - v) ? c : a);
+  for (let i = b0; i < K.boxes.length; i++) {
+    const b = K.boxes[i]; if (!b.edges) continue;
+    const lx = b.max[0] - b.min[0], lz = b.max[2] - b.min[2];
+    let e = [...b.edges].filter(c => ((c === 'n' || c === 's') ? lx : lz) >= 2.4).join('');
+    // a thin box (a 0.6 m ledge, a bench, a table, a bumper) grinds on the side facing the nearest street; the 0.7 m rail
+    // magnet catches it from the far side too
+    const thin = Math.min(lx, lz), long = Math.max(lx, lz);
+    if (thin <= 0.7 || (thin <= 1.25 && long < 4)) {
+      const cx = (b.min[0] + b.max[0]) / 2, cz = (b.min[2] + b.max[2]) / 2;
+      if (e.includes('n') && e.includes('s')) e = e.replace(nearest(zs, cz) < cz ? 's' : 'n', '');
+      if (e.includes('w') && e.includes('e')) e = e.replace(nearest(O.axes, cx) < cx ? 'e' : 'w', '');
+    }
+    b.edges = e;
+  }
+  const R = K.rails.slice(r0), dead = new Set(), key = v => v.x.toFixed(2) + ',' + v.y.toFixed(2) + ',' + v.z.toFixed(2);
+  const starts = new Map();
+  R.forEach((r, i) => { if (!r.coping) { const k = r.kind + '|' + key(r.a); (starts.get(k) || starts.set(k, []).get(k)).push(i); } });
+  const offLine = (a, b, p) => { const d = b.clone().sub(a), L2 = d.lengthSq(); if (L2 < 1e-6) return 0; const t = Math.max(0, Math.min(1, p.clone().sub(a).dot(d) / L2)); return a.clone().addScaledVector(d, t).distanceTo(p); };
+  const lineY = (a, b, p) => { const d = b.clone().sub(a), L2 = d.x * d.x + d.z * d.z; return L2 < 1e-6 ? a.y : a.y + d.y * Math.max(0, Math.min(1, ((p.x - a.x) * d.x + (p.z - a.z) * d.z) / L2)); };
+  for (let i = 0; i < R.length; i++) {
+    const r = R[i]; if (dead.has(i) || r.coping) continue;
+    const joints = [];
+    for (;;) {
+      const next = (starts.get(r.kind + '|' + key(r.b)) || []).find(j => j > i && !dead.has(j) && R[j].post === r.post);
+      if (next === undefined) break;
+      const nb = R[next].b, pts = [...joints, r.b];
+      if (pts.some(p => offLine(r.a, nb, p) > (r.kind === 'Curb' ? 0.08 : 0.02))) break;
+      joints.push(r.b.clone()); r.b = nb.clone(); dead.add(next);
+    }
+    // a curb chord across a sag would float over the curb: drop it until it nowhere stands above the curb top
+    const up = Math.max(0, ...joints.map(p => lineY(r.a, r.b, p) - p.y));
+    if (up > 0.005) { r.a.y -= up; r.b.y -= up; }
+  }
+  const keep = R.filter((r, i) => !dead.has(i));
+  K.rails.length = r0; K.rails.push(...keep);
 }
 
 /* traffic, peds and skaters (design 10.3). Each ped is about 22k triangles and each skater about 31k, so the doc's 22 peds
@@ -60,8 +103,8 @@ function old_index_lines(P) {
   // the doc's five lines (section 5)
   P.line('Santa Brisa Run', [[-130, 250], [-117.5, 262], [-117.5, 356], [-130, 380], [-150, 396], [-150, 430], [-150, 470], [-120, 478],
     [-120, 534], [-100, 548], [0, 548], [40, 548]], 'push', true);
-  P.line('Tile Works to Pool Row', [[0, 250], [40, 256], [40, 414], [48, 420], [92, 420], [121, 425], [120, 446], [120, 780],
-    [150, 790], [170, 795], [170, 832]], 'push', true);
+  P.line('Tile Works to Pool Row', [[0, 250], [40, 256], [40, 414], [48, 420], [92, 420], [121, 425], [120, 446], [120, 798],
+    [150, 798], [170, 800], [170, 832]], 'push', true);
   P.line('Rambla to the Sea', [[-40, 236], [-40, 380], [-70, 392], [-45, 430], [-40, 470], [-40, 742], [-40, 764], [-40, 864],
     [-42, 872], [-120, 872], [-200, 872], [-200, 906]], 'bomb', true);
   P.line('Rampart Run', [[-320, 254], [-320, 560], [-320, 600], [-262, 626], [-260, 650], [-260, 742], [-230, 760], [-200, 776],

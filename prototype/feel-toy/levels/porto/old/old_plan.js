@@ -46,6 +46,12 @@ function old_plan(baseH) {
   const ground = (x, z, base) => {
     if (z <= 242 || z >= 898) return base;
     let h = gen(x, z, base);
+    // the Wall Walk (x -402..-392) is level across, at its centre line's height, so a rider rolls straight down it; it eases
+    // back to the flank's cross-slope over 6 m either side (under the Old Wall to the west, the U/M/H blocks to the east)
+    if (x > -408 && x < -386) {
+      const w = x < -402 ? ss((x + 408) / 6) : x > -392 ? ss((-386 - x) / 6) : 1;
+      h += (gen(-397, z, baseH(-397, z)) - h) * w;
+    }
     for (const L of lanes) {
       if (x < L.x0 || x > L.x1) continue;
       const dz = Math.abs(z - L.zc), bl = z < L.zc && L.bn ? L.bn : L.bl;
@@ -96,7 +102,7 @@ function old_plan(baseH) {
     [140, 200, 778, 850, 2],       // pool lots + banks
   ];
   /* ---- break points for sloped sidewalks ---- */
-  const bs = new Set([230.5, 242, 898]);
+  const bs = new Set([230, 242, 898]);
   for (let k = 1; k < KN.length - 1; k++) { const z = KN[k][0], r = FR[k]; for (const d of [-r, -r / 2, 0, r / 2, r]) bs.add(z + d); }
   const breaks = [...bs].sort((a, b) => a - b);
   const breaksAlto = []; for (let z = 240; z <= 262; z += 2) breaksAlto.push(z);       // every 2 m on the Grand Boulevard's first stretch

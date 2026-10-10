@@ -6,6 +6,8 @@
 function old_upper(K, P, O) {
   const T = (x, z) => K.terrainH(x, z);
   const G = z => O.Gk(z);
+  old_upper_apron(K, -150, 446, 6);     // the Gull Fountain
+  old_upper_apron(K, 121, 425, 4.5);    // the Lemon bowl
   old_upper_alto(K, P, O, T);
   old_upper_boulevard(K, P, O, T, G);
   old_upper_bishop(K, P, O, T, G);
@@ -18,6 +20,18 @@ function old_upper(K, P, O) {
   old_upper_buildings(K, P, O, T);
   old_upper_fill(K, P, O, T, G);
   old_upper_life(K, P, O, T, G);
+}
+
+/* a bowl on a sloping square: the ground mesh draws a pool's whole 8 m-snapped patch in the pool colours wherever it lies
+   under the rim, so the square is levelled at rim height over that patch (a flat stone apron) and eases back to the slope
+   over m metres round it */
+function old_upper_apron(K, cx, cz, r, m = 8) {
+  const y0 = K.terrainH(cx, cz), x0 = Math.floor((cx - r - 1) / 8) * 8, x1 = Math.ceil((cx + r + 1) / 8) * 8,
+    z0 = Math.floor((cz - r - 1) / 8) * 8, z1 = Math.ceil((cz + r + 1) / 8) * 8;
+  K.feat(x0 - m, x1 + m, z0 - m, z1 + m, (x, z, h) => {
+    const d = Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1)), t = Math.min(1, d / m), s = t * t * (3 - 2 * t);
+    return y0 + (h - y0) * s;
+  }, 'set');
 }
 
 /* a building with a stepped cornice and a terracotta roof slab (design 7.10) */
@@ -46,8 +60,8 @@ function old_upper_alto(K, P, O, T) {
 
 /* ---------------- 7.2 Grand Boulevard ---------------- */
 function old_upper_boulevard(K, P, O, T, G) {
-  old_walk(K, O, -55, -50, 230.5, 400);
-  old_walk(K, O, -30, -25, 230.5, 400);
+  old_walk(K, O, -55, -50, 230, 400);    // from the border itself (the fin handshake)
+  old_walk(K, O, -30, -25, 230, 400);
   for (let z = 232; z < 262; z += 6) K.dash(-40, z, -40, z + 3);
   // the Rambla median: three segments, a noRails deck and two 0.45 ledges each (six sloped ledges)
   for (const [z0, z1] of [[262, 300], [304, 344], [348, 390]]) {
@@ -55,7 +69,8 @@ function old_upper_boulevard(K, P, O, T, G) {
     old_slopeLedge(K, -43, -42.4, z0, z1, 0.45, 0xe9e1cf, -43);
     old_slopeLedge(K, -37.6, -37, z0, z1, 0.45, 0xe9e1cf, -37);
   }
-  for (const z of [270, 286, 312, 328, 356, 372]) K.tree(-40, z);
+  // trees staggered off the deck's centre line, so the centre stays a clear manual lane and the line in from fin's boulevard rolls on
+  [270, 286, 312, 328, 356, 372].forEach((z, i) => K.tree(i % 2 ? -38.4 : -41.6, z));
   for (const z of [302, 346]) { K.zebra(-46.5, z, 'x', 4); K.zebra(-33.5, z, 'x', 4); }
   for (let z = 270; z <= 366; z += 32) { K.lamp(-54.2, z, 1); K.lamp(-25.8, z, -1); }
   // hydrants and bins on the outer sidewalks
@@ -110,9 +125,9 @@ function old_upper_brisa(K, P, O, T, G) {
 /* ---------------- 7.5 Fountain Square ---------------- */
 function old_upper_square(K, P, O, T, G) {
   // wave paving: six sine lines of 2 m dashes
-  for (const zr of [412, 422, 432, 456, 462, 466]) for (let x = -222; x < -30; x += 2) {
-    const xm = x + 1; if (xm > -160 && xm < -140 && zr > 430 && zr < 460) continue;
-    K.dash(x, zr + 1.2 * Math.sin(2 * Math.PI * x / 9), x + 2, zr + 1.2 * Math.sin(2 * Math.PI * (x + 2) / 9), 0x2b2b2b, 0.4);
+  for (const zr of [412, 422, 432, 456, 462, 466]) for (let x = -222; x < -30; x += 1) {
+    const xm = x + 0.5; if (xm > -160 && xm < -140 && zr > 430 && zr < 460) continue;
+    K.dash(x, zr + 1.2 * Math.sin(2 * Math.PI * x / 9), x + 1, zr + 1.2 * Math.sin(2 * Math.PI * (x + 1) / 9), 0x4a4741, 0.3);
   }
   // the Gull Fountain: a bowl r 6 d 1.5 inside a 16 m wall with a 3 m gap in the middle of each side
   K.fountainBowl(-150, 446, 6, 1.5);
@@ -176,10 +191,10 @@ function old_upper_lemon(K, P, O, T, G) {
   K.bench(113.7, 428.8, 114.3, 431.2); K.bench(127.7, 423.8, 128.3, 426.2); K.bench(119.8, 417.7, 122.2, 418.3); K.bench(119.8, 431.7, 122.2, 432.3);
   // the Cafe Steps: three wooden decks, each south edge a drop
   [[404, 418], [418, 432], [432, 446]].forEach(([z0, z1]) => {
-    K.B(150, T(170, z1) - 0.5, z0, 190, G(z0) + 0.1, z1, 'wood', { edges: 's', color: 0x8a6a4a });
+    K.B(150, T(170, z1) - 0.5, z0, 190, T(170, z0) + 0.03, z1, 'wood', { edges: 's', color: 0x8a6a4a });   // flush at the north edge, so it rolls on
   });
   K.decorFns.push(D => { const geo = new THREE.ConeGeometry(1.3, 0.5, 8), pole = new THREE.CylinderGeometry(0.04, 0.04, 2.0, 6);
-    for (const [x, z, y] of [[158, 410, G(404) + 0.1], [172, 411, G(404) + 0.1], [160, 425, G(418) + 0.1], [178, 426, G(418) + 0.1], [165, 439, G(432) + 0.1]]) {
+    for (const [x, z, y] of [[158, 410, K.terrainH(170, 404) + 0.03], [172, 411, K.terrainH(170, 404) + 0.03], [160, 425, K.terrainH(170, 418) + 0.03], [178, 426, K.terrainH(170, 418) + 0.03], [165, 439, K.terrainH(170, 432) + 0.03]]) {
       D.add(pole, 0xdedad2, [x, y + 1.0, z]); D.add(geo, 0xc0623f, [x, y + 2.2, z]); } });
   // the top of Lantern Street: two sidewalks, centre dashes
   old_walk(K, O, 112, 115, 446, 470, { ramps: [true, false] });

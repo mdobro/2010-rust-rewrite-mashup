@@ -100,8 +100,10 @@ function old_market_crosstown(K, P, O, T, G) {
   const cross = [-320, -200, -40, 120];
   for (let x = -300; x <= 200; x += 32) {
     if (cross.some(k => Math.abs(x - k) < 10) || Math.abs(x - 60) < 4) continue;
-    K.lamp(x, 553.2, 1); K.lamp(x + 16, 566.8, -1);
+    K.lamp(x, 553.2, 1); K.lamp(x + 16 > -170 && x + 16 < -130 ? -176 : x + 16, 566.8, -1);   // the Lavadouro mouth stays open
   }
+  // the Wash and Clock line rolls off Crosstown into the Lavadouro: a curb ramp along the south sidewalk's face
+  K.hubbas.push({ a: V(-150, y + 0.15, 565.4), b: V(-150, y + 0.01, 563.8), w: 30, noRails: true, color: 0xb9b5ab });
   for (const x of [144, 176]) { K.tree(x, 553.7); K.tree(x + 16, 566.3); }                                  // trees only east of Lantern
   // the Crosstown ledges on the south sidewalk, 0.45 over it
   K.ledge(-100, 566.0, -84, 566.6, 0.6, 'marble');
@@ -239,6 +241,8 @@ function old_market_fill(K, P, O, T, G) {
   K.bench(-51.4, 650, -50.8, 652.4); K.ledge(-51.6, 640, -50.8, 646, 0.4);
   // the Convent Lane foot
   led(-267.5, 724, 738, 1); led(-252.5, 714, 728, -1); flat(-265.6, 730, -263.2, 731.2);
+  old_curbRamp(K, -260, 8, 742, -1);   // up onto the Terrace's north sidewalk (a box face head-on bails)
+  old_curbRamp(K, -261, 7, 755, -1);   // and across onto its south sidewalk, towards the Miradouro wall
   // Rampart Alley (x -320, z 524..552): a ledge each side and a pad between
   led(-324.3, 528, 540, 1); led(-315.7, 538, 550, -1); flat(-323.4, 533, -321.4, 534.2);
   // Lantern Street, z 470..600: ledges along the east sidewalk's back edge, with a bank between
