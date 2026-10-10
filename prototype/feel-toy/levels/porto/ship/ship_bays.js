@@ -39,6 +39,7 @@ function ship_bays_docks(K, P, PL) {
     K.prop(433, top - 0.45, z0, 433.15, top - 0.3, z1, 0x2a2a2e);               // the bumper strip
   }
   K.hubbas.push({ a: V(430, -39.436, 946), b: V(430, -40.485, 938), w: 6, noRails: true, color: 0xb9b5ab });      // the WA1 ramp (13 %)
+  K.hubbas.push({ a: V(430, PL.y2 + 0.15, 1112), b: V(430, PL.y2 + 0.01, 1110.6), w: 6, noRails: true, color: 0xb9b5ab });   // a curb cut where the Long Dock runs out on to Quay Road (designer review)
   K.rail(433.4, -38.536, 946, 433.4, -39.585, 938, 'Handrail', true);
   // east docks, x 446..452, edges w n s
   for (const [z0, z1, top] of [[942, 960, -40.405], [964, 982, -40.405], [986, 1004, -40.405],

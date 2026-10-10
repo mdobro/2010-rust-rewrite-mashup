@@ -91,6 +91,8 @@ function ship_west_fish(K, P, PL) {
   K.B(106, -43.6, 1130, 198, PT, 1136, 'plaza', { edges: 'ns' });
   K.stairSpot('x', 106, -1, 1130, 1136, PT, -43.244, 4, 0.4, { rails: [1136.45] });
   K.hubbas.push({ a: V(198, PT, 1133), b: V(206, -43.244, 1133), w: 5, noRails: true, color: 0xb9b5ab });
+  // a curb cut over Quay Road's south sidewalk at x 206 (clear of the lamp at 214), so the Fish Quay line gets off the road to the ramp (designer review)
+  for (const [z0, z1] of [[1125, 1123.6], [1128, 1129.4]]) K.hubbas.push({ a: V(206, PL.y2 + 0.15, z0), b: V(206, PL.y2 + 0.01, z1), w: 4, noRails: true, color: 0xb9b5ab });
   for (const x of [114, 132, 150, 168, 186]) for (const z of [1150, 1157])
     K.B(x, Y(z) - 0.2, z, x + 5, Y(z) + 0.9, z + 1.2, 'metal', { edges: 'nswe' });
   for (const x of [120, 140, 160, 180]) { K.B(x, Y(1162) - 0.3, 1162, x + 2, Y(1162) + 0.5, 1164, 'wood'); K.B(x + 0.2, Y(1162) + 0.45, 1162.2, x + 1.8, Y(1162) + 0.95, 1163.8, 'wood'); }

@@ -134,10 +134,12 @@ function ship_yard_containers(K, P, PL) {
   zs.forEach((z0, r) => {
     for (const [tab, bx] of [[A, 652], [B, 784]]) for (let i = 0; i < 8; i++) {
       const pal = PL.PAL[(i * 7 + (r + 1) * 3) % 7];
-      if (tab[r]) PL.stack(K, bx + 13.2 * i, z0, tab[r][i], 12.2, pal);
-      else if (bx === 652 || i < 7) PL.stack(K, bx + 13.2 * i, z0, 1, 13.2, pal);        // the Stack Runs: butted, 13.2 long, one high
+      if (tab[r]) PL.stack(K, bx + 13.2 * i, z0, tab[r][i], 12.2, pal, '');            // 2.6 m and up from the aisles: no reachable edges
+      else if (bx === 652 || i < 7) PL.stack(K, bx + 13.2 * i, z0, 1, 13.2, pal, '');    // the Stack Runs: butted, 13.2 long, one high
     }
   });
+  // the Stack Runs' lips: one ledge per side for the whole run (not one per box), at the flat top Y(1062) + 2.6
+  for (const [x0, x1] of [[652, 757.6], [784, 876.4]]) for (const z of [1062, 1064.45]) K.rail(x0, Y(1062) + 2.6, z, x1, Y(1062) + 2.6, z, 'Ledge', false);
   const T = Y(1062) + 2.6, zc = 1063.225;
   K.hubbas.push({ a: V(757.6, T, zc), b: V(770, T - 2.6, zc), w: 2.45, noRails: true, color: 0x8a8f94 });
   K.hubbas.push({ a: V(652, T, zc), b: V(640, T - 2.6, zc), w: 2.45, noRails: true, color: 0x8a8f94 });
@@ -149,10 +151,15 @@ function ship_yard_containers(K, P, PL) {
 function ship_yard_reefer(K, P, PL) {
   const Y = PL.Y;
   K.hubbas.push({ a: V(906.5, -39.548, 1050), b: V(906.5, PL.y1, 1034), w: 5, noRails: true, color: 0x8a8f94 });
-  K.B(904, -42.7, 1050, 909, -39.548, 1066, 'car', { color: 0xdedad2, edges: 'nswe' });
-  K.B(904, -43.0, 1069.5, 909, -39.548, 1085.5, 'car', { color: 0xdedad2, edges: 'nswe' });
-  K.B(904, -43.5, 1086.7, 909, -40.241, 1098.9, 'car', { color: 0x2f6d8a, edges: 'nswe' });
+  K.B(904, -42.7, 1050, 909, -39.548, 1066, 'car', { color: 0xdedad2, edges: 'ew' });
+  K.B(904, -43.0, 1069.5, 909, -39.548, 1085.5, 'car', { color: 0xdedad2, edges: 'ew' });
+  K.B(904, -43.5, 1086.7, 909, -40.241, 1098.9, 'car', { color: 0x2f6d8a, edges: 'ew' });
   K.hubbas.push({ a: V(906.5, -40.241, 1098.9), b: V(906.5, PL.y2, 1110), w: 5, noRails: true });
+  // curb cuts where the Reefer Run crosses the sidewalks at x 906.5 (designer review): up off Harbour Road, down to the plate,
+  // and over Quay Road's north sidewalk at the foot of N3
+  const cut = (z0, y0, z1, y1) => K.hubbas.push({ a: V(906.5, y0, z0), b: V(906.5, y1, z1), w: 5, noRails: true, color: 0xb9b5ab });
+  cut(1026, PL.y1 + 0.15, 1024.6, PL.y1 + 0.01); cut(1030, PL.y1 + 0.15, 1031.4, PL.y1 + 0.01);
+  cut(1112, PL.y2 + 0.15, 1110.6, PL.y2 + 0.01); cut(1115, PL.y2 + 0.15, 1116.4, PL.y2 + 0.01);
   for (const [z0, z1, top] of [[1050, 1066, -39.548], [1069.5, 1085.5, -39.548], [1086.7, 1098.9, -40.241]])     // reefer plugs on the west faces
     for (let z = z0 + 2; z < z1 - 1; z += 4) K.prop(903.6, top - 1.6, z, 904, top - 1.1, z + 0.5, 0x2b2b2e);
   P.challenge({ id: 'ship-canyon', name: 'Reefer Canyon', desc: 'Gap from one reefer stack to the next', kind: 'gap',
@@ -192,14 +199,14 @@ function ship_yard_bit(K, code, x, z, v, sw) {
 function ship_yard_filler(K, P, PL) {
   const sw = list => list.forEach(([c, x, z, v]) => ship_yard_bit(K, c, x, z, v, true));
   const gr = list => list.forEach(([c, x, z, v]) => ship_yard_bit(K, c, x, z, v, false));
-  // Gantry Road, both sidewalks (their ledges stand 0.45 over the sidewalk, at its outer edge so the bomb lane stays clear)
+  // Gantry Road, both sidewalks (the west one keeps z 1036..1048 clear in front of Deckhand Skate Supply; their ledges stand 0.45 over the sidewalk, at its outer edge so the bomb lane stays clear)
   sw([['v', 609.6, 978], ['v', 609.6, 1042], ['v', 609.6, 1066], ['v', 609.6, 1090], ['v', 609.6, 1105],
-      ['v', 591.2, 953], ['v', 591.2, 975], ['v', 591.2, 998], ['v', 591.2, 1042], ['v', 591.2, 1064], ['v', 591.2, 1086], ['v', 591.2, 1104]]);
+      ['v', 591.2, 953], ['v', 591.2, 975], ['v', 591.2, 998], ['v', 591.2, 1054], ['v', 591.2, 1064], ['v', 591.2, 1086], ['v', 591.2, 1104]]);
   gr([['v', 609.6, 937], ['v', 609.6, 1004]]);                                                                           // beside the roll-out cut
   // Harbour Road: north sidewalk z 1010..1014 (items at z 1011), south sidewalk z 1026..1030 (items at z 1028.4)
   gr([['l', 616, 1010.4], ['p', 624, 1010.8]]);
   sw([['l', 640, 1011], ['p', 645, 1028], ['b', 665, 1011], ['k', 665, 1028.4], ['p', 690, 1028], ['l', 702, 1011], ['k', 720, 1028.4], ['l', 736, 1011],
-      ['p', 746, 1028], ['l', 792, 1011], ['p', 806, 1028], ['k', 830, 1028.4], ['b', 850, 1011], ['p', 870, 1028], ['l', 892, 1011], ['k', 906, 1028.4], ['l', 924, 1028.4]]);
+      ['p', 746, 1028], ['l', 792, 1011], ['p', 806, 1028], ['k', 830, 1028.4], ['b', 850, 1011], ['p', 870, 1028], ['l', 892, 1011], ['k', 890, 1028.4], ['l', 924, 1028.4]]);
   gr([['d', 770, 1011], ['d', 770, 1026.6]]);                                                                            // the Straddle Lane mouth
   // the roll-out apron (x 612..700, gravel), kept 6 m clear of the line z 951
   gr([['w', 624, 944.6, 0.9], ['l', 640, 958.4], ['j', 662, 944], ['l', 680, 958.4], ['w', 694, 944.6, 1.2], ['w', 650, 944.4, 0.6]]);

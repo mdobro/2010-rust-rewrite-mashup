@@ -197,9 +197,11 @@ function ship_quay_filler(K, P, PL) {
 function ship_quay_landmarks(K, P, PL) {
   const parts = [];
   for (const [dx, c] of [[-100, 0xc8402e], [0, 0xd2a12a], [100, 0x3d6a9a]]) {
-    parts.push({ shape: 'box', at: [dx - 8.9, 15, 0], size: [1.6, 30, 29.6], color: c });
-    parts.push({ shape: 'box', at: [dx + 8.9, 15, 0], size: [1.6, 30, 29.6], color: c });
-    parts.push({ shape: 'box', at: [dx, 33, 10], size: [2.4, 2.2, 140], color: c });
+    for (const sx of [-8.9, 8.9]) {                                   // four legs and the portal beam over each pair (not a solid wall)
+      for (const sz of [-14, 14]) parts.push({ shape: 'box', at: [dx + sx, 15, sz], size: [1.6, 30, 1.6], color: c });
+      parts.push({ shape: 'box', at: [dx + sx, 27.5, 0], size: [1, 2.5, 29.6], color: c });
+    }
+    parts.push({ shape: 'box', at: [dx, 33.3, 16], size: [2.4, 2.2, 128], color: c });   // the boom, z 1112..1240 like the real one
   }
   parts.push({ shape: 'box', at: [0, 40, 0], size: [1.2, 8, 1.2], color: 0xd2a12a });
   P.landmark({ at: [790, -44, 1160], near: 160, parts });
