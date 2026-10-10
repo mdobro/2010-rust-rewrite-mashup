@@ -1470,7 +1470,11 @@ function levelMega() {
     fine.push({ x0: 392, x1: 412, z0: -120, z1: 120, res: 1 });
     for (const z of [-80, 0, 80]) kicker(398, z, 1, 0, 2.2, 0.55);     // ply someone left at the bottom
     // pipe racks along the road, low rails of the rail spur, gravel and pallets
-    for (const z of [-56, 46]) rail(150, 1.1, z, 380, 1.1, z, 'Pipe');
+    // pipe racks along the yards beside the roads (not on them), broken where the cross road goes through, on steel supports
+    for (const z of [-58.5, 48.5]) for (const [x0, x1] of [[150, 252], [268, 378]]) {
+      rail(x0, 1.1, z, x1, 1.1, z, 'Pipe', false);
+      for (let x = x0 + 0.5; x <= x1 - 0.4; x += (x1 - x0 - 1) / Math.round((x1 - x0) / 9)) B(x - 0.12, -0.2, z - 0.12, x + 0.12, 1.06, z + 0.12, 'metal');
+    }
     rail(380, 0.15, -118, 380, 0.15, 118, 'Rail', false); rail(382.2, 0.15, -118, 382.2, 0.15, 118, 'Rail', false);
     hump(320, 82, 12, 3.2); hump(345, 100, 9, 2.2); fine.push({ x0: 300, x1: 360, z0: 66, z1: 112, res: 1 });
     for (const x of [234, 236, 238]) B(x, 0, 28, x + 1.2, 0.3, x === 238 ? 29.2 : 29.2, 'wood');
