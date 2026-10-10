@@ -278,7 +278,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.2, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 3.2, runSpeed: 5, sprintSpeed: 7.5, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.2, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 3.2, runSpeed: 5, sprintSpeed: 7.5, walkJump: 4.6, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
@@ -296,7 +296,7 @@ const SPEC = [
     ['revertWindow', 'Revert: time after landing to keep the combo (s)', 0, 1.5, 0.05], ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDelay', 'Manual: hold the stick steady this long first (s)', 0, 0.6, 0.02], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
     ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualAssist', 'Manual: self-righting with a steady thumb', 0, 3, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
     ['slamBail', 'Bail when hitting a wall faster than (m/s)', 2, 15, 0.25], ['curbBail', 'Bail when catching a curb faster than (m/s)', 0.5, 10, 0.25],
-    ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['sprintSpeed', 'Sprint speed (tap the trick stick)', 3, 12, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
+    ['walkSpeed', 'Walking speed', 1, 5, 0.1], ['runSpeed', 'Running speed (stick all the way)', 2, 8, 0.1], ['sprintSpeed', 'Sprint speed (stick held all the way)', 3, 12, 0.1], ['walkJump', 'Jump on foot (m/s up)', 2, 7, 0.1], ['slideAngle', 'Powerslide board angle (°)', 30, 100, 1],
     ['turnRate', 'Turn rate, slow', 0.5, 6, 0.05], ['turnRateFast', 'Turn rate, fast', 0.3, 5, 0.05],
     ['grip', 'Grip (less side slip)', 1, 30, 0.5], ['carveKeep', 'Speed kept when carving', 0, 1, 0.01],
   ]],
@@ -816,7 +816,7 @@ function buildDowntown(K) {
   // blocks and sidewalks up, roads down; the step is a slope hidden under the sidewalk boxes, never a cliff
   const roadDist = (x, z) => Math.min(...AV.map(a => Math.abs(x - a) - RW), ...ST.map(c => Math.abs(z - c) - RW));
   feat(-E, E, -E, E, (x, z) => G * clamp(roadDist(x, z), 0, 1), 'set');
-  fine.push({ x0: -E, x1: E, z0: -E, z1: E, res: 1 });
+  fine.push({ x0: -E - 8, x1: E + 8, z0: -E - 8, z1: E + 8, res: 1 });     // a little past the blocks, so the step down to the boulevards is drawn where it is
   const CLEAR = [];                                                           // where lines cross: keep the furniture out
   const clearRect = (x0, z0, x1, z1) => CLEAR.push([Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1)]);
   const isClear = (x0, z0, x1, z1) => !CLEAR.some(([a, b, c, d]) => x1 > a && x0 < c && z1 > b && z0 < d);
@@ -1074,7 +1074,7 @@ function buildDowntown(K) {
     for (const [x0, z0, x1, z1] of [[74, 52, 74.08, 64], [74, 76, 74.08, 118], [74, 52, 90, 52.08], [98, 52, 118, 52.08]]) B(x0, G - 0.1, z0, x1, G + 1.9, z1, 'fence');
     hubbas.push({ a: V(90.4, G + 0.6, 70), b: V(88, G + 0.02, 70), w: 1.4, noRails: true, color: 0xc49a5c });
     feat(92, 94.6, 64, 76, () => G - 1.4, 'set'); fine.push({ x0: 91, x1: 96, z0: 63, z1: 77, res: 0.25 });
-    hump(108, 76, 6, 1.8);
+    hump(108, 76, 6, 1.8); fine.push({ x0: 100, x1: 116, z0: 68, z1: 84, res: 0.4 });          // the dirt pile, drawn fine enough that you ride on it, not in it
     // a half-built deck on columns: push up the ply ramp, drop off the far edge onto the dirt
     B(100, G + 3.2, 86, 117, G + 3.6, 106, 'plaza', { edges: 'nsw' });
     for (const xx of [101, 108.5, 116]) for (const zz of [87, 96, 105]) B(xx - 0.3, G - 0.2, zz - 0.3, xx + 0.3, G + 3.2, zz + 0.3, 'plaza');
@@ -1896,7 +1896,7 @@ function levelMega() {
   // the ground: big coarse patches leave out the cells that finer patches cover (fine patches snap to an 8 m grid)
   const snap = f => ({ ...f, x0: Math.floor(f.x0 / 8) * 8, x1: Math.ceil(f.x1 / 8) * 8, z0: Math.floor(f.z0 / 8) * 8, z1: Math.ceil(f.z1 / 8) * 8 });
   const F = fine.map(snap);
-  const NWr = { x0: -440, x1: -144, z0: -440, z1: -152 }, SWr = { x0: -440, x1: -128, z0: 128, z1: 440 }, RVr = { x0: -352, x1: 440, z0: 280, z1: 328 };
+  const NWr = { x0: -440, x1: -144, z0: -440, z1: -144 }, SWr = { x0: -440, x1: -128, z0: 128, z1: 440 }, RVr = { x0: -352, x1: 440, z0: 280, z1: 328 };
   const regions = [
     { ...NWr, res: 2, col: groundCol, skip: F }, { ...SWr, res: 2, col: groundCol, skip: [...F, RVr] }, { ...RVr, res: 1, col: groundCol, skip: F },
     { x0: -440, x1: 440, z0: -440, z1: 440, res: 8, col: groundCol, skip: [...F, NWr, SWr, RVr] },
@@ -2109,6 +2109,7 @@ function sampleInput() {
     const anyBtn = p.buttons.some(b => b.pressed);
     if (lx || ly || rx || ry || anyBtn) { setDevice('pad'); startAudio(); }
     const nowB = {}; for (const i of [0, 2, 3, 8, 9, 12]) nowB[i] = pb(i);
+    if (nowB[0] && !prevBtn[0]) EDGE_IN.jump = true;               // on foot, A jumps
     if (nowB[3] && !prevBtn[3]) EDGE_IN.walk = true;
     if (nowB[12] && !prevBtn[12]) EDGE_IN.setSpot = true;
     if (anyBtn && introVisible) hideIntro();
@@ -2129,14 +2130,14 @@ function sampleInput() {
   IN.push = ly + ky < -0.5 || pb(0) || (ts.pushHold && ts.moved < 20); // touch: tap the trick thumb, or tap then hold to keep pushing
   IN.brake = IN.stickY > 0.6;
   const ollie = keys.has('Space') || FL.ollie;
-  if (ollie && !IN.ollie) EDGE_IN.ollieDown = true;
+  if (ollie && !IN.ollie) { EDGE_IN.ollieDown = true; EDGE_IN.jump = true; }
   if (!ollie && IN.ollie) { if (FL.cancelPop) S.crouch = 0; else EDGE_IN.ollieUp = true; }
   FL.cancelPop = false;
   if (FL.popNow) { FL.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
   IN.ollie = ollie;
   IN.grab = false; // no grabs: in the air the trick stick sets the board up for a grind instead
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
-  IN.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(0) || pb(10); // on foot: hold to sprint (touch taps the trick stick instead)
+  IN.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(10); // on foot: hold to sprint (touch: keep the stick pushed all the way)
 }
 function trickDir() {
   if (IN.stickY < -0.5) return 'up';
@@ -2488,8 +2489,8 @@ for (const r of RAILS) {
       for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2;
         decorAdd(coneGeo, frond, M4.clone().compose(top.clone().add(V(Math.cos(a) * 1.4, -0.3, Math.sin(a) * 1.4)), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.4, -a + Math.PI / 2, 0, 'YXZ')), S4.clone().set(0.5, 3.2, 0.12))); }
     },
-    tree(x, y, z) { decorAdd(boxGeo, bark, place(x, y + 1.3, z, 0, 0.22, 2.6, 0.22)); decorAdd(sphGeo, leaf, place(x, y + 3.6, z, 0, 1.7, 1.5, 1.7)); },
-    lamp(x, y, z, side) { decorTube(V(x, y, z), V(x, y + 5.2, z), 0.07, pole); decorTube(V(x, y + 5.2, z), V(x + side * 1.2, y + 5.4, z), 0.05, pole);
+    tree(x, y, z) { solidPost(x, y, z, 0.16, 2.5); decorAdd(boxGeo, bark, place(x, y + 1.3, z, 0, 0.22, 2.6, 0.22)); decorAdd(sphGeo, leaf, place(x, y + 3.6, z, 0, 1.7, 1.5, 1.7)); },
+    lamp(x, y, z, side) { solidPost(x, y, z, 0.09, 5.2); decorTube(V(x, y, z), V(x, y + 5.2, z), 0.07, pole); decorTube(V(x, y + 5.2, z), V(x + side * 1.2, y + 5.4, z), 0.05, pole);
       decorAdd(boxGeo, lampHead, place(x + side * 1.3, y + 5.3, z, 0, 0.5, 0.18, 0.3)); },
     // a flat area with rectangular holes left for terrain meshes
     planeAround([x0, x1, z0, z1], holes, y, color, tex) {
@@ -2608,6 +2609,8 @@ function deckOutline() {
   s.moveTo(-W, -L); s.lineTo(-W, L); s.absarc(0, L, W, Math.PI, 0, true); s.lineTo(W, -L); s.absarc(0, -L, W, 0, Math.PI, true); return s;
 }
 const KICK_AT = 0.27, KICK_SLOPE = 0.21;
+// how far the kicked nose or tail rises under a shoe at z turned by yaw (a shoe is 27 cm long, 10 wide), so it sits on the kick, not in it
+const kickLift = (z, yaw) => { const u = Math.max(0, Math.abs(z) + 0.128 * Math.abs(Math.sin(yaw)) + 0.046 * Math.abs(Math.cos(yaw)) - KICK_AT); return u * KICK_SLOPE + u * u * 0.35; };
 function bendDeck(g) {   // kick the nose and tail up, and dish the middle
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), u = Math.max(0, Math.abs(z) - KICK_AT);
@@ -2794,6 +2797,8 @@ function walkPose(dt, time) {
   head.rotation.set(0, 0, 0);
   const feet = { front: V(-0.1, 0.075, -0.3 * Math.sin(ph) * amp), back: V(0.1, 0.075, 0.3 * Math.sin(ph) * amp) };
   feet.front.y += Math.max(0, -Math.cos(ph)) * 0.12 * amp; feet.back.y += Math.max(0, Math.cos(ph)) * 0.12 * amp;
+  const air = clamp((S.pos.y - groundAt(S.pos.x, S.pos.z, S.pos.y + 0.14).h) / 0.35, 0, 1);   // in a jump the knees tuck up
+  feet.front.y += 0.2 * air; feet.back.y += 0.16 * air; feet.front.z -= 0.08 * air;
   for (const side of ['front', 'back']) {
     const L = LIMBS[side], foot = feet[side];
     limbIK(L.thigh, L.shin, toRig(V(0, -0.04, side === 'front' ? -0.09 : 0.09)), foot, V(0, 0.1, -1), THIGH, SHIN);
@@ -2918,8 +2923,15 @@ function stepWalk(dt) {
   const fw = fwdOf(fy), rt = V(Math.cos(fy), 0, -Math.sin(fy));
   const want = fw.multiplyScalar(-iy).addScaledVector(rt, ix);
   if (want.lengthSq() > 1e-4) want.normalize();
-  if (m < 0.12) S.sprint = false;                                   // a sprint lasts until you let go of the stick
+  // keep the stick pushed all the way for a second and you break into a sprint, until you ease off
+  S.fullStickT = m > 0.92 ? (S.fullStickT || 0) + dt : 0;
+  if (m < 0.12) S.sprint = false; else if (S.fullStickT > 1) S.sprint = true; else if (m < 0.8) S.sprint = false;
   const sprinting = m >= 0.12 && (S.sprint || IN.sprint);
+  // a tap of the trick stick (Space, A) jumps: about 0.75 m, enough to hop up on to a ledge
+  const gNow = groundAt(S.pos.x, S.pos.z, S.pos.y + 0.14), onFoot = S.pos.y - gNow.h < 0.05 && S.vel.y <= 0.01;
+  S.jumpBuf = (S.jumpBuf || 0) - dt;
+  if (S.jumpBuf > 0 && onFoot) { S.jumpBuf = 0; S.vel.y = T.walkJump; S.pos.y += 0.03; sfx.step(2); }
+  const rising = S.vel.y > 0.5;
   const speed = m < 0.12 ? 0 : sprinting ? T.sprintSpeed * Math.max(m, 0.6) : m > 0.92 ? T.runSpeed : T.walkSpeed * m / 0.92;
   S.vel.x = damp(S.vel.x, want.x * speed, 10, dt); S.vel.z = damp(S.vel.z, want.z * speed, 10, dt);
   if (speed > 0) S.yaw = dampAngle(S.yaw, yawOf(want), 10, dt);
@@ -2929,11 +2941,11 @@ function stepWalk(dt) {
   const hv = Math.hypot(S.vel.x, S.vel.z);
   for (const ahead of hv > 0.05 ? [0.32, 0] : [0]) {
     const g = groundAt(S.pos.x + S.vel.x / hv * ahead || S.pos.x, S.pos.z + S.vel.z / hv * ahead || S.pos.z, S.pos.y + 0.14);
-    if (g.h > S.pos.y && g.h - S.pos.y <= 0.44) { S.pos.y = g.h; S.vel.y = 0; break; }
+    if (!rising && g.h > S.pos.y && g.h - S.pos.y <= 0.44) { S.pos.y = g.h; S.vel.y = 0; break; }
   }
   // ...and step up on to anything low the body touches while walking toward it, at whatever angle
   // (coming at a flight of stairs diagonally the body meets the step before the probe ahead does)
-  if (hv > 0.05) {
+  if (hv > 0.05 && !rising) {
     const R = 0.31; let up = -1;
     const seen = new Set();
     for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]]) for (const b of near(S.pos.x + ox, S.pos.z + oz)) {
@@ -3459,7 +3471,8 @@ function stepRail(dt) {
 function step(dt) {
   if (EDGE_IN.reset) { EDGE_IN.reset = false; returnToSpot(); }
   if (EDGE_IN.setSpot) { EDGE_IN.setSpot = false; setSpot(); }
-  if (EDGE_IN.push) { EDGE_IN.push = false; if (S.walking) S.sprint = true; else if (S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
+  if (EDGE_IN.jump) { EDGE_IN.jump = false; if (S.walking) S.jumpBuf = 0.15; }
+  if (EDGE_IN.push) { EDGE_IN.push = false; if (S.walking) S.jumpBuf = 0.15; else if (S.grounded && !S.rail) S.pushQueue = Math.min(2, S.pushQueue + 1); }
   if (EDGE_IN.revert) { EDGE_IN.revert = false; revert(); }
   trackGrindStick();
   if (EDGE_IN.walk) { EDGE_IN.walk = false; toggleWalk(); }
@@ -3705,6 +3718,7 @@ function updateVisuals(dt, time) {
     L.shoe.position.set(foot.x + 0.03 * (1 - pb), foot.y - 0.027, foot.z - 0.03 * pb * ps);
     const standing = (side === 'front') === (ps > 0);
     L.shoe.rotation.set(0, lerp(side === 'front' ? 0.25 : -0.15, 1.5 * ps, pb * (standing || pose.push > 0 ? 1 : 0)), 0);
+    L.shoe.position.y += kickLift(L.shoe.position.z, L.shoe.rotation.y);
   }
   // arms: out along the board for balance; while pushing they hang and swing like walking
   const sway = Math.sin(time * 1.7) * 0.03;
@@ -4439,6 +4453,17 @@ function npcStep(n, dt) {
   if (n.trick && n.mode === 'ride') { const p = n.trick.t / n.trick.dur; n.y += Math.max(0, Math.sin(Math.min(1, (p - 0.08) / 0.92) * Math.PI)) * 0.5; }
 }
 const _f = V(), _r = V(), _q = new THREE.Quaternion(), _m4 = new THREE.Matrix4();
+// trees and lamp posts are solid: a thin box round the trunk or pole (drawn by the decor, not as a box)
+function solidPost(x, y, z, r, h) { const b = box(x - r, y - 0.2, z - r, x + r, y + h, z + r, 'metal', { ghost: true }); BOXES.push(b); gridAdd(b, b.min[0], b.max[0], b.min[2], b.max[2]); }
+// after posing: if a corner of the deck or a wheel would be under the ground (a flip low to the ground, a
+// slope the board leans across), lift the whole rider clear. Not while grinding: the wheels hang off a ledge.
+const BOARD_PROBES = [[0, 0.115, -0.41], [0, 0.115, 0.41], [-0.09, 0.09, -0.32], [0.09, 0.09, -0.32], [-0.09, 0.09, 0.32], [0.09, 0.09, 0.32], [-0.105, 0.082, 0], [0.105, 0.082, 0],
+  [-0.094, 0, -0.255], [0.094, 0, -0.255], [-0.094, 0, 0.255], [0.094, 0, 0.255]], _bp = V();
+function keepBoardAboveGround(R) {
+  R.skater.updateMatrixWorld(true); let lift = 0;
+  for (const [x, y, z] of BOARD_PROBES) { _bp.set(x, y, z).applyMatrix4(R.boardFlip.matrixWorld); const d = groundAt(_bp.x, _bp.z, _bp.y + 0.25).h - _bp.y; if (d > lift) lift = d; }
+  if (lift > 0.002) { R.skater.position.y += Math.min(lift, 0.4); R.skater.updateMatrixWorld(true); }
+}
 function poseNpc(n, dt, time) {
   const R = n.R, P = n.pose; R.skater.position.set(n.x, n.y, n.z);
   _f.copy(n.dir).addScaledVector(n.up, -n.dir.dot(n.up)).normalize(); _r.crossVectors(_f, n.up).normalize();
@@ -4468,13 +4493,14 @@ function poseNpc(n, dt, time) {
   const toR = l => l.clone().applyQuaternion(R.pelvis.quaternion).add(R.pelvis.position), toT = l => toR(l.clone().applyQuaternion(R.torso.quaternion));
   for (const [side, foot, hz, pole] of [['front', V(0.02, ankleY, -0.22), -0.09, V(1, 0.1, -0.35)], ['back', V(0.02, ankleY, 0.24), 0.09, V(1, 0.1, 0.35)]]) {
     const L = R.LIMBS[side]; limbIK(L.thigh, L.shin, toR(V(0, -0.04, hz)), foot, pole, THIGH, SHIN);
-    L.shoe.position.set(foot.x + 0.03, foot.y - 0.027, foot.z); L.shoe.rotation.set(0, side === 'front' ? 0.25 : -0.15, 0);
+    L.shoe.position.set(foot.x + 0.03, foot.y - 0.027, foot.z); L.shoe.rotation.set(0, side === 'front' ? 0.25 : -0.15, 0); L.shoe.position.y += kickLift(foot.z, L.shoe.rotation.y);
   }
   const shF = toT(V(0, 0.5, -0.19)), shB = toT(V(0, 0.5, 0.19)), sw = Math.sin(time * 1.7 + n.s) * 0.03;
   const fh = toT(V(0.14, 0.12 + sw, -0.52)).lerp(toT(slide ? V(0.3, 0.5, -0.56) : V(0.26, 0.4 + 0.07 * sway, -0.5)), gb);
   const bh = toT(V(0.08, 0.1 - sw, 0.5)).lerp(toT(slide ? V(-0.06, 0.32, 0.56) : V(0.1, 0.08 - 0.07 * sway, 0.52)), gb);
   limbIK(R.LIMBS.front.upper, R.LIMBS.front.fore, shF, fh, V(-0.3, -1, -0.4), UPPER_ARM, FOREARM);
   limbIK(R.LIMBS.back.upper, R.LIMBS.back.fore, shB, bh, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
+  if (!onRail && n.bailT <= 0) keepBoardAboveGround(R);
 }
 function npcTick(dt, time) {
   for (const n of NPCS) {
@@ -4769,7 +4795,7 @@ function frameBody(now) {
   if (SHOP.active) { updateVisuals(dt, simTime); shopCamera(dt); renderer.render(scene, camera); return; }
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
-  updateVisuals(dt, simTime);
+  updateVisuals(dt, simTime); if (S.bail <= 0 && !S.rail) keepBoardAboveGround(PLAYER);
   if (!introVisible) { npcTick(Math.min(dt, 0.05), simTime); trafficTick(Math.min(dt, 0.05)); }
   const co = window.__camOverride; // test hook: a fixed camera for screenshots
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
@@ -4780,7 +4806,7 @@ function frameBody(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { THREE, scene, keepBoardAboveGround, CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

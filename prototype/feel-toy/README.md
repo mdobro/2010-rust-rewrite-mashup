@@ -253,9 +253,14 @@ Walking follows the left stick relative to the camera (the direction is
 locked while you hold the stick, so the camera swinging round doesn't curve
 your path), runs when the stick is all the way over, steps up stairs and stops at taller walls.
 
-**Sprinting:** tap the trick stick while walking, or hold Shift (keyboard) or
-A or L3 (controller). The sprint lasts until you let go of the movement
-stick. You walk at about 3 m/s, run at 5 m/s with the stick all the way over,
+**Jumping:** tap the trick stick while walking, or press Space (keyboard)
+or A (controller). You jump about 0.75 m, which is enough to hop up on to
+ledges, planters and walls up to about waist height. Your knees tuck up in
+the air. The jump speed is on a slider.
+
+**Sprinting:** keep the movement stick pushed all the way for a second, or
+hold Shift (keyboard) or L3 (controller). The sprint lasts until you ease
+off the stick. You walk at about 3 m/s, run at 5 m/s with the stick all the way over,
 and sprint at 7.5 m/s. All three speeds are on sliders.
 
 On foot you hear footsteps instead of the board rolling. They come about
