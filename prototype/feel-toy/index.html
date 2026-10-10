@@ -1786,6 +1786,9 @@ const sfx = {
   // the tail cracking down: a sharp wooden snap with a hollow body under it
   pop: () => { burst({ dur: 0.03, freq: 2300, q: 1.3, vol: 0.55, tone: 560, toneEnd: 190, toneVol: 0.16 }); burst({ dur: 0.1, freq: 320, type: 'lowpass', vol: 0.32, tone: 120, toneEnd: 62, toneVol: 0.26 }); },
   // a wheel over a crack in the slabs: a tick and a little knock
+  // locking on to a rail: metal clanks with a ring, concrete is a gritty thump
+  lockIn: (metal, k) => { if (metal) { burst({ dur: 0.05, freq: 3200, q: 3, vol: 0.25 * k, tone: 1250, toneEnd: 1180, toneVol: 0.08 * k }); burst({ dur: 0.18, freq: 2200, q: 8, vol: 0.06 * k }); }
+    else { burst({ dur: 0.09, freq: 700, q: 0.8, vol: 0.3 * k, tone: 90, toneEnd: 55, toneVol: 0.2 * k }); burst({ dur: 0.12, freq: 1800, q: 0.6, vol: 0.08 * k }); } },
   clack: k => { burst({ dur: 0.016, freq: 2800, type: 'highpass', vol: 0.04 + 0.07 * k }); burst({ dur: 0.035, freq: 200, type: 'lowpass', vol: 0.05 + 0.09 * k, tone: 95, toneEnd: 60, toneVol: 0.03 + 0.04 * k }); },
   land: s => { if (s > 0.35) buzz(Math.round(12 + 30 * s));
     burst({ dur: 0.12, freq: 400, type: 'lowpass', vol: 0.25 + 0.25 * s, tone: 70, toneEnd: 40, toneVol: 0.3 * s + 0.1 });   // the deck slapping down
@@ -2147,8 +2150,9 @@ const shadowed = m => { m.castShadow = true; return m; };
 const capsule = (r, len, mat) => shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, len - 2 * r), 4, 10), mat));
 const pelvis = new THREE.Group(); rig.add(pelvis);
 { const hips = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.3), pants)); hips.position.y = 0.02; pelvis.add(hips); }
-const chest = capsule(0.15, 0.46, shirt); chest.position.set(0, 0.3, 0); chest.scale.set(1, 1, 1.25); pelvis.add(chest);
-const head = new THREE.Group(); head.position.set(0, 0.7, 0); pelvis.add(head);
+const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
+const chest = capsule(0.15, 0.46, shirt); chest.position.set(0, 0.3, 0); chest.scale.set(1, 1, 1.25); torso.add(chest);
+const head = new THREE.Group(); head.position.set(0, 0.7, 0); torso.add(head);
 head.add(shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), skin)));
 { const cap = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat)); cap.position.y = 0.01; head.add(cap);
   const brim = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.012, 0.15), capMat)); brim.position.set(0.12, 0.015, 0); head.add(brim); }
@@ -2173,8 +2177,10 @@ function limbIK(upper, lower, root, target, pole, L1, L2) {
   placeBone(upper, root, _j); placeBone(lower, _j, _e);
 }
 const toRig = local => local.clone().applyQuaternion(pelvis.quaternion).add(pelvis.position);
+const toRigT = local => toRig(local.clone().applyQuaternion(torso.quaternion));   // from the torso's space
 // walking: hips and chest face forward, legs stride, the free arm swings, the other carries the board
 function walkPose(dt, time) {
+  torso.rotation.set(0, 0, 0);
   const sp = Math.hypot(S.vel.x, S.vel.z), amp = clamp(sp / 3, 0, 1.2), ph = S.walkPhase;
   pose.pushBlend = 0; pose.slide = 0;
   qA.setFromAxisAngle(UP, Math.PI / 2); qB.setFromAxisAngle(V(0, 0, 1), -0.08 * amp); // face the way you walk, lean in a little
@@ -2192,7 +2198,29 @@ function walkPose(dt, time) {
   limbIK(LIMBS.front.upper, LIMBS.front.fore, shF, shF.clone().add(V(0, -0.52, 0.22 * Math.sin(ph) * amp)), V(0, -1, 0.6), UPPER_ARM, FOREARM);
   limbIK(LIMBS.back.upper, LIMBS.back.fore, shB, V(0.33, 0.62, 0.02), V(0.3, -1, 0.3), UPPER_ARM, FOREARM);
 }
-const pose = { push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, yawLag: 0, posLag: new THREE.Vector3() };
+// sparks off metal, dust off concrete: one small particle pool each, drawn as glowing points
+function makeSparks(n, color, size, additive) {
+  const geo = new THREE.BufferGeometry(), pos = new Float32Array(n * 3).fill(-999);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ color, size, sizeAttenuation: true, transparent: true, opacity: additive ? 1 : 0.5, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, fog: true });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; scene.add(pts);
+  return { n, pos, vel: new Float32Array(n * 3), life: new Float32Array(n), next: 0, geo, emitAcc: 0 };
+}
+const SPARKS = makeSparks(420, 0xff7a14, 0.065, true), DUST = makeSparks(90, 0xb9b2a6, 0.16, false);
+function emitParticles(P, at, back, n, spread, up, life, speed) {
+  for (let k = 0; k < n; k++) { const i = P.next = (P.next + 1) % P.n, j = i * 3;
+    P.pos[j] = at.x; P.pos[j + 1] = at.y; P.pos[j + 2] = at.z;
+    P.vel[j] = back.x * speed * (0.4 + Math.random()) + (Math.random() - 0.5) * spread; P.vel[j + 1] = up * (0.3 + Math.random()); P.vel[j + 2] = back.z * speed * (0.4 + Math.random()) + (Math.random() - 0.5) * spread;
+    P.life[i] = life * (0.5 + Math.random() * 0.7); }
+}
+function stepParticles(P, dt, g, drag) {
+  for (let i = 0; i < P.n; i++) { if (P.life[i] <= 0) continue; const j = i * 3;
+    if ((P.life[i] -= dt) <= 0) { P.pos[j + 1] = -999; continue; }
+    P.vel[j + 1] -= g * dt; const d = Math.exp(-drag * dt); P.vel[j] *= d; P.vel[j + 2] *= d;
+    P.pos[j] += P.vel[j] * dt; P.pos[j + 1] += P.vel[j + 1] * dt; P.pos[j + 2] += P.vel[j + 2] * dt; }
+  P.geo.attributes.position.needsUpdate = true;
+}
+const pose = { grind: 0, push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, yawLag: 0, posLag: new THREE.Vector3() };
 
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
@@ -2764,7 +2792,9 @@ function tryRail() {
   const onRail = r.a.clone().addScaledVector(r.dir, t * r.len); onRail.y += 0.035;
   pose.posLag.add(S.pos.clone().sub(onRail)); S.pos.copy(onRail); // ...and settles onto it
   const halfTurns = Math.round(Math.abs(S.spin) / Math.PI); if (halfTurns) addTrick(`${halfTurns * 180} Spin`, 60 * halfTurns, halfTurns);
-  S.spin = 0; sfx.land(0.25);
+  S.spin = 0;
+  const metal = METAL_RAILS.has(r.kind); sfx.lockIn(metal, clamp(hv / 8, 0.3, 1)); S.landDip = Math.min(0.3, 0.1 + hv * 0.015); cam.shake = Math.max(cam.shake || 0, 0.25);
+  if (metal) { skater.updateMatrixWorld(true); emitParticles(SPARKS, S.pos.clone().add(V(0, 0.08, 0)), S.vel.clone().setY(0).normalize().negate(), 14, 2.4, 2.4, 0.4, 1.2); }
 }
 function stepRail(dt) {
   const r = S.rail;
@@ -2988,7 +3018,10 @@ function updateVisuals(dt, time) {
   if (S.walking) walkPose(dt, time); else {
   S.steerVis = damp(S.steerVis, S.grounded || S.rail ? IN.steer * clamp(S.vel.length() / 6, 0, 1) : 0, 8, dt);
   const air = !S.grounded && !S.rail;
-  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? 0.3 : 0, air ? 0.25 : 0, pose.slide * 0.45) + S.landDip * 2.5, 0, 1);
+  // on a rail: low and loaded, the weight over the truck (or the deck) that's grinding
+  pose.grind = damp(pose.grind, S.rail ? 1 : 0, S.rail ? 14 : 7, dt);
+  const gb = pose.grind, gSlide = S.rail && GRINDS[S.grindKey].slide;
+  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? (gSlide ? 0.45 : 0.58) : 0, air ? 0.25 : 0, pose.slide * 0.45) + S.landDip * 2.5, 0, 1);
   pose.crouch = damp(pose.crouch, crouchTarget, S.landDip > 0.05 ? 25 : 14, dt);
   const crouchAmt = pose.crouch;
   const boardLift = boardFlip.position.y;
@@ -3024,10 +3057,14 @@ function updateVisuals(dt, time) {
   qB.setFromAxisAngle(V(0, 0, 1), -(0.18 + 0.32 * crouchAmt) * (1 - pb) * (1 - pose.slide) + 0.38 * pose.slide - S.steerVis * 0.3 * (1 - pose.slide));
   pelvis.quaternion.copy(qA).multiply(qB);
   // the hips don't follow the board up: when it rises the knees tuck instead
-  pelvis.position.set(lerp(-0.05 - 0.07 * crouchAmt, 0.04, pb), baseY + lerp(0.7, 0.46, crouchAmt) - 0.06 * pb - standDip, lerp(0.01, -0.12 * ps, pb));
+  pelvis.position.set(lerp(-0.05 - 0.07 * crouchAmt, 0.04, pb), baseY + lerp(0.7, 0.46, crouchAmt) - 0.06 * pb - standDip, lerp(0.01, -0.12 * ps, pb) + gb * pose.gPivot * 0.4);
+  // the shoulders turn back toward where you're going (most in a slide) and sway for balance
+  const gs = Math.sin(time * 2.6) * (0.5 + 0.5 * Math.sin(time * 0.9)), chatter = S.rail && METAL_RAILS.has(S.rail.kind) && !gSlide ? (Math.random() - 0.5) * 0.008 : 0;
+  torso.rotation.set(gb * (0.05 * gs + (gSlide ? 0.12 : 0.06)), -pose.gYaw * 0.55 * gb, gb * 0.04 * gs, 'YXZ');
+  boardFlip.position.y += chatter;
   // head turns to look where you're going (back over the other shoulder when fakie)
   pose.lookFwd = damp(pose.lookFwd, fakie() ? -1 : 1, 6, dt);
-  head.rotation.set(0, 1.15 * pose.lookFwd - 1.35 * pb * ps, 0);
+  head.rotation.set(gb * 0.25, 1.15 * pose.lookFwd - 1.35 * pb * ps - pose.gYaw * 0.3 * gb, 0);   // on a rail, chin down, eyes down the rail
   // legs: knees bend out over the toes; while pushing both knees point at the nose
   const frontPole = V(lerp(1, 0.15, pb), 0.1, lerp(-0.35, -ps, pb)), backPole = V(lerp(1, 0.15, pb), lerp(0.1, 0.3, pb), lerp(0.35, -ps, pb));
   for (const [side, foot, hz, pole] of [['front', frontFoot, -0.09, frontPole], ['back', backFoot, 0.09, backPole]]) {
@@ -3040,15 +3077,27 @@ function updateVisuals(dt, time) {
   // arms: out along the board for balance; while pushing they hang and swing like walking
   const sway = Math.sin(time * 1.7) * 0.03;
   const stride = pose.push > 0 ? Math.sin(pp * Math.PI * 2 - Math.PI / 2) : 0; // back leg behind -> back arm forward
-  const shF = toRig(V(0, 0.5, -0.19)), shB = toRig(V(0, 0.5, 0.19));
-  const frontHand = toRig(V(0.14, 0.12 + sway - S.steerVis * 0.12, -0.52)).lerp(shF.clone().add(V(-0.08, -0.5, 0.22 * stride * ps)), pb);
-  const backHand = toRig(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5)).lerp(shB.clone().add(V(0.08, -0.5, -0.22 * stride * ps)), pb);
+  const shF = toRigT(V(0, 0.5, -0.19)), shB = toRigT(V(0, 0.5, 0.19));
+  const frontHand = toRigT(V(0.14, 0.12 + sway - S.steerVis * 0.12, -0.52)).lerp(shF.clone().add(V(-0.08, -0.5, 0.22 * stride * ps)), pb)
+    .lerp(toRigT(gSlide ? V(0.3, 0.5 + 0.08 * gs, -0.56) : V(0.26, 0.4 + 0.07 * gs, -0.5)), gb);         // leading arm up and out
+  const backHand = toRigT(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5)).lerp(shB.clone().add(V(0.08, -0.5, -0.22 * stride * ps)), pb)
+    .lerp(toRigT(gSlide ? V(-0.06, 0.32 - 0.08 * gs, 0.56) : V(0.1, 0.08 - 0.07 * gs, 0.52)), gb);       // trailing arm low and back
   limbIK(LIMBS.front.upper, LIMBS.front.fore, shF, frontHand, V(lerp(-0.3, 0, pb), -1, lerp(-0.4, 0.6, pb)), UPPER_ARM, FOREARM);
   limbIK(LIMBS.back.upper, LIMBS.back.fore, shB, backHand, V(lerp(-0.3, 0, pb), -1, lerp(0.4, 0.6, pb)), UPPER_ARM, FOREARM);
   }
   // bail: topple off the heel side
   rig.rotation.set(0, 0, S.bail > 0 ? clamp((1.2 - S.bail) * 3, 0, 1.35) : 0);
   rig.position.set(S.bail > 0 ? -clamp((1.2 - S.bail) * 0.6, 0, 0.4) : 0, 0, 0);
+  // sparks and dust where the board meets the rail, thrown back the way you came
+  if (S.rail && S.bail <= 0) {
+    skater.updateMatrixWorld(true);
+    const at = boardOrient.localToWorld(V(0, 0.02, pose.gPivot)), sp = Math.abs(S.railS), back = S.vel.clone().setY(0).normalize().negate();
+    const metal = METAL_RAILS.has(S.rail.kind), P = metal ? SPARKS : DUST;
+    P.emitAcc += dt * sp * (metal ? (GRINDS[S.grindKey].slide ? 14 : 38) : 3.5);
+    const n = Math.floor(P.emitAcc); P.emitAcc -= n;
+    if (n) metal ? emitParticles(SPARKS, at, back, n, 1.4, 1.8, 0.45, 0.35 * sp) : emitParticles(DUST, at, back, n, 0.5, 0.5, 0.7, 0.15 * sp);
+  }
+  stepParticles(SPARKS, dt, 9, 1.5); stepParticles(DUST, dt, 0.6, 3);
   // shadow camera follows the skater
   sun.position.copy(S.pos).add(SUN_OFFSET); sun.target.position.copy(S.pos);
   // sound beds

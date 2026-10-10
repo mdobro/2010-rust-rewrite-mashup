@@ -196,6 +196,18 @@ up pops you off, as on the ground.
 Steering is the same riding regular or fakie: stick right always turns the
 board the same way.
 
+**How grinds look and sound**
+- **Lock-in:** you sink in as you lock on. Metal rails clank and concrete
+  ledges thump, and the camera takes a small knock.
+- **Stance:** on the rail you ride low and loaded, with your weight over the
+  truck that's grinding: the tail for a 5-0, the nose for a nosegrind. The
+  leading arm is up and out, the trailing arm is low and back, and both sway
+  for balance.
+- **Slides:** in boardslides, lipslides, tailslides and noseslides the hips
+  stay with the board, but the shoulders and head turn back down the rail.
+- **Metal rails:** they throw sparks back the way you came, and the board
+  chatters on them. Concrete ledges kick up dust.
+
 ## Manuals
 
 Tip the trick stick about halfway down for a manual (back wheels, nose up) or
