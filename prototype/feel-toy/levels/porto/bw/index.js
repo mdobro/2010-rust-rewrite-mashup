@@ -1,0 +1,88 @@
+/* Boardwalk West (bw). Design: levels/porto/design/bw.md. Parts: bw_west, bw_park, bw_gardens, bw_east (each (K, P, PL)). */
+function porto_bw(K, P) {
+  const PL = bw_plan();
+  P.ground(PL.ground); P.col(PL.col); P.surface(PL.surface);
+  for (const r of PL.REGIONS) P.region(...r);
+  if (typeof bw_west === 'function') bw_west(K, P, PL);
+  if (typeof bw_park === 'function') bw_park(K, P, PL);
+  if (typeof bw_gardens === 'function') bw_gardens(K, P, PL);
+  if (typeof bw_east === 'function') bw_east(K, P, PL);
+  bw_index_lines(P, PL);
+  bw_index_life(P, PL);
+  bw_index_challenges(P, PL);
+  bw_index_landmarks(P, PL);
+  P.travel('Boardwalk West', -200, PL.YS, 1150, -Math.PI / 2, 'district');
+  P.travel('Harbour Bowl Complex', -520, PL.YN, 1000, 0, 'park');
+  P.travel('The Drydock', -912, PL.YN, 1050, Math.PI, 'park');
+  P.travel('Spillway Outlet', -700, -40.4, 930, Math.PI, 'spot');
+  P.travel('Eel Run', -210, PL.YN, 950, Math.PI / 2, 'spot');
+  P.travel('Long Pier', -336, PL.YS, 1170, Math.PI, 'spot');
+  P.travel('Ferry Terminal', -112, PL.T3, 1060, Math.PI / 2, 'spot');
+}
+/* every street, path and line (the parts add the spots and pull-offs along them) */
+function bw_index_lines(P, PL) {
+  const YN = PL.YN;
+  // streets and paths
+  P.line('Quay Road', [[-968, 930], [-24, 930]], 'push', true);
+  P.line('Harbour Road', [[-968, 1020], [-12, 1020]], 'push', true);
+  P.line('Boardwalk', [[-968, 1150], [-4, 1150]], 'push', true);
+  P.line('Slappy Strip', [[-968, 1160], [-24, 1160]], 'push', true);
+  P.line('Net Loft Lane', [[-790, 930], [-790, 1142]], 'push');
+  P.line('Ice House Lane', [[-40, 930], [-40, 1142]], 'push');
+  P.line('Long Pier', [[-336, 1176], [-336, 1274]], 'push');
+  P.line('Wheel Pier', [[-128, 1176], [-128, 1262]], 'push');
+  P.line('Ferry Pier', [[-56, 1176], [-56, 1236]], 'push');
+  P.line('West Mole', [[-982, 1176], [-982, 1296]], 'push');
+  P.line('Park Promenade', [[-668, 943], [-216, 943]], 'push');
+  P.line('Gardens Path', [[-600, 1030], [-600, 1096], [-440, 1098], [-336, 1100]], 'push');
+  P.line('Boatyard Lane', [[-960, 930], [-960, 1010], [-840, 1010]], 'push');
+  // descents and the named lines
+  P.line('Old Town Steep run', [[-200, 910], [-200, 1096], [-200, 1128], [-200, 1148]], 'bomb', true);
+  P.line('Spillway Express', [[-700, 910], [-700, 944], [-700, 1032], [-700, 1120], [-700, 1136]], 'bomb', true);
+  P.line('Eel Run', [[-218, 952], [-236, 952], [-266, 972], [-300, 954], [-334, 976], [-366, 956], [-396, 978], [-418, 966]], 'push', true);
+  P.line('Steep to Bowl', [[-200, 944], [-200, 952], [-218, 952], [-266, 972], [-300, 954], [-334, 976], [-366, 956], [-396, 978], [-418, 966], [-500, 968], [-632, 960]], 'push', true);
+  P.line('Gull Steps', [[-200, 1020], [-226, 1037], [-226, 1084], [-336, 1100], [-336, 1148], [-336, 1274]], 'push', true);
+  P.line('Ferry Rush', [[-200, 1020], [-120, 1033], [-120, 1040], [-54, 1042], [-40, 1068], [-40, 1020], [0, 1020]], 'push', true);
+  P.line('Dry Run', [[-912, 1010], [-912, 1056], [-912, 1120], [-950, 1120], [-950, 1168], [-880, 1130]], 'push', true);
+}
+/* traffic, peds and skaters. Each ped is about 22k triangles and each skater about 31k (cars under 1k), so the doc's 30 peds and
+   5 skaters are cut to 2 peds and 1 skater (the parts may add more if they have budget) to stay inside the 450k triangle budget. */
+function bw_index_life(P, PL) {
+  const loop = [[-790, 930], [-40, 930], [-40, 1020], [-790, 1020]];
+  P.traffic({ path: loop, lane: 2.6, dir: 1, n: 4, speed: 9, r: 8 });
+  P.traffic({ path: loop, lane: 2.6, dir: -1, n: 4, speed: 9, r: 8 });
+  P.peds({ path: [[-780, 1148], [-20, 1148], [-20, 1158], [-780, 1158]], n: 1 });
+  P.peds({ path: [[-960, 1015], [-20, 1015], [-20, 1025], [-960, 1025]], n: 1 });
+  P.npc({ kind: 'session', rail: [-616, 962, -596, 962], start: -626, end: -586, back: 3.4, side: 1, speed: 5 });
+}
+function bw_index_challenges(P, PL) {
+  const { YN, YS, T3 } = PL;
+  P.challenge({ id: 'bw-snake-speed', name: 'Eel Run Express', desc: 'Hit 35 km/h in the Eel Run', at: [-226, YN - 1, 952], go: [-205, YN, 952, Math.PI / 2], kind: 'speed', speed: 9.7, area: [-432, 944, -212, 990, -45, -40] });
+  P.challenge({ id: 'bw-deep-coping', name: 'Deep End Coping', desc: 'Grind the Deep End coping', at: [-500, YN + 0.4, 957], go: [-500, YN, 944, Math.PI], kind: 'grind', rail: 'Coping', area: [-512, 946, -474, 991, -41, -40] });
+  P.challenge({ id: 'bw-anchor-gap', name: 'Anchor Gap', desc: 'Ollie the Anchor from the ramp deck', at: [-226, -37.5, 1056], go: [-226, -37.9, 1045, Math.PI], kind: 'gap', from: [-229, 1053, -223, 1070, -38.3, -37.5], to: [-229, 1073, -223, 1084, -40.6, -38.2] });
+  P.challenge({ id: 'bw-terminal-kf', name: 'Kickflip the Terminal Eight', desc: 'Kickflip down the Terminal Eight', at: [-170, T3 + 0.3, 1054], go: [-170, T3, 1046, Math.PI], kind: 'trick', trick: 'Kickflip', from: [-172, 1052, -168, 1068, -38.5, -37.8], to: [-176, 1068, -164, 1090, -45, -40] });
+  P.challenge({ id: 'bw-slappy-line', name: 'Slappy Strip', desc: 'Three grinds on the Slappy curbs in one line, 2,500 points', at: [-600, YS + 0.3, 1160], go: [-640, YS, 1152, -Math.PI / 2], kind: 'line', pts: 2500, area: [-968, 1156, -24, 1168], need: [['grind', 3]] });
+  P.challenge({ id: 'bw-pier-rail', name: 'Long Pier Rail', desc: 'Grind the Long Pier handrail for 4 seconds', at: [-336, YS + 1, 1180], go: [-336, YS, 1166, Math.PI], kind: 'grind', rail: 'Handrail', area: [-343, 1182, -329, 1274, -42, -40] });
+  P.challenge({ id: 'bw-slab-heel', name: 'Heelflip the Slab', desc: 'Heelflip the Slab five-stair', at: [-632, -38.9, 960], go: [-622, -39.1, 960, Math.PI / 2], kind: 'trick', trick: 'Heelflip', from: [-634, 954, -630, 966, -39.4, -38.9], to: [-632, 954, -622, 966, -41, -40] });
+  P.challenge({ id: 'bw-outlet-speed', hard: true, name: 'Spillway Express', desc: 'Hit 50 km/h in the Spillway Outlet', at: [-700, -43, 1000], go: [-700, -40.4, 930, Math.PI], kind: 'speed', speed: 13.9, area: [-728, 944, -672, 1136, -46, -40] });
+  P.challenge({ id: 'bw-altar-gap', hard: true, name: 'Gap the Altars', desc: 'Gap from altar A over B to altar C', at: [-955, -41.8, 1104], go: [-955, -42, 1092, Math.PI], kind: 'gap', from: [-958, 1100, -952, 1168, -42.2, -41.6], to: [-946, 1100, -940, 1168, -45, -44.4] });
+  P.challenge({ id: 'bw-legend', hard: true, name: 'Harbour Legend', desc: 'Land a 12,000 point combo in the Harbour Bowl Complex', at: [-560, YN, 1000], go: [-560, YN, 1000, 0], kind: 'score', pts: 12000, area: [-672, 940, -212, 1006, -45, -38] });
+  const top = (x, z, y) => P.tape(x, z, y);
+  top(-592, 1064, YN + 3.0); top(-943, 1165, -44.8); top(-982, 1280, YN); top(-700, 1020, -44.8); top(-150, 992, YN + 1.2);
+}
+function bw_index_landmarks(P, PL) {
+  const { YN, YS } = PL;
+  P.landmark({ at: [-128, YS, 1240], near: 160, parts: [
+    { shape: 'sphere', at: [0, 24, 0], size: [46, 46, 1.6], color: 0xe8e4da },
+    { shape: 'cyl', at: [0, 24, 0], size: [3, 2.4, 3], color: 0xc8432f, rotY: 0 },
+    { shape: 'box', at: [-8, 12, -2], size: [1.2, 26, 1.2], color: 0x8a8f96 },
+    { shape: 'box', at: [8, 12, 2], size: [1.2, 26, 1.2], color: 0x8a8f96 },
+    { shape: 'box', at: [0, 1.5, 0], size: [16, 3, 16], color: 0xcfd2d6 },
+  ] });
+  P.landmark({ at: [-982, YN, 1288], near: 140, parts: [
+    { shape: 'cyl', at: [0, 9, 0], size: [4.4, 18, 4.4], color: 0xf2f2ee },
+    { shape: 'cyl', at: [0, 12, 0], size: [4.6, 3, 4.6], color: 0xc8432f },
+    { shape: 'cyl', at: [0, 19.2, 0], size: [3, 2.4, 3], color: 0xffe9a8 },
+    { shape: 'cone', at: [0, 21.6, 0], size: [3.6, 2.4, 3.6], color: 0xc8432f },
+  ] });
+}
