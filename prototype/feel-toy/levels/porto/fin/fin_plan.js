@@ -71,3 +71,7 @@ function fin_plan() {
     [208, 248, 96, 136, 1], [272, 320, 128, 176, 1], [216, 256, 168, 200, 1]];
   return { ground, col, surface, regions, sm, ring, alley, hall: { y: 4.0 }, cascade: { y: 3.0 }, colors, HUMPS, Hb, Hs, alleyCut, berm };
 }
+/* filler helpers shared by the parts (grind-line budget, CONTRACT 8): a planter grinds on its two long edges only,
+   a manual pad has no grind edges (it still counts as a box to ollie onto) */
+function fin_plant(K, x0, z0, x1, z1, hgt = 0.55) { return K.Bg(x0, z0, x1, z1, hgt, 'ledge', { edges: Math.abs(x1 - x0) >= Math.abs(z1 - z0) ? 'ns' : 'ew' }); }
+function fin_padx(K, x0, z0, x1, z1, hgt = 0.18) { return K.Bg(x0, z0, x1, z1, hgt, 'pad', { edges: '' }); }

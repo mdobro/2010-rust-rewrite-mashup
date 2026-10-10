@@ -41,17 +41,17 @@ function fin_index_lines(P) {
   P.line('Treasury Ramp', [[80, -186], [138, -186]], 'push');
   P.line('Treasury Walk', [[138, -186], [214, -186]], 'push');
   P.line('Bourse Walk', [[-400, -144], [-150, -144]], 'push');
-  P.line('Civic Walk', [[-86, -152], [80, -152]], 'push');
+  P.line('Civic Walk', [[-86, -143], [80, -143]], 'push');   // the north side of the square, clear of its ledges (z -159..-146)
   P.line('Planter Alley', [[-146, -40], [-420, -40]], 'push');
   P.line('Alley North Terrace', [[-170, -53], [-400, -53]], 'push');
   P.line('Alley South Terrace', [[-170, -27], [-400, -27]], 'push');
-  P.line('Metro Plaza', [[160, -60], [290, -60], [290, -20], [200, -20]], 'push');
+  P.line('Metro Plaza', [[160, -52], [200, -52], [200, -17], [295, -17], [295, -75], [238, -75], [238, -40]], 'push');   // round the deck, the Nautilus and the Spiral Rim, not through them
   P.line('Long Pool Walk', [[200, 66], [272, 66], [272, 94], [200, 94], [200, 66]], 'push');
-  P.line('Arena Concourse', [[-363, 31], [-187, 31], [-187, 169], [-363, 169], [-363, 31]], 'push');
+  P.line('Arena Concourse', [[-366, 172], [-366, 28], [-184, 28], [-184, 172]], 'push');   // round three sides, clear of the stair feet (the north side is the car park)
   P.line('Arena Car Park', [[-387, 190], [-163, 190]], 'push');
   // the five named lines (design 9.2)
   P.line('Civic Line', [[-100, -228], [-100, -190], [-86, -186], [0, -186], [10, -183], [40, -183], [40, -170], [40, -150], [40, -120]], 'push', true);
-  P.line('Treasury Line', [[76, -186], [138, -186], [200, -170], [220, -160], [220, -76], [220, -50], [247, -46], [262, -30], [250, 0], [205, 40], [205, 95], [205, 200], [190, 200]], 'push', true);
+  P.line('Treasury Line', [[76, -186], [138, -186], [200, -170], [220, -160], [220, -76], [220, -50], [247, -46], [262, -30], [262, -16], [226, -14], [220, -8], [220, 12], [206, 18], [205, 40], [205, 95], [205, 200], [190, 200]], 'push', true);
   P.line('Alley Line', [[-110, -40], [-146, -40], [-250, -40], [-404, -40], [-420, -40]], 'push', true);
   P.line('Bourse-Mint Line', [[-260, -190], [-260, -176], [-260, -150], [-270, -132], [-270, -80], [-270, -55], [-270, -40]], 'push', true);
   P.line('Boulevard Line', [[85, 176], [85, 160], [60, 148], [0, 146], [-40, 148], [-40, 229]], 'push', true);

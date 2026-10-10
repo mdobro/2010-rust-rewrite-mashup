@@ -13,7 +13,8 @@ function porto_heights(K, P) {
                    [-936,-896,-424,-360,4], [-912,-896,-592,-424,4], [-888,-864,-520,-424,4], [-784,-760,-520,-424,4],
                    [472,504,-552,-328,4], [952,968,-552,-328,4], [208,232,-592,-240,4], [256,280,-592,-472,4],
                    [640,664,-592,-240,4], [864,880,-592,-360,4],
-                   [-1000,-968,-618,-230,4], [968,1000,-618,-230,4], [-968,968,-650,-618,4], [-1000,-968,-650,-618,1], [968,1000,-650,-618,1]]) P.region(...r);   // + the map-edge hills (not in the doc)
+                   [-1000,-968,-618,-230,4], [968,1000,-618,-230,4], [-968,968,-650,-618,4], [-1000,-968,-650,-618,1], [968,1000,-650,-618,1],
+                   [-1000,-968,-248,-230,2], [968,1000,-248,-230,2]]) P.region(...r);   // + the map-edge hills (not in the doc; the last two: where the border band blends the edge hill)
   const G = (x, z) => T(x, z, P.baseH(x, z));
   P.col(heights_col(PL, G));
   P.surface(heights_surface(PL, G));
@@ -25,7 +26,8 @@ function porto_heights(K, P) {
   heights_index_lines(P, PL);
   P.travel('The Heights', 24, 43.9, -578, Math.PI, 'district');
 }
-/* traffic, peds and skaters (design section 8). Cars are cheap; peds and skaters are not, so the counts are the doc's. */
+/* traffic, peds and skaters (design section 8). Cars are cheap; peds and skaters are not (each is a full rider, ~25k triangles),
+   so the doc's 20 peds and 5 skaters are cut to 5 peds and the 3 session skaters to stay inside the 450k triangle budget. */
 function heights_index_life(P) {
   const west = [[-76,-596], [-904,-596], [-904,-392], [-112,-392], [-86.5,-402.5], [-76,-428], [-86.5,-453.5], [-112,-464], [-272,-464],
                 [-297.5,-474.5], [-308,-500], [-297.5,-525.5], [-272,-536], [-112,-536], [-86.5,-546.5], [-76,-572]];
@@ -35,12 +37,10 @@ function heights_index_life(P) {
   P.traffic({ path: east, lane: 2.5, dir: 1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: east, lane: 2.5, dir: -1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[220,-596], [268,-596], [268,-476], [220,-476]], lane: 2.0, dir: 1, n: 2, speed: 8, r: 6 });
-  P.peds({ path: [[-30,-586], [84,-586], [84,-563], [-30,-563]], n: 6 });
-  P.peds({ path: [[234,-280], [298,-280], [298,-252], [234,-252]], n: 4 });
-  P.peds({ path: [[504,-446.5], [952,-446.5], [952,-433.5], [504,-433.5]], n: 5 });
-  P.peds({ path: [[504,-366.5], [952,-366.5], [952,-353.5], [504,-353.5]], n: 5 });
-  P.npc({ kind: 'loop', path: [[-30,-582], [80,-582], [80,-566], [-30,-566]], speed: 5.5 });
-  P.npc({ kind: 'loop', path: [[506,-443], [950,-443], [950,-437], [506,-437]], speed: 6 });
+  P.peds({ path: [[-30,-586], [84,-586], [84,-563], [-30,-563]], n: 2 });
+  P.peds({ path: [[234,-280], [298,-280], [298,-252], [234,-252]], n: 1 });
+  P.peds({ path: [[504,-446.5], [952,-446.5], [952,-433.5], [504,-433.5]], n: 1 });
+  P.peds({ path: [[504,-366.5], [952,-366.5], [952,-353.5], [504,-353.5]], n: 1 });
   P.npc({ kind: 'session', rail: [-20, -560.7, 60, -560.7], start: -34, end: 74, back: 3.4, side: -1, speed: 5 });     // brow ledge, from the plaza (north)
   P.npc({ kind: 'session', rail: [236, -466, 236, -436], start: -474, end: -428, back: 3.4, side: -1, speed: 5 });     // Observatory Ledge, podium-top (east) side
   P.npc({ kind: 'session', rail: [-660, -382.9, -632, -382.9], start: -668, end: -624, back: 3.4, side: -1, speed: 5 }); // Pump Curb, lane (north) side

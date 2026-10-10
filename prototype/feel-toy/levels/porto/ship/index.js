@@ -18,7 +18,7 @@ function porto_ship(K, P) {
 /* fine ground [x0, x1, z0, z1, res]. The kinks of the plate are not on the 8 m grid (only x 16 and 96 are), so the mesh
    cuts each corner by up to 4 cm: under the 10 cm the check allows, so only the quay face (the base falls 10 m over z 1180..1186, and ground steps 2.6 m at z 1180) is drawn finer, along the whole width. */
 function ship_index_regions() {
-  return [[0, 1000, 1176, 1192, 2], [968, 1000, 912, 1176, 2]];   // the quay face, and the toe of the map-edge hill
+  return [[0, 1000, 1176, 1192, 2], [968, 1000, 904, 1176, 2]];   // the quay face, and the toe of the map-edge hill
 }
 /* every street, path and line of the district (CONTRACT 4); main: true for the doc's five named lines (section 5) */
 function ship_index_lines(P) {

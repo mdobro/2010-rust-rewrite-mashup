@@ -66,7 +66,7 @@ function heights_terrain(PL, baseH) {
     if (z <= C.lipZ) return lerp(C.full, C.lipD, (z - C.lipStart) / (C.lipZ - C.lipStart)); // shallows to the lip
     if (z < C.apron[0]) return C.full;
     return C.full * (C.apron[1] - z) / (C.apron[1] - C.apron[0]); }                 // the apron: 3 -> 0
-  return (x, z, base) => {
+  const ground = (x, z, base) => {
     let h = base;
     for (const b of PL.BENCHES) h += benchOff(b, x, z, base);
     h -= dip(x, z);
@@ -77,7 +77,7 @@ function heights_terrain(PL, baseH) {
     if (ax < C.floor + C.wall && z > C.head[0] && z < C.apron[1]) {
       const g = h;                                                     // the grade beside the channel
       if (z > C.lipZ && z < C.laneN)                                   // under the headwall box: lip down to the lane
-        return lerp(B0(C.lipZ) - C.lipD, h, (z - C.lipZ) / (C.laneN - C.lipZ));
+        return Math.min(h, lerp(B0(C.lipZ) - C.lipD, h, (z - C.lipZ) / (C.laneN - C.lipZ)));
       if (z >= C.laneN && z <= C.laneS) return h;                      // the lane fords straight through
       let floor;
       if (z > C.laneS && z < C.laneS + 20) floor = Math.max(B0(z) - C.full, (B0(D.zc) - D.depth) - C.landSlope * (z - C.laneS)); // the landing
@@ -85,6 +85,14 @@ function heights_terrain(PL, baseH) {
       const wr = ax <= C.floor ? 0 : (ax - C.floor) / C.wall;          // walls: straight 8 m banks up to grade
       return Math.min(g, lerp(floor, g, wr)); }
     return h; };
+  // 5. the map-edge hills (|x| > 968, z < -620: base only, nothing of ours there) are ridden as the 4 m chords the res-4 mesh
+  //    draws, so the drawn hill never stands over the ridden one (the hills bend too fast for res 4 otherwise)
+  const gz = (x, z) => { if (z >= -620) return ground(x, z, baseH(x, z));
+    const z0 = Math.floor(z / 4) * 4; return lerp(ground(x, z0, baseH(x, z0)), ground(x, z0 + 4, baseH(x, z0 + 4)), (z - z0) / 4); };
+  return (x, z, base) => {
+    if (z >= -620 && Math.abs(x) <= 968) return ground(x, z, base);
+    if (Math.abs(x) <= 968) return gz(x, z);
+    const x0 = Math.floor(x / 4) * 4; return lerp(gz(x0, z), gz(x0 + 4, z), (x - x0) / 4); };
 }
 
 /* what the ground is: one zone key per point, shared by colour and surface. T(x, z) is the final ground (for the bank slope test). */
