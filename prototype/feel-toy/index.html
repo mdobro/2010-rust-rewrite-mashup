@@ -2155,10 +2155,11 @@ const boardFlip = new THREE.Group(); boardOrient.add(boardFlip);
   const graphic = new THREE.MeshStandardMaterial({ color: 0xffb547, roughness: 0.55 }), deckMats = [ply, ply, grip, graphic, ply, ply];
   const mid = shadowedB(new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.022, 0.56), deckMats)); mid.position.y = 0.094; boardFlip.add(mid);
   for (const s of [-1, 1]) {                      // -1 the nose, +1 the tail
-    const kick = shadowedB(new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.022, 0.16), deckMats));
-    kick.rotation.x = -s * 0.36; kick.position.set(0, 0.094 + 0.028, s * (0.28 + 0.074)); boardFlip.add(kick);
+    const KICK = 0.2, KL = 0.13;                    // about 11°, like a real popsicle deck
+    const kick = shadowedB(new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.022, KL), deckMats));
+    kick.rotation.x = -s * KICK; kick.position.set(0, 0.094 + Math.sin(KICK) * KL / 2, s * (0.28 + Math.cos(KICK) * KL / 2 - 0.002)); boardFlip.add(kick);
     const round = shadowedB(new THREE.Mesh(new THREE.CylinderGeometry(0.1025, 0.1025, 0.022, 18, 1, false, s < 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), [ply, grip, graphic]));
-    round.rotation.x = -s * 0.36; round.position.set(0, 0.094 + 0.053, s * (0.28 + 0.139)); boardFlip.add(round);   // the rounded end
+    round.rotation.x = -s * KICK; round.position.set(0, 0.094 + Math.sin(KICK) * KL, s * (0.28 + Math.cos(KICK) * KL - 0.004)); boardFlip.add(round);   // the rounded end
   }
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.002, 0.5), new THREE.MeshStandardMaterial({ color: 0x2f5d8a, roughness: 0.6 }));
   stripe.position.y = 0.0825; boardFlip.add(stripe);                                                        // a stripe on the graphic
@@ -2196,10 +2197,11 @@ const pelvis = new THREE.Group(); rig.add(pelvis);
 { const hips = capsule(0.105, 0.32, pants); hips.rotation.x = Math.PI / 2; hips.scale.set(0.95, 1, 0.85); hips.position.y = 0.02; pelvis.add(hips);
   const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.118, 0.118, 0.035, 16), beltMat); belt.scale.set(0.95, 1, 1.42); belt.position.y = 0.1; pelvis.add(belt); }
 const torso = new THREE.Group(); pelvis.add(torso);              // the upper body turns on the hips (shoulders down the rail in a slide)
-const chest = capsule(0.145, 0.44, shirt); chest.position.set(0, 0.3, 0); chest.scale.set(0.95, 1, 1.25); torso.add(chest);
-{ const shoulders = capsule(0.085, 0.42, shirt); shoulders.rotation.x = Math.PI / 2; shoulders.scale.set(1, 1, 0.9); shoulders.position.set(0, 0.49, 0); torso.add(shoulders);
-  const hem = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.152, 0.158, 0.07, 18), shirt)); hem.scale.set(0.95, 1, 1.28); hem.position.y = 0.13; torso.add(hem);   // an untucked tee
-  const neck = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10), skin)); neck.position.y = 0.6; torso.add(neck);
+// the torso: one smooth shape, a loose tee hanging at the hips, narrow at the waist, broad and rounded at the shoulders
+const chest = shadowed(new THREE.Mesh(new THREE.LatheGeometry([[0, 0.05], [0.128, 0.05], [0.134, 0.09], [0.124, 0.17], [0.126, 0.26], [0.138, 0.36], [0.146, 0.43], [0.142, 0.48], [0.122, 0.525], [0.085, 0.56], [0.05, 0.58], [0, 0.585]].map(([r, y]) => new THREE.Vector2(r, y)), 28), shirt));
+chest.scale.set(0.8, 1, 1.3); torso.add(chest);
+for (const z of [-0.168, 0.168]) { const sh = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), shirt)); sh.scale.set(0.9, 0.85, 1); sh.position.set(0, 0.49, z); torso.add(sh); }   // rounded shoulders
+{ const neck = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10), skin)); neck.position.y = 0.6; torso.add(neck);
   const collar = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.014, 6, 16), shirt); collar.rotation.x = Math.PI / 2; collar.position.y = 0.565; torso.add(collar); }
 const head = new THREE.Group(); head.position.set(0, 0.71, 0); torso.add(head);
 { const skull = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 14), skin)); skull.scale.set(1, 1.08, 0.93); head.add(skull);
@@ -2222,7 +2224,7 @@ for (const side of ['front', 'back']) {
   for (const m of Object.values(LIMBS[side])) rig.add(m);
   const L = LIMBS[side];
   // bones run from the joint nearer the body (-y) to the far one (+y)
-  const sleeve = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.066, 0.06, 0.17, 12), shirt)); sleeve.position.y = -UPPER_ARM / 2 + 0.07; L.upper.add(sleeve);
+  const sleeve = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.055, 0.15, 12), shirt)); sleeve.position.y = -UPPER_ARM / 2 + 0.065; L.upper.add(sleeve);
   const hand = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), skin)); hand.scale.set(0.85, 1.25, 0.65); hand.position.y = FOREARM / 2 + 0.03; L.fore.add(hand);
   const cuff = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.084, 0.07, 12), cuffMat)); cuff.position.y = SHIN / 2 - 0.05; L.shin.add(cuff);
   const knee = new THREE.Mesh(new THREE.SphereGeometry(0.078, 10, 8), pants); knee.position.y = -SHIN / 2 + 0.02; L.shin.add(knee);
