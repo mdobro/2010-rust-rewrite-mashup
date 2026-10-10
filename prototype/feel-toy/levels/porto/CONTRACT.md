@@ -130,7 +130,7 @@ P.tape(x, z, y)                         // a hidden tape to collect (y: the surf
 P.traffic(def), P.peds(def), P.npc(def) // cars, people, other skaters (see 6)
 P.landmark({...})                       // a far-off silhouette (see 6)
 P.water(x0, x1, z0, z1, y)
-P.shop({...})                           // a skate shop (see 6). Only fin has one so far: one more at most
+P.shop({...})                           // a skate shop (see 6): every district has at least one, preferably two
 ```
 
 **The ground.** `P.ground` sets the height inside your rectangle. It's analytic: the skater rides
@@ -200,7 +200,14 @@ Look at `buildDowntown` in `levels/dt.js` (lines ~389–435) for working example
   a plain, low-detail silhouette drawn past the fog and hidden within `near` metres, where your
   real model takes over. For the big sights you can see from far off (the radio tower, the Nautilus,
   the cranes, the water tank). One or two per district, a handful of parts each.
-* **Shop** (only if your district is told to have one): copy the shape from `dt.js` line ~190.
+* **Skate shops: every district has at least one, preferably two** (Financial already has Downtown's
+  two, Library Lane Skates and Bank Street Boards). A shop is a ground-floor shopfront in a real
+  building on a street you ride past, its door facing the street, with room in front to stop.
+  `P.shop({ name, sign: [x, y, z, rotY, width], awning: [x0, z0, x1, z1, y, 'x' if it runs along z],
+  zone: [x0, z0, x1, z1], door: [x, y, z] })`: copy the shape from `dt.js` line ~190 (the sign board
+  sits about 3.85 m over the door, the awning at 2.2 m, the zone is the 3 × 8 m patch of sidewalk in
+  front of the door where stopping takes you in). Made-up names that fit the district. Shops don't
+  count against the `D.sign` limit. Register a 'spot' fast-travel point at each one.
 
 ## 7. How it should ride (from the brief, and from how the game plays)
 

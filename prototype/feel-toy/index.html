@@ -4514,9 +4514,8 @@ $('tb-replay').addEventListener('click', startReplay);
    ============================================================ */
 const SHOP = { active: false, ang: 0, here: false, cur: null, mats: [] };
 const SHOPS = (LV.shops || (LV.shop ? [LV.shop] : [])).filter(Boolean);
-for (const sh of SHOPS) {
-  const [sx, sy, sz, srot, sw] = sh.sign;
-  const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 144; const g = c.getContext('2d');
+// every shop has the same sign board and awning: make their textures once
+const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 144; const g = c.getContext('2d');
     g.fillStyle = '#16181c'; g.fillRect(0, 0, 512, 144); g.strokeStyle = '#ffc83d'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 132);
     g.fillStyle = '#ffc83d'; g.beginPath(); g.arc(70, 72, 40, 0, 7); g.fill(); g.fillStyle = '#16181c'; g.beginPath(); g.arc(70, 72, 16, 0, 7); g.fill();      // a wheel
     // fit the words to the board, whatever fonts this device has
@@ -4524,11 +4523,13 @@ for (const sh of SHOPS) {
     g.fillStyle = '#f3f1ea'; g.textBaseline = 'middle'; fit('SKATE SHOP', '900 %px Impact, "Arial Black", sans-serif', 64, 350); g.fillText('SKATE SHOP', 132, 62);
     g.fillStyle = '#ff6f88'; fit('BOARDS · WHEELS · SHOES · TEES', '700 %px monospace', 22, 350); g.fillText('BOARDS · WHEELS · SHOES · TEES', 132, 112);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+const awTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 16; const g = c.getContext('2d');
+    for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#f3f1ea' : '#c8432f'; g.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+for (const sh of SHOPS) {
+  const [sx, sy, sz, srot, sw] = sh.sign;
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw * 144 / 512), new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.35, roughness: 0.6 }));
   sign.position.set(sx, sy, sz); sign.rotation.y = srot; scene.add(sign);
   // the awning: red and white stripes, sloping out over the door
-  const awTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 16; const g = c.getContext('2d');
-    for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#f3f1ea' : '#c8432f'; g.fillRect(i * 16, 0, 16, 16); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
   const [ax0, az0, ax1, az1, ay, alongZ] = sh.awning, along = alongZ === 'x' ? 'z' : 'x';
   const aw = new THREE.Mesh(new THREE.BoxGeometry(along === 'x' ? ax1 - ax0 : 0.06, 0.06, along === 'x' ? 0.06 : az1 - az0), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
   const awPlane = new THREE.Mesh(new THREE.PlaneGeometry(along === 'x' ? ax1 - ax0 : az1 - az0, 1.7), new THREE.MeshStandardMaterial({ map: awTex, roughness: 0.8, side: THREE.DoubleSide }));
