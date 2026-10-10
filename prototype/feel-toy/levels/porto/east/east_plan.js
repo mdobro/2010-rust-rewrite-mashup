@@ -168,7 +168,8 @@ function east_plan() {
 }
 
 // A sidewalk on a slope: a run of sloped blocks 0.15 m over the ground, each one a straight chord, split wherever
-// the ground bends away from the chord by more than 3 cm (and at least every 24 m), with a 'Curb' grind line along
+// the ground bends away from the chord by more than 3 cm, or the walk curves away from it by more than 0.2 m (on the
+// bends: longer chords would overlap their neighbours and z-fight), and at least every 24 m, with a 'Curb' grind line along
 // the road-side edge. path(s) -> [x, z] is the road's centre line, s in metres; off is the walk's centre offset
 // (+ is to the right of the direction of travel, i.e. -x when travelling +z... see below); kerb is the curb offset.
 function east_walk(K, path, s0, s1, off, kerb, w, skip = []) {
@@ -185,7 +186,9 @@ function east_walk(K, path, s0, s1, off, kerb, w, skip = []) {
       let e = Math.min(r1, s + 24);
       for (;;) {                                                     // shrink until the chord stays within 3 cm of the ground
         const ya = top(s, off), yb = top(e, off); let bad = false;
-        for (let t = 0.125; t < 1; t += 0.125) { const u = s + (e - s) * t; if (Math.abs(top(u, off) - lerp(ya, yb, t)) > 0.03) { bad = true; break; } }
+        const [pa, pb] = [at(s, off), at(e, off)];
+        for (let t = 0.125; t < 1; t += 0.125) { const u = s + (e - s) * t, [px, pz] = at(u, off);
+          if (Math.abs(top(u, off) - lerp(ya, yb, t)) > 0.03 || Math.hypot(px - lerp(pa[0], pb[0], t), pz - lerp(pa[1], pb[1], t)) > 0.2) { bad = true; break; } }
         if (!bad || e - s <= 3) break; e = s + (e - s) * 0.6;
       }
       const [ax, az] = at(s, off), [bx, bz] = at(e, off), [cx, cz] = at(s, kerb), [dx, dz] = at(e, kerb);
