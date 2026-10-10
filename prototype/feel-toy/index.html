@@ -283,7 +283,7 @@ const DEFAULTS = {
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
-  autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, coneBail: 2.2, potholeBail: 3.5, grindAngle: 12, grindSlideAngle: 55,
+  windDrag: 0.0085, autoGrind: true, railMagnet: 0.7, railFriction: 0.6, railAngle: 55, coneBail: 2.2, potholeBail: 3.5, grindAngle: 12, grindSlideAngle: 55,
   camMode: 0, camDist: 3.6, camHeight: 1.45, camFov: 72, fovKick: 14, camShake: 1, camLag: 12, lookSpeed: 2.6, camFollow: 4, camFollowAir: 0.6, camPitch: -0.2,
   stickRadius: 55,
   flickRim: 0.6, flickTime: 0.25, lateArm: 0.12, flickSettle: 0.15, ollieCone: 15, sweepVarial: 22, sweep360: 55, shuv360: 120, shuvArc: 0.08, holdReleasePops: false,
@@ -292,7 +292,7 @@ const SPEC = [
   ['Skating', [
     ['gravity', 'Gravity', 6, 30, 0.5], ['pushImpulse', 'Push strength', 0.3, 4, 0.05],
     ['pushInterval', 'Push interval (s)', 0.15, 1, 0.01], ['pushMax', 'Push top speed (m/s)', 3, 16, 0.25],
-    ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['brakeDecel', 'Brake strength (slow)', 1, 20, 0.5],
+    ['rollFriction', 'Rolling friction', 0, 2, 0.01], ['windDrag', 'Wind drag over 25 km/h', 0, 0.04, 0.0005], ['brakeDecel', 'Brake strength (slow)', 1, 20, 0.5],
     ['slideDecel', 'Powerslide stopping power', 2, 30, 0.5],
     ['revertWindow', 'Revert: time after landing to keep the combo (s)', 0, 1.5, 0.05], ['manualMin', 'Manual: trick stick tip from (0-1)', 0.05, 0.55, 0.01], ['manualDelay', 'Manual: hold the stick steady this long first (s)', 0, 0.6, 0.02], ['manualDrag', 'Manual: extra drag', 0, 4, 0.05],
     ['manualTip', 'Manual: how fast balance tips away', 0, 4, 0.05], ['manualAssist', 'Manual: self-righting with a steady thumb', 0, 3, 0.05], ['manualControl', 'Manual: how much the stick corrects it', 0.2, 5, 0.05],
@@ -390,7 +390,7 @@ const box = (x0, y0, z0, x1, y1, z1, mat, extra) => ({ min: [x0, y0, z0], max: [
 
 /* ---------------- levels ---------------- */
 const LEVELS = [
-  { id: 'park', name: 'Beach Park', blurb: 'A Venice Beach style skatepark on the sand: clover bowl, flow bowl, snake run and an L-shaped street plaza' },
+  { id: 'porto', name: 'Porto Alto', blurb: 'One big city on a hill, two kilometres across: bomb down from the Heights through eight districts and five skateparks to the harbour, by more than one way' },
   { id: 'mega', name: 'Port City', blurb: 'A whole city in nine districts: hills, a stadium, a university, suburbs with backyard pools, downtown plazas, docks, a dam spillway, the river and the port' },
   { id: 'city', name: 'Downtown', blurb: 'A hillside neighbourhood to explore: bomb the hill through the roadworks, a storm channel, stoops and plazas, a construction site, a sunken car park and a rooftop line' },
 ];
@@ -398,7 +398,7 @@ const LEVEL_ID = (() => {
   const q = new URLSearchParams(location.search).get('level');
   if (q === 'block' || LEVELS.some(l => l.id === q)) return q;
   try { const s = localStorage.getItem('skate-level'); if (LEVELS.some(l => l.id === s)) return s; } catch (_) {}
-  return 'park';
+  return 'porto';
 })();
 
 // The old practice block (tests use it): ?level=block
@@ -482,112 +482,6 @@ return {
      street plaza  a platform with bank, hubba and stairs with a rail; ledges, a pad, a flat rail,
                    a funbox with banks, and a curved "clamshell" quarter pipe in the corner
    The sand around the pad slows you right down. */
-function levelPark() {
-  const PAD = [-32, 32, -22, 22];
-  const onPad = (x, z) => x >= PAD[0] && x <= PAD[1] && z >= PAD[2] && z <= PAD[3];
-  // pools: lobes are circles (or a rounded square), each with its own depth; overlapping lobes take the
-  // deepest, which leaves hips where they meet
-  const circle = (cx, cz, r, D) => ({ s: (x, z) => r - Math.hypot(x - cx, z - cz), D, cx, cz, r });
-  const square = (cx, cz, hw, rr, D) => ({ s: (x, z) => { const qx = Math.abs(x - cx) - hw + rr, qz = Math.abs(z - cz) - hw + rr;
-    return -(Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - rr); }, D });
-  const clover = [circle(-21, -12, 4.6, 2.75), circle(-25.2, -7.6, 3.0, 1.8), circle(-16.8, -7.6, 3.0, 1.8)];
-  const flow = [circle(-24, 10.5, 3.4, 1.5), circle(-18.2, 12.2, 3.0, 1.4), square(-21, 16.5, 2.2, 1.2, 1.2)];
-  // the snake run: a channel along a winding path, deepening as it goes
-  const snakePath = [[-6, -15.5, 0.9], [-3.2, -10, 1.15], [-7, -4.5, 1.3], [-3.2, 1, 1.45], [-7, 6.5, 1.6], [-5.5, 11.5, 1.8]];
-  const snakeHW = 2.1;
-  const snake = [square(-6, -17.5, 2.2, 0.7, 0.9), circle(-6, 15, 3.2, 2.1), circle(-2.6, 17, 2.3, 2.1)];
-  function snakeH(x, z) {
-    let h = 0;
-    for (let i = 0; i < snakePath.length - 1; i++) {
-      const [ax, az, ad] = snakePath[i], [bx, bz, bd] = snakePath[i + 1], dx = bx - ax, dz = bz - az;
-      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1);
-      const s = snakeHW - Math.hypot(x - ax - dx * t, z - az - dz * t);
-      if (s > 0) h = Math.min(h, poolDepth(s, Math.min(lerp(ad, bd, t), snakeHW * 0.9)));
-    }
-    return h;
-  }
-  const pools = [...clover, ...flow, ...snake];
-  // the clamshell: a quarter pipe curving round the south-east corner
-  const CL = { cx: 32, cz: 22, r0: 7.4, R: 2.6, D: 2.5 };
-  const clamshell = (x, z) => (x > 21 && z > 11) ? arc(Math.hypot(x - CL.cx, z - CL.cz) < CL.r0 + CL.D ? CL.r0 + CL.D - Math.hypot(x - CL.cx, z - CL.cz) : 0, CL.R, CL.D) : 0;
-  function terrainH(x, z) {
-    if (!onPad(x, z)) return 0;
-    let h = 0;
-    for (const p of pools) { const s = p.s(x, z); if (s > 0) h = Math.min(h, poolDepth(s, p.D)); }
-    h = Math.min(h, snakeH(x, z));
-    return h < 0 ? h : clamshell(x, z);
-  }
-  const tile = new THREE.Color(0x3d7fae), poolC = new THREE.Color(0xb7b8b2), deckC = new THREE.Color(0xc9c5bb);
-  const poolCol = (x, z, h) => h > -0.32 && h < -0.015 ? tile : h < -0.015 ? poolC : deckC;
-  const regions = [
-    { x0: -31.5, x1: -11.5, z0: -18, z1: -3, res: 0.18, col: poolCol },           // clover bowl
-    { x0: -31.5, x1: -14, z0: 6, z1: 19.5, res: 0.18, col: poolCol },             // flow bowl
-    { x0: -10.5, x1: 1.5, z0: -20.5, z1: 20.5, res: 0.18, col: poolCol },          // snake run
-    { x0: 21, x1: 32, z0: 11, z1: 22, res: 0.2 },                                  // clamshell
-  ];
-  const SHOP_FRONT = box(48.5, -0.5, 0, 52.5, 5.2, 12, 'building', { color: 0xe7d6a1, tex: 'brick' });   // the skate shop on the boardwalk
-  const boxes = [SHOP_FRONT, 
-    // the platform in the north-east corner: bank down its west side, stairs and a hubba down its south side
-    box(22, 0, -22, 32, 1.1, -12, 'plaza', { edges: 'w' }),
-    ...stairs('z', -12, 1, 24.5, 30, 1.1, 0, 4, 0.5),
-    box(4, 0, -18.6, 16, 0.45, -18, 'ledge', { edges: 'ns' }),                    // long ledge
-    box(8, 0, -12.3, 14, 0.3, -11.7, 'ledge', { edges: 'ns' }),                   // low ledge
-    box(6, 0, -6, 12, 0.18, -2, 'pad', { edges: 'nswe' }),                         // manual pad
-    box(18, 0, 2, 24, 0.6, 8, 'plaza', { edges: 'ns' }),                          // funbox (banks either side)
-    box(9, 0, 9, 15, 0.45, 9.6, 'ledge', { edges: 'ns' }),                         // bench ledge
-    box(32, 0, -10, 32.6, 0.5, 10, 'ledge', { edges: 'ew' }),                      // seat wall along the boardwalk side
-    box(-33, 0, -22, -32.4, 0.5, 22, 'ledge', { edges: 'ew' }),                    // seat wall along the beach side
-    box(32, 0, 11.5, 32.8, 2.2, 22.8, 'plaza'), box(21, 0, 22, 32.8, 2.2, 22.8, 'plaza'), // the wall behind the clamshell
-  ];
-  const hubbas = [
-    { a: V(22, 1.1, -17), b: V(17.5, 0.02, -17), w: 8, noRails: true, color: 0xbdb9af },  // the bank off the platform
-    stairHubba('z', -12, 1, 24.0, 1.1, 0, 4, 0.5),
-    { a: V(18, 0.6, 5), b: V(15.2, 0.02, 5), w: 6, noRails: true, color: 0xbdb9af },       // funbox banks
-    { a: V(24, 0.6, 5), b: V(26.8, 0.02, 5), w: 6, noRails: true, color: 0xbdb9af },
-  ];
-  const rails = [
-    handrail('z', -12, 1, 27.25, 1.1, 0, 4, 0.5),
-    { a: V(3, 0.38, 3.5), b: V(13, 0.38, 3.5), kind: 'Rail', post: true },
-  ];
-  // coping round each pool lobe, where it isn't inside another lobe
-  for (const p of [...clover, ...flow.slice(0, 2), snake[1], snake[2]]) {
-    const n = Math.round(p.r * 5);
-    for (let i = 0; i < n; i++) {
-      const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
-      const q0 = V(p.cx + Math.cos(a0) * p.r, 0, p.cz + Math.sin(a0) * p.r), q1 = V(p.cx + Math.cos(a1) * p.r, 0, p.cz + Math.sin(a1) * p.r);
-      if (pools.some(o => o !== p && (o.s(q0.x, q0.z) > -0.1 || o.s(q1.x, q1.z) > -0.1)) || snakeH(q0.x, q0.z) < 0 || snakeH(q1.x, q1.z) < 0) continue;
-      rails.push({ a: q0, b: q1, kind: 'Coping', coping: true });
-    }
-  }
-  for (let i = 0; i < 8; i++) { // clamshell coping
-    const a0 = Math.PI + i / 8 * Math.PI / 2, a1 = Math.PI + (i + 1) / 8 * Math.PI / 2, r = CL.r0 + CL.D, y = arc(CL.D, CL.R, CL.D);
-    rails.push({ a: V(CL.cx + Math.cos(a0) * r, y, CL.cz + Math.sin(a0) * r), b: V(CL.cx + Math.cos(a1) * r, y, CL.cz + Math.sin(a1) * r), kind: 'Coping', coping: true });
-  }
-  return {
-    terrainH, regions, boxes, hubbas, rails,
-    spawn: { pos: V(8, 0, 15), yaw: 0 }, bounds: [-48, 52, -40, 40], fog: [70, 170], sky: 0xa9d3ec,
-    // the skate shop on the boardwalk, facing the park
-    npcs: [
-      { kind: 'carve', c: [-21, -12], r: 3.3, speed: 6 },                                  // round the clover bowl
-      { kind: 'carve', c: [-21.4, 12.4], r: 2.5, speed: 5, dir: -1 },                      // the flow bowl
-      { kind: 'session', rail: [3, 3.5, 13, 3.5], start: 0, end: 16.5, back: 3.1, side: 1, speed: 5 },   // the flat bar in the street plaza
-    ],
-    shop: { name: 'Boardwalk Skate Shop', sign: [48.46, 4.3, 6, -Math.PI / 2, 7], awning: [47.2, 0.5, 48.5, 11.5, 2.9, 'x'], zone: [44.6, 3.2, 48.3, 8.8], door: [48.3, 0, 6] },
-
-    drag: (x, z) => onPad(x, z) || (x > 40 && x < 48) ? 0 : 7,                    // sand
-    decor(D) {
-      D.planeAround(PAD, regions, 0, 0xc9c5bb);                                    // the concrete pad, round the transition areas
-      D.planeAround([-120, 120, -120, 120], [{ x0: PAD[0], x1: PAD[1], z0: PAD[2], z1: PAD[3] }], 0, 0xdcc89b, 'sand'); // the beach
-      D.plane(40, -60, 48, 60, 0, 0xb5aea2, true);                                // the boardwalk
-      D.plane(-200, -200, -75, 200, -0.3, 0x2f6f96, false);                       // the ocean
-      for (let z = -36; z <= 36; z += 9) { D.palm(36.5, z); D.palm(-38, z + 4); }
-      for (const [x, z, w, d, h, c] of [[60, -30, 14, 10, 7, 0xe0a46a], [60, -12, 10, 12, 9, 0x6fb3a6], [62, 6, 12, 9, 6, 0xd77a6e], [60, 22, 14, 12, 8, 0xe7d6a1]])
-        D.building(x, z, w, d, h, c);
-      D.building(-58, 18, 3, 3, 4.5, 0xd9d4c7);                                   // lifeguard tower
-    },
-  };
-}
-
 /* ---------------- a kit for building cities ----------------
    Shared by Downtown and Port City: the ground (a base height plus local features: pools, bowls,
    humps, raised blocks), and the pieces cities are made of, from buildings and stair sets down to
@@ -1306,6 +1200,8 @@ function levelMega() {
     groundMin, groundMax, B, Bg, building, rail, cone, pothole, kicker, SET, stairSpot, lip, ledge, planter, pad, bench, tree, lamp,
     paintRect, dash, street, zebra, car, raisedPlaza, sunkenPlaza, fountainBowl, bankToWall, garage, loadingDock, containers, backyardPool } = K;
 
+
+
   /* ================= DOWNTOWN (x, z -120..120): see buildDowntown ================= */
   const dtSpots = buildDowntown(K);
 
@@ -1374,6 +1270,7 @@ function levelMega() {
     // a sculpture plaza: a big bank up to a wall, and a hubba
     bankToWall(380, -186, 420, U + 2.2 - U, 5); for (const b of boxes.slice(-1)) { b.min[1] = U - 0.5; b.max[1] = U + 2.2 + 0.9; } hubbas.at(-1).a.y = U + 2.2; hubbas.at(-1).b.y = U + 0.02;
   }
+
   /* ================= RESIDENTIAL HILLS (x -440..-142, z -440..-150) ================= */
   const NWAVE = [-400, -320, -240], NWX = [-410, -340, -270, -200];
   {
@@ -1555,6 +1452,7 @@ function levelMega() {
   for (const [x, z] of [[-130, -60], [130, 40], [-60, -130], [80, 130], [-130, 200], [130, -300]]) pothole(x + 3, z);
 
   for (const hz of hazards) hz.y = terrainH(hz.x, hz.z);
+
 
   /* ================= MONUMENTS ================= */
   // After the districts are laid out: the monuments, public art you can ollie over, and the pipe
@@ -1879,6 +1777,7 @@ function levelMega() {
       for (let x = 352; x <= 426; x += 5) B(x, -0.2, 323.6, x + 0.6, 0.55, 324.2, 'metal');                      // bollards along the quay
     }
   }
+
   /* ---------- the ground: coarse where it's flat, finer on hills, finest round pools and jumps ---------- */
   const C = c => new THREE.Color(c);
   const concrete = C(0xb3afa6), grass = C(0x7d9a5b), asphalt = C(0x56585d), dirtC = C(0x8f7a5a), chanC = C(0xb7b3a9), plazaC = C(0xc4bfb5), poolC = C(0xb7b8b2), tile = C(0x3d7fae), lot = C(0x6a6c70);
@@ -1935,8 +1834,199 @@ function levelMega() {
   };
 }
 
+/* Porto Alto: one city on a hill, two kilometres across, in eight districts. You start up on the
+   Heights and the whole map runs downhill to the harbour, by more than one way.
+
+        z -650  ┌───────────────────── THE HEIGHTS (y 4 → 44, the ridge) ────────────────────┐
+        z -230  ├────────┬──────────────────────────────┬────────────────────────────────┤
+                │ ARROYO │ FINANCIAL CORE (y 0, Downtown │ UNIVERSITY (y 0 and up)         │
+        z  230  │ (the   ├────────────────────┬─────────┴────────────────────────────────┤
+                │ ditch) │ OLD TOWN (y 0→-40) │ EASTSIDE HILLS (y 0 → -40)                  │
+        z  910  ├────────┴───────────┬────────┴──────────────────────────────────────────┤
+                │ BOARDWALK WEST     │ SHIPYARD EAST          (y -40 → -42, then the sea)  │
+        z 1350  └────────────────────┴────────────────────────────────────────────────────┘
+               x -1000   -420        0   300  360                                x 1000
+
+   Downtown keeps its own coordinates (x, z -120..120 at height 0), so the Financial Core sits on a flat
+   plateau at y 0 and everything else is measured from there: the Heights rise to 44, the harbour is at
+   -42 and the sea at -46.
+
+   Each district is built by its own function, porto_<id>(K, P), in levels/porto/<id>/. K is the shared
+   city kit; P is that district's helper (its rectangle, its gates, and where to register things).
+   See levels/porto/CONTRACT.md. */
+const PORTO = {
+  bounds: [-1000, 1000, -650, 1350],
+  seaZ: 1180, seaY: -46,
+  // id: [name, x0, x1, z0, z1]
+  districts: {
+    heights: { name: 'The Heights',      rect: [-1000, 1000, -650, -230] },
+    arroyo:  { name: 'The Arroyo',       rect: [-1000, -420, -230, 910] },
+    fin:     { name: 'Financial Core',   rect: [-420, 360, -230, 230] },
+    uni:     { name: 'University',       rect: [360, 1000, -230, 230] },
+    old:     { name: 'Old Town',         rect: [-420, 300, 230, 910] },
+    east:    { name: 'Eastside Hills',   rect: [300, 1000, 230, 910] },
+    bw:      { name: 'Boardwalk West',   rect: [-1000, 0, 910, 1350] },
+    ship:    { name: 'Shipyard East',    rect: [0, 1000, 910, 1350] },
+  },
+  // Gates: where a route crosses from one district into the next. Both sides deliver open, rideable
+  // ground at the base height across the gate's width, for GATE_DEPTH metres in from the border.
+  // dir: which way the border runs at the gate ('x': an east-west border, crossed going north-south)
+  gates: [
+    { id: 'switchback',  name: 'Switchback Road',     a: 'heights', b: 'fin',    at: [-100, -230], dir: 'x', w: 16 },
+    { id: 'observatory', name: 'Observatory Steps',   a: 'heights', b: 'fin',    at: [220, -230],  dir: 'x', w: 12 },
+    { id: 'culvert',     name: 'Drainage Culvert',    a: 'heights', b: 'arroyo', at: [-700, -230], dir: 'x', w: 16 },
+    { id: 'ridge',       name: 'Ridge Road',          a: 'heights', b: 'uni',    at: [650, -230],  dir: 'x', w: 16 },
+    { id: 'avenue',      name: 'University Avenue',   a: 'fin',     b: 'uni',    at: [360, 0],     dir: 'z', w: 16 },
+    { id: 'planters',    name: 'Planter Alley',       a: 'fin',     b: 'arroyo', at: [-420, -40],  dir: 'z', w: 12 },
+    { id: 'boulevard',   name: 'Grand Boulevard',     a: 'fin',     b: 'old',    at: [-40, 230],   dir: 'x', w: 20 },
+    { id: 'campus',      name: 'Campus Drive',        a: 'uni',     b: 'east',   at: [650, 230],   dir: 'x', w: 16 },
+    { id: 'crosstown',   name: 'Crosstown Street',    a: 'old',     b: 'east',   at: [300, 560],   dir: 'z', w: 16 },
+    { id: 'footbridge',  name: 'Arroyo Footbridge',   a: 'old',     b: 'arroyo', at: [-420, 520],  dir: 'z', w: 8 },
+    { id: 'spillway',    name: 'Spillway Outlet',     a: 'arroyo',  b: 'bw',     at: [-700, 910],  dir: 'x', w: 24 },
+    { id: 'steep',       name: 'Old Town Steep',      a: 'old',     b: 'bw',     at: [-200, 910],  dir: 'x', w: 16 },
+    { id: 'hillbomb',    name: 'Eastside Hill Bomb',  a: 'east',    b: 'ship',   at: [600, 910],   dir: 'x', w: 16 },
+    { id: 'harbourRd',   name: 'Harbour Road',        a: 'bw',      b: 'ship',   at: [0, 1020],    dir: 'z', w: 16 },
+    { id: 'boardwalk',   name: 'The Boardwalk',       a: 'bw',      b: 'ship',   at: [0, 1150],    dir: 'z', w: 12 },
+  ],
+  GATE_DEPTH: 16, BAND: 12,
+  // the height of the land along z, from the ridge down to the quay (smoothed where the grade changes)
+  profile: [[-650, 44], [-560, 44], [-262, 3], [-218, 0], [230, 0], [880, -40], [1180, -42]],
+};
+// the land before any district shapes it: the profile, the sea past the quay, and a ridge of hills
+// round the three sides that aren't the sea, so the map has edges you can see
+function portoBaseH(x, z) {
+  const P = PORTO.profile, lin = z => { if (z <= P[0][0]) return P[0][1]; for (let i = 1; i < P.length; i++) if (z <= P[i][0]) return lerp(P[i - 1][1], P[i][1], (z - P[i - 1][0]) / (P[i][0] - P[i - 1][0])); return P[P.length - 1][1]; };
+  let h = 0; for (const o of [-24, -12, 0, 12, 24]) h += lin(z + o); h /= 5;   // round off the corners of the profile
+  if (z > PORTO.seaZ) h = lerp(-42, -52, clamp((z - PORTO.seaZ) / 6, 0, 1));  // the quay drops to the sea bed
+  const sm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  const edge = Math.max(Math.abs(x) - 975, -625 - z);                          // the hills round the edge
+  if (edge > 0 && z < PORTO.seaZ - 30) h += 22 * sm(edge / 30) * sm((PORTO.seaZ - 30 - z) / 60);
+  return h;
+}
+
+function levelPorto() {
+  const q = new URLSearchParams(location.search);
+  const ONLY = q.get('only') ? q.get('only').split(',') : null, GRAY = q.has('gray');
+  const IDS = Object.keys(PORTO.districts);
+  const BUILD = {
+    heights: typeof porto_heights === 'function' ? porto_heights : null, arroyo: typeof porto_arroyo === 'function' ? porto_arroyo : null,
+    fin: typeof porto_fin === 'function' ? porto_fin : null, uni: typeof porto_uni === 'function' ? porto_uni : null,
+    old: typeof porto_old === 'function' ? porto_old : null, east: typeof porto_east === 'function' ? porto_east : null,
+    bw: typeof porto_bw === 'function' ? porto_bw : null, ship: typeof porto_ship === 'function' ? porto_ship : null,
+  };
+  const sm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  const inR = (r, x, z, pad = 0) => x >= r[0] - pad && x <= r[1] + pad && z >= r[2] - pad && z <= r[3] + pad;
+  const districtAt = (x, z) => { for (const id of IDS) if (inR(PORTO.districts[id].rect, x, z)) return id; return null; };
+  const [BX0, BX1, BZ0, BZ1] = PORTO.bounds;
+  // how far in from the nearest border with another district (the map's own edges don't count)
+  const bandDist = (r, x, z) => Math.min(r[0] > BX0 ? x - r[0] : 1e9, r[1] < BX1 ? r[1] - x : 1e9, r[2] > BZ0 ? z - r[2] : 1e9, r[3] < BZ1 ? r[3] - z : 1e9);
+
+  /* ---------- the ground: each district may shape its own, meeting the base height at its borders ---------- */
+  const GROUND = {}, COL = {}, SURF = {};
+  function baseH(x, z) {
+    const b = portoBaseH(x, z), id = districtAt(x, z), g = id && GROUND[id];
+    if (!g) return b;
+    const w = sm(bandDist(PORTO.districts[id].rect, x, z) / PORTO.BAND);
+    return w <= 0 ? b : lerp(b, g(x, z, b), w);
+  }
+  const K = cityKit(baseH, 20261010);
+  K.shops = []; K.challenges = []; K.tapes = []; K.traffic = []; K.ringTraffic = []; K.peds = []; K.ringPeds = []; K.npcs = [];
+  K.dtCol = () => null; K.dtSurface = () => null;
+
+  const extraRegions = [], spots = [], fast = [], challenges = [], tapes = [], traffic = [], peds = [], npcs = [], landmarks = [], water = [];
+  water.push({ x0: BX0 - 400, x1: BX1 + 400, z0: PORTO.seaZ, z1: BZ1 + 450, y: PORTO.seaY });
+  const gatesOf = id => PORTO.gates.filter(g => g.a === id || g.b === id);
+  function makeP(id) {
+    const d = PORTO.districts[id], r = d.rect;
+    return {
+      id, name: d.name, rect: r, gates: gatesOf(id), baseH: portoBaseH, PORTO,
+      inside: (x, z, pad = 0) => x >= r[0] + pad && x <= r[1] - pad && z >= r[2] + pad && z <= r[3] - pad,
+      // your own ground: fn(x, z, base) gives the height inside your rectangle; it's blended into the
+      // base height over the last BAND metres before a border. Call this first, before building anything.
+      ground(fn) { GROUND[id] = fn; },
+      col(fn) { COL[id] = fn; },                          // ground colour: fn(x, z, h) -> THREE.Color or null
+      surface(fn) { SURF[id] = fn; },                     // fn(x, z) -> 'rough' | 'smooth' | null
+      region(x0, x1, z0, z1, res) { extraRegions.push({ id, x0: Math.floor(x0 / 8) * 8, x1: Math.ceil(x1 / 8) * 8, z0: Math.floor(z0 / 8) * 8, z1: Math.ceil(z1 / 8) * 8, res }); },
+      spot(name, x, y, z, yaw, area) { const s = { name, pos: V(x, y, z), yaw, area, district: id }; spots.push(s); return s; },
+      travel(name, x, y, z, yaw, kind = 'spot') { fast.push({ name, pos: V(x, y, z), yaw, kind, district: id }); },  // kind: 'district' | 'park' | 'spot'
+      challenge(c) { challenges.push({ ...c, district: id }); },
+      tape(x, z, y) { tapes.push([x, z, y]); },
+      traffic(def) { traffic.push(def); }, peds(def) { peds.push(def); }, npc(def) { npcs.push(def); },
+      landmark(L) { landmarks.push(L); },
+      water(x0, x1, z0, z1, y) { water.push({ x0, x1, z0, z1, y }); },
+      shop(s) { K.shops.push(s); },
+    };
+  }
+
+  /* ---------- build the districts ---------- */
+  const built = [];
+  // the Financial Core goes first: it holds Downtown, which sets up the kit's shop list and challenge lists
+  for (const id of ['fin', ...IDS.filter(i => i !== 'fin')]) {
+    if (ONLY && !ONLY.includes(id)) continue;
+    if (!BUILD[id]) continue;
+    BUILD[id](K, makeP(id)); built.push(id);
+  }
+  // what Downtown registers on the kit directly (it predates P)
+  challenges.push(...K.challenges); tapes.push(...K.tapes); traffic.push(...K.traffic, ...K.ringTraffic); peds.push(...K.peds, ...K.ringPeds); npcs.push(...K.npcs);
+
+  // test view: the borders and the gates painted on the ground
+  if (GRAY || built.length === 0) {
+    for (const id of IDS) { const [x0, x1, z0, z1] = PORTO.districts[id].rect;
+      for (const [a, b, c, e] of [[x0, z0, x1, z0 + 1], [x0, z1 - 1, x1, z1], [x0, z0, x0 + 1, z1], [x1 - 1, z0, x1, z1]]) K.decorFns.push(D => D.paint(a, b, c, e, portoBaseH((a + c) / 2, (b + e) / 2) + 0.05, 0x3a6fd8)); }
+    for (const g of PORTO.gates) { const [gx, gz] = g.at, hw = g.w / 2, dd = PORTO.GATE_DEPTH;
+      const [x0, x1, z0, z1] = g.dir === 'x' ? [gx - hw, gx + hw, gz - dd, gz + dd] : [gx - dd, gx + dd, gz - hw, gz + hw];
+      K.decorFns.push(D => D.paint(x0, z0, x1, z1, K.terrainH(gx, gz) + 0.06, 0xe0703a)); }
+  }
+
+  /* ---------- the ground mesh: 250 m tiles at 8 m, finer where districts asked, finest round pools ---------- */
+  const C = c => new THREE.Color(c);
+  const grass = C(0x7d9a5b), concrete = C(0xb3afa6), sand = C(0xd6c49a), quay = C(0x9d9a92), tile = C(0x3d7fae), poolC = C(0xb7b8b2);
+  const groundCol = (x, z, h) => {
+    const id = districtAt(x, z), f = id && COL[id], c = f && f(x, z, h); if (c) return c;
+    const dc = K.dtCol(x, z); if (dc) return dc;
+    if (z > 1160) return quay;
+    if (z > 910) return concrete;
+    return grass;
+  };
+  const poolCol = (x, z, h) => { const g = baseH(x, z); return h > g - 0.32 && h < g - 0.015 ? tile : h < g - 0.015 ? poolC : groundCol(x, z, h); };
+  const snap = f => ({ ...f, x0: Math.floor(f.x0 / 8) * 8, x1: Math.ceil(f.x1 / 8) * 8, z0: Math.floor(f.z0 / 8) * 8, z1: Math.ceil(f.z1 / 8) * 8 });
+  const F = K.fine.map(snap), XR = extraRegions;
+  const regions = [];
+  const TILE = 250;
+  for (let x = BX0; x < BX1; x += TILE) for (let z = BZ0; z < BZ1 + 60; z += TILE)
+    regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(BZ1 + 60, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F] });
+  for (const r of XR) regions.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, res: r.res, col: groundCol, skip: [...F, ...XR.filter(o => o !== r && o.res < r.res && o.x0 >= r.x0 && o.x1 <= r.x1 && o.z0 >= r.z0 && o.z1 <= r.z1)] });
+  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
+
+  /* ---------- fast travel, spawn ---------- */
+  const order = { district: 0, park: 1, spot: 2 };
+  fast.sort((a, b) => order[a.kind] - order[b.kind]);
+  const fallback = (() => { const id = built[0] || 'fin', r = PORTO.districts[id].rect, x = (r[0] + r[1]) / 2, z = (r[2] + r[3]) / 2; return { name: PORTO.districts[id].name, pos: V(x, K.terrainH(x, z), z), yaw: 0 }; })();
+  const travel = fast.length ? fast : [fallback];
+  return {
+    terrainH: K.terrainH, baseH: portoBaseH, PORTO, built,
+    surface: (x, z) => { const id = districtAt(x, z), f = id && SURF[id]; return (f && f(x, z)) || K.dtSurface(x, z) || 'smooth'; },
+    regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards,
+    districts: travel, spots, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
+    landmarks, water, seaZ: PORTO.seaZ,
+    spawn: travel[0], bounds: [BX0 + 5, BX1 - 5, BZ0 + 5, BZ1 - 5],
+    fog: [170, 520], far: 2800, cullDist: 540, simDist: 280, sky: 0xa9c8de,
+    decor(D) { for (const f of K.decorFns) f(D); },
+  };
+}
+
+/* The Financial Core: Downtown, in its own coordinates (x, z -120..120 at height 0), with the rest of
+   the district built round it. (Starting point: just Downtown so far.) */
+function porto_fin(K, P) {
+  P.ground(() => 0);
+  const spots = buildDowntown(K);
+  for (const s of spots) P.spot(s.name, s.pos.x, s.pos.y, s.pos.z, s.yaw, s.area);
+  const cp = spots.find(s => s.name === 'Central Plaza') || spots[0];
+  P.travel('Financial Core', cp.pos.x, cp.pos.y, cp.pos.z, cp.yaw, 'district');
+}
+
 /* ---------------- the chosen level ---------------- */
-const LV = ({ park: levelPark, city: levelCity, mega: levelMega, block: levelBlock })[LEVEL_ID]();
+const LV = ({ porto: levelPorto, city: levelCity, mega: levelMega, block: levelBlock })[LEVEL_ID]();
 const TERRAIN = LV.regions, BOXES = LV.boxes, HUBBAS = LV.hubbas, RAILS = LV.rails, terrainH = LV.terrainH;
 const [WX0, WX1, WZ0, WZ1] = LV.bounds;
 const HAZARDS = LV.hazards || [];
@@ -1983,6 +2073,18 @@ for (const b of BOXES) {
   if (e.includes('e')) RAILS.push({ a: V(b.max[0], y, b.min[2]), b: V(b.max[0], y, b.max[2]), kind: 'Ledge' });
 }
 for (const r of RAILS) { r.len = r.a.distanceTo(r.b); r.dir = r.b.clone().sub(r.a).normalize(); }
+// rails by patch of the map too, so grinding only checks the few nearby (a big city has thousands)
+const railGrid = new Map(), RPAD = 3;
+for (const r of RAILS) {
+  const x0 = Math.min(r.a.x, r.b.x) - RPAD, x1 = Math.max(r.a.x, r.b.x) + RPAD, z0 = Math.min(r.a.z, r.b.z) - RPAD, z1 = Math.max(r.a.z, r.b.z) + RPAD;
+  for (let i = Math.floor(x0 / GRID); i <= Math.floor(x1 / GRID); i++) for (let j = Math.floor(z0 / GRID); j <= Math.floor(z1 / GRID); j++) {
+    // a long diagonal rail only goes in the cells it actually passes near
+    const cx = (i + 0.5) * GRID, cz = (j + 0.5) * GRID, t = clamp(((cx - r.a.x) * r.dir.x + (cz - r.a.z) * r.dir.z) / (Math.hypot(r.dir.x, r.dir.z) ** 2 * r.len || 1), 0, 1);
+    if (Math.hypot(r.a.x + (r.b.x - r.a.x) * t - cx, r.a.z + (r.b.z - r.a.z) * t - cz) > GRID * 0.71 + RPAD) continue;
+    const k = cellKey(i, j); if (!railGrid.has(k)) railGrid.set(k, []); railGrid.get(k).push(r);
+  }
+}
+const railsNear = (x, z) => railGrid.get(cellKey(Math.floor(x / GRID), Math.floor(z / GRID))) || NONE;
 
 function terrainNormal(x, z) {
   // slope from both sides, but ignore a side that falls off a feature's edge (a bank that sits on a box
@@ -2018,7 +2120,7 @@ function collideBoxes(p, v) {
     return -vn;
   }
   // freestanding rails and their posts: bump off them unless you're above the bar
-  for (const rl of RAILS) {
+  for (const rl of railsNear(p.x, p.z)) {
     if (!rl.post) continue;
     const rr = 0.22, hits = [];
     const t = clamp(p.clone().sub(rl.a).dot(rl.dir) / rl.len, 0, 1), c = rl.a.clone().addScaledVector(rl.dir, t * rl.len);
@@ -2269,6 +2371,8 @@ function gridTexture(base, line) {
 // Static scenery is queued per material and per patch of the map, then merged into one mesh each:
 // a few draw calls per patch, and patches out of view are skipped
 const CHUNK = 96, decorQ = new Map();
+// on a big map, patches far from the camera are hidden outright (fog would hide them anyway)
+const CULL = [], cullAdd = m => { m.geometry.computeBoundingSphere(); CULL.push(m); };
 function decorAdd(geo, mat, matrix) {
   const g = geo.index ? geo.toNonIndexed() : geo.clone(); if (matrix) g.applyMatrix4(matrix);
   if (!g.attributes.normal) g.computeVertexNormals();
@@ -2282,14 +2386,14 @@ function decorFlush() {
     for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (withUV && g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     if (withUV) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));      // textured decor (stains, graffiti) keeps its mapping
-    const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.userData.noShadow; m.receiveShadow = true; scene.add(m);
+    const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.userData.noShadow; m.receiveShadow = true; scene.add(m); cullAdd(m);
   }
   decorQ.clear();
 }
 const M4 = new THREE.Matrix4(), Q4 = new THREE.Quaternion(), S4 = new THREE.Vector3();
 const place = (x, y, z, rotY = 0, sx = 1, sy = 1, sz = 1) => M4.clone().compose(V(x, y, z), Q4.clone().setFromAxisAngle(UP, rotY), S4.clone().set(sx, sy, sz));
 const flatMat = (color, extra) => new THREE.MeshStandardMaterial({ color, roughness: 0.9, ...extra });
-const paintMat = new Map(), shapeMats = new Map();
+const paintMat = new Map(), shapeMats = new Map(), planeMats = new Map();
 const paintOf = color => { if (!paintMat.has(color)) { const m = new THREE.MeshBasicMaterial({ color, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }); m.userData.noShadow = true; paintMat.set(color, m); } return paintMat.get(color); };
 function sandTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
@@ -2327,7 +2431,7 @@ function sandTexture() {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(idx); geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, groundMat); m.receiveShadow = true; m.castShadow = res < 0.5; scene.add(m);
+    const m = new THREE.Mesh(geo, groundMat); m.receiveShadow = true; m.castShadow = res < 0.5; scene.add(m); cullAdd(m);
   }
 }
 const metal = new THREE.MeshStandardMaterial({ color: 0xc9d1d8, metalness: 0.85, roughness: 0.3 });
@@ -2398,7 +2502,7 @@ const boxTex = { plaza: gridTexture('#c9c5bb', 'rgba(40,46,56,0.28)'), step: gri
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.nor, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(g.col, 3));
-    const m = new THREE.Mesh(geo, matFor(g.key)); m.castShadow = g.key !== 'fence' && g.key !== 'glass'; m.receiveShadow = true; scene.add(m);
+    const m = new THREE.Mesh(geo, matFor(g.key)); m.castShadow = g.key !== 'fence' && g.key !== 'glass'; m.receiveShadow = true; scene.add(m); cullAdd(m);
   }
 }
 { // painted safety strips on the drop-off lips and the stair nosings, so edges read from a low camera
@@ -2478,15 +2582,22 @@ for (const r of RAILS) {
       const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
       decorAdd(g, paintOf(color), M4.clone().compose(a.clone().add(b).multiplyScalar(0.5), q, S4.clone().set(1, 1, 1)));
     },
+    // flat painted areas (roads, boardwalks, the sea): merged like the rest, one material per colour
     plane(x0, z0, x1, z1, y, color, textured) {
-      const mat = textured ? new THREE.MeshStandardMaterial({ map: (() => { const t = gridTexture('#ffffff', 'rgba(40,46,56,0.3)'); t.repeat.set((x1 - x0) / 2, (z1 - z0) / 2); return t; })(), color, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
-        : new THREE.MeshStandardMaterial({ color, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), mat); m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; scene.add(m);
+      const key = color + (textured ? 't' : 'f');
+      if (!planeMats.has(key)) { const m = textured ? new THREE.MeshStandardMaterial({ map: (() => { const t = gridTexture('#ffffff', 'rgba(40,46,56,0.3)'); return t; })(), color, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })
+        : new THREE.MeshStandardMaterial({ color, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }); m.userData.noShadow = true; planeMats.set(key, m); }
+      const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2);
+      if (textured) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (x1 - x0) / 2, uv.getY(i) * (z1 - z0) / 2); }
+      // big planes are cut into map patches so they can be hidden with the rest
+      const step = CHUNK;
+      if (x1 - x0 > step * 1.5 || z1 - z0 > step * 1.5) { for (let a = x0; a < x1 - 0.01; a += step) for (let b = z0; b < z1 - 0.01; b += step) this.plane(a, b, Math.min(x1, a + step), Math.min(z1, b + step), y, color, textured); return; }
+      decorAdd(g, planeMats.get(key), place((x0 + x1) / 2, y, (z0 + z1) / 2));
     },
-    palm(x, z) {
+    palm(x, z, y = 0) {   // y: the ground under it (the old levels are flat at 0)
       const lean = Math.sin(x * 3.1 + z) * 0.25;
-      for (let i = 0; i < 8; i++) decorAdd(boxGeo, bark, place(x + lean * i * 0.12, i * 1.0 + 0.5, z, 0, 0.32 - i * 0.015, 1.02, 0.32 - i * 0.015));
-      const top = V(x + lean * 0.96, 8.2, z);
+      for (let i = 0; i < 8; i++) decorAdd(boxGeo, bark, place(x + lean * i * 0.12, y + i * 1.0 + 0.5, z, 0, 0.32 - i * 0.015, 1.02, 0.32 - i * 0.015));
+      const top = V(x + lean * 0.96, y + 8.2, z);
       for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2;
         decorAdd(coneGeo, frond, M4.clone().compose(top.clone().add(V(Math.cos(a) * 1.4, -0.3, Math.sin(a) * 1.4)), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.4, -a + Math.PI / 2, 0, 'YXZ')), S4.clone().set(0.5, 3.2, 0.12))); }
     },
@@ -2507,7 +2618,7 @@ for (const r of RAILS) {
         tex ? (() => { const m = new THREE.Mesh(g, mat); m.position.set(cx, y, cz); m.receiveShadow = true; scene.add(m); })() : decorAdd(g, mat, place(cx, y, cz));
       }
     },
-    building(cx, cz, w, d, h, color) { decorAdd(boxGeo, flatMat(color), place(cx, h / 2, cz, 0, w, h, d)); },
+    building(cx, cz, w, d, h, color, y = 0) { decorAdd(boxGeo, flatMat(color), place(cx, y + h / 2, cz, 0, w, h, d)); },  // looks only
     water(x0, z0, x1, z1, y) { decorAdd(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), water, place((x0 + x1) / 2, y, (z0 + z1) / 2)); },
     // a dark soft blotch on the ground: oil, wear, wax
     stain(x, y, z, r, a) { decorAdd(new THREE.PlaneGeometry(2 * r, 2 * r * (0.6 + 0.4 * Math.abs(Math.sin(x * 7 + z)))).rotateX(-Math.PI / 2).rotateY(x * 13.7 + z * 3.1), stainMat(a), place(x, y + 0.014, z)); },
@@ -2551,7 +2662,27 @@ for (const r of RAILS) {
   D.overpass = (x0, x1, z0, z1, y) => { const m = flatMat(0x9c9890); decorAdd(boxGeo, m, place((x0 + x1) / 2, y, (z0 + z1) / 2, 0, x1 - x0, 1.2, z1 - z0));
     for (const zz of [z0 + 0.3, z1 - 0.3]) decorAdd(boxGeo, m, place((x0 + x1) / 2, y + 0.9, zz, 0, x1 - x0, 0.6, 0.3)); };
   if (LV.decor) LV.decor(D);
+  // open water (the sea, a canal): flat tiles, cut into map patches like everything else
+  for (const w of LV.water || []) for (let a = w.x0; a < w.x1 - 0.01; a += CHUNK) for (let b = w.z0; b < w.z1 - 0.01; b += CHUNK) {
+    const a1 = Math.min(w.x1, a + CHUNK), b1 = Math.min(w.z1, b + CHUNK);
+    decorAdd(new THREE.PlaneGeometry(a1 - a, b1 - b).rotateX(-Math.PI / 2), water, place((a + a1) / 2, w.y, (b + b1) / 2));
+  }
   decorFlush();
+}
+// Landmarks: plain shapes for the big sights (a radio tower, a sculpture, cranes), drawn past the fog
+// so you can always see which way is downhill. Close up they hide and the real one, built by the level, shows.
+const LANDMARKS = [];
+{ const geos = { box: new THREE.BoxGeometry(1, 1, 1), cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), cone: new THREE.ConeGeometry(0.5, 1, 10), sphere: new THREE.SphereGeometry(0.5, 12, 8) };
+  const hazeC = new THREE.Color(HAZE);
+  for (const L of LV.landmarks || []) {
+    const g = new THREE.Group(); g.position.set(...L.at);
+    for (const p of L.parts) {
+      const c = new THREE.Color(p.color ?? 0x8a8f96).lerp(hazeC, 0.45);
+      const m = new THREE.Mesh(geos[p.shape] || geos.box, new THREE.MeshBasicMaterial({ color: c, fog: false }));
+      m.position.set(...p.at); m.scale.set(...p.size); if (p.rotY) m.rotation.y = p.rotY; g.add(m);
+    }
+    g.userData.near = L.near ?? (LV.cullDist ? LV.cullDist * 0.7 : 250); scene.add(g); LANDMARKS.push(g);
+  }
 }
 // the saved spot: a little marker on the ground
 const spotMarker = new THREE.Group(); spotMarker.visible = false; scene.add(spotMarker);
@@ -3139,6 +3270,17 @@ function checkHazards() {
     }
   }
 }
+// water: ride or walk into it and you go in, then you're put back on the last dry ground you were on
+const WATER = LV.water || [];
+const W = { safe: null, safeT: 0, wetT: 0 };
+function waterTick(dt) {
+  if (W.wetT > 0) { W.wetT -= dt; if (W.wetT <= 0) { const s = W.safe; s ? goTo({ pos: s.pos, yaw: s.yaw }) : respawn(); } return; }
+  const w = WATER.find(w => S.pos.x > w.x0 && S.pos.x < w.x1 && S.pos.z > w.z0 && S.pos.z < w.z1 && S.pos.y < w.y - 0.2);
+  if (w) { S.bail = 0; doBail('In the water'); S.vel.multiplyScalar(0.2); W.wetT = 1.1; return; }
+  if ((S.grounded || S.walking) && !S.rail && S.bail <= 0 && (W.safeT -= dt) <= 0) {
+    W.safeT = 0.4; W.safe = { pos: S.pos.clone(), yaw: S.yaw };
+  }
+}
 function doBail(reason) {
   if (S.bail > 0) return;
   S.manual = null; S.bankT = 0;
@@ -3245,6 +3387,8 @@ function stepGround(dt) {
     if (IN.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), (S.sliding ? T.slideDecel : T.brakeDecel) * dt);
   } else vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
   vf -= Math.sign(vf) * Math.min(Math.abs(vf), (T.rollFriction + (LV.drag ? LV.drag(S.pos.x, S.pos.z) : 0)) * dt); // sand drags
+  // the wind: nothing at pushing speed, but it builds as you go faster, so a long hill levels off at a top speed
+  { const over = Math.abs(vf) - 7; if (over > 0) vf -= Math.sign(vf) * Math.min(over, T.windDrag * over * over * dt); }
   // manuals: hold the trick stick halfway; they keep a combo alive until you roll out of them
   const mk = S.bail <= 0 ? manualInput() : null;
   if (!mk) S.manualLock = false;
@@ -3465,7 +3609,7 @@ function grindKey() {
 }
 // a rail below and close enough that holding the stick means "grind", not "grab"
 function railNearby() {
-  for (const r of RAILS) {
+  for (const r of railsNear(S.pos.x, S.pos.z)) {
     const t = clamp(S.pos.clone().sub(r.a).dot(r.dir) / r.len, 0, 1);
     const c = r.a.clone().addScaledVector(r.dir, t * r.len);
     if (Math.hypot(S.pos.x - c.x, S.pos.z - c.z) < 2.2 && S.pos.y - c.y > -0.3 && S.pos.y - c.y < 2.5) return true;
@@ -3480,7 +3624,7 @@ function grindSegment() {
 function tryRail() {
   let best = null, bestD = Infinity;
   const hv = Math.hypot(S.vel.x, S.vel.z);
-  for (const r of RAILS) {
+  for (const r of railsNear(S.pos.x, S.pos.z)) {
     if (S.vel.y > 1.0) continue;
     if (hv < 1.5) continue;                                   // no snapping onto rails from a standstill
     if (r.coping && !S.popped && S.sinceGround < 0.3) continue; // rolling over the coping into a bowl drops you in
@@ -3583,6 +3727,7 @@ function step(dt) {
   else if (S.grounded) stepGround(dt);
   else stepAir(dt);
   if (HAZARDS.length && !S.walking) checkHazards();
+  if (WATER.length) waterTick(dt);
   EDGE_IN.ollieUp = false; EDGE_IN.flip = false;
   if (S.grounded && S.trick) S.trick = null;
 }
@@ -3685,7 +3830,7 @@ function soundBeds(dt) {
   ringGain.gain.setTargetAtTime(metal && !slide ? 0.012 + 0.004 * Math.sin(t * 31) : 0, t, 0.03);
   ringOsc.frequency.setTargetAtTime(1500 + Math.abs(S.railS) * 60, t, 0.1);
   // the world around you
-  const beach = LEVEL_ID === 'park';
+  const beach = LV.seaZ != null && S.pos.z > LV.seaZ - 160;          // waves and gulls down by the sea
   ambGain.gain.setTargetAtTime(beach ? 0.03 + 0.025 * Math.sin(t * 0.5) ** 2 : 0.022, t, 0.3);
   ambFilter.frequency.setTargetAtTime(beach ? 380 + 200 * Math.sin(t * 0.5) ** 2 : 240, t, 0.3);
   amb.car -= dt; amb.bird -= dt;
@@ -4599,8 +4744,11 @@ function poseNpc(n, dt, time) {
   limbIK(R.LIMBS.back.upper, R.LIMBS.back.fore, shB, bh, V(-0.3, -1, 0.4), UPPER_ARM, FOREARM);
   if (!onRail && n.bailT <= 0) keepBoardAboveGround(R);
 }
+// on a big map, actors far from the camera wait where they are (hidden) instead of being simulated
+const SIM_D2 = LV.simDist ? LV.simDist ** 2 : Infinity;
 function npcTick(dt, time) {
   for (const n of NPCS) {
+    if (camera.position.distanceToSquared(V(n.x, n.y, n.z)) > SIM_D2) { n.R.skater.visible = false; continue; }
     npcStep(n, dt);
     const far = camera.position.distanceToSquared(V(n.x, n.y, n.z)) > 110 * 110;
     n.R.skater.visible = !far; if (!far) poseNpc(n, dt, time);
@@ -4854,8 +5002,9 @@ function posePed(p, dt) {
     for (let k = 0; k < def.n; k++) PEDS.push(makePed(P, (k + rnd() * 0.6) / def.n * P.L, k % 2 ? 1 : -1, rnd)); }
 }
 function trafficTick(dt) {
-  for (const c of CARS) { carStep(c, dt); poseCar(c); carHitsYou(c); }
+  for (const c of CARS) { if (SIM_D2 < Infinity && camera.position.distanceToSquared(V(c.x, c.y, c.z)) > SIM_D2) { c.mesh.visible = false; continue; } carStep(c, dt); poseCar(c); carHitsYou(c); }
   for (const p of PEDS) {
+    if (camera.position.distanceToSquared(V(p.x, p.y, p.z)) > SIM_D2) { p.R.skater.visible = false; continue; }
     pedStep(p, dt);
     const far = camera.position.distanceToSquared(V(p.x, p.y, p.z)) > 85 * 85;
     p.R.skater.visible = !far; if (!far) posePed(p, dt);
@@ -4876,6 +5025,14 @@ const DT = 1 / 120;
 let acc = 0, last = performance.now(), simTime = 0;
 respawn();
 let frameErr = 0;
+// hide the patches of a big map that are past the fog; checked a few times a second
+let cullN = 0;
+function cullTick(force) {
+  const R = LV.cullDist; if (!R || (!force && cullN++ % 8)) return;
+  const c = camera.position;
+  for (const m of CULL) { const b = m.geometry.boundingSphere; m.visible = Math.hypot(b.center.x - c.x, b.center.z - c.z) - b.radius < R; }
+  for (const g of LANDMARKS) g.visible = Math.hypot(g.position.x - c.x, g.position.z - c.z) > g.userData.near;
+}
 function frame(now) {
   requestAnimationFrame(frame);                                       // first, so one bad frame can never stop the game
   try { frameBody(now); } catch (e) { if (frameErr++ < 3) console.error(e); }
@@ -4900,6 +5057,7 @@ function frameBody(now) {
   chalTick(dt, simTime);
   shopTick(dt);
   updateHud(dt);
+  cullTick();
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
