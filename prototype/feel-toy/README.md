@@ -392,6 +392,28 @@ Run into one faster than about 2.5 m/s (counting both of your speeds) and you
 both slam. Slower than that and you just bump apart. They follow set lines
 rather than the full physics.
 
+## Port City's monuments
+
+Public art you can ollie over. Each sculpture stands low on a plinth past the
+end of a raised deck. Push up the ramp, get your speed back along the deck,
+pop off the end over the statue, and land on the bank beyond. Each one has a
+gap challenge and a hard one with a named trick, and appears in the jump
+list.
+- **The Night Owl (University):** the college's bronze owl, on the campus
+  quad. Hard: Kickflip.
+- **The Anchor (Waterfront):** a ship's anchor stood on end. Hard: Heelflip.
+- **The Propeller (Port):** a three-bladed bronze propeller. Hard: 360 Flip.
+- **The Big Ball (Stadium):** a giant ball on its tee. Hard: Pop Shuvit.
+- **The Big Gear (Industrial):** a rusted cog. Hard: Varial Kickflip.
+- **The Giant Doughnut (Hill Park):** iced and sprinkled, at the top of the
+  hills. Hard: Hardflip.
+- **The Pipe Bridge (Dam):** a water main crossing the spillway about a metre
+  off the slope. Bomb the spillway and flip over it, or grind across it.
+  Hard: a 360 Flip over it at full speed.
+
+You need about full push speed to clear a sculpture. Roll off a deck without
+popping and you hit the statue.
+
 ## Traffic and people (Downtown and Port City)
 
 The downtown streets are busy, on both the Downtown level and in Port City's
