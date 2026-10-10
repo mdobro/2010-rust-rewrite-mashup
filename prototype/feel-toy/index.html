@@ -3553,6 +3553,11 @@ function chalTick(dt, time) {
   if (bannerT > 0 && (bannerT -= dt) <= 0) $('banner').classList.remove('on');
   // what's here: the nearest challenge marker, or the spot you're in and its best
   const near = CHAL.map(c => [c, Math.hypot(S.pos.x - c.at[0], S.pos.z - c.at[2])]).filter(([c, d]) => d < 13 && Math.abs(S.pos.y - c.at[1]) < 8).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([c]) => c);
+  // a beam fades out once its goal is up on screen (you're there), and none show in a replay
+  for (const c of CHAL) {
+    const base = prog.done[c.id] ? 0.1 : c.hard ? 0.38 : 0.3, want = near.includes(c) ? 0 : base;
+    c.mat.opacity = RP.active ? 0 : damp(c.mat.opacity, want, 8, dt); c.mesh.visible = c.mat.opacity > 0.005;
+  }
   const el = $('chal-prompt'), sp = !near.length && SPOTS.find(s => inBox(s.area, S.pos, false));
   const mark = c => prog.done[c.id] ? '✓' : c.hard ? '★★' : '★';
   if (near.length) { el.hidden = false; el.className = near.every(c => prog.done[c.id]) ? 'done' : '';

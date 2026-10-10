@@ -304,7 +304,8 @@ either camera with a short shake (*Landing shake*).
 ## Challenges, spot bests and tapes
 
 - **Challenges:** a gold beam marks each challenge. Ride near one and its
-  goal shows at the top of the screen. Some examples:
+  goal shows at the top of the screen, and the beam fades so it doesn't get in
+  the way. Beams never show in replays. Some examples:
   - Kickflip the Big Four.
   - Gap from the garage to the roof.
   - Grind the courthouse handrail.
