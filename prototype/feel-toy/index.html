@@ -59,6 +59,8 @@
     font: 13px/1.3 var(--font-mono); color: var(--ink); background: rgba(12,15,20,.55); border: 1px solid rgba(255,200,61,.45); border-radius: 4px; padding: 6px 10px; }
   #chal-prompt b { color: #ffc83d; font-weight: 700; } #chal-prompt.done { border-color: rgba(111,220,140,.5); } #chal-prompt.done b { color: var(--good); }
   #chal-prompt small { display: block; color: var(--ink-dim); font-size: 11px; }
+  #chal-prompt b.hard { color: #ff6f88; } #chal-prompt b.ok { color: var(--good); } #chal-prompt small + b { display: block; margin-top: 5px; }
+  #chal-list .c i.hard { color: #ff6f88; } #chal-list .c em { font-style: normal; font: 600 9px var(--font-mono); color: #ff6f88; border: 1px solid #ff6f8866; border-radius: 3px; padding: 0 3px; margin-left: 4px; }
   #banner { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s; }
   #banner.on { opacity: 1; }
   #banner .t { font: 13px var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: #ffc83d; }
@@ -1016,7 +1018,7 @@ function buildDowntown(K) {
     hump(-92, 94, 26, 6); fine.push({ x0: -120, x1: -64, z0: 66, z1: 120, res: 0.5 });
     const ht = H(-92, 94);
     B(-97, ht - 1.2, 89, -87, ht + 0.3, 99, 'plaza', { edges: 'nswe' }); bench(-96, 97, -92, 97.6); bench(-91, 90.4, -88, 91);
-    let x = -86, tp = H(x, 94) + 0.3;
+    let x = -86, tp = H(x, 94) + 0.3; K.hillStairTop = tp;
     B(-87.2, tp - 1.5, 91.4, x, tp, 96.6, 'plaza');
     while (tp > G + 0.4) { const run = 6 * 0.4, bot = Math.max(G, H(x + run + 2.5, 94)); if (tp - bot < 0.45) break;
       SET('x', x, 1, 92, 96, tp, bot, 6, 0.4); rails.push(handrail('x', x, 1, 91.55, tp, bot, 6, 0.4), handrail('x', x, 1, 96.45, tp, bot, 6, 0.4));
@@ -1161,6 +1163,17 @@ function buildDowntown(K) {
     { id: 'hill-bomb', name: 'Hill Bomb', desc: 'Hit 40 km/h coming down the knoll', at: [-92, G + 6, 86], go: [-92, G + 6.2, 92, 0], kind: 'speed', speed: 40 / 3.6, area: [-112, 44, -70, 92] },
     { id: 'plaza-score', name: 'Own Central Plaza', desc: 'Land a 5,000 point line that starts in Central Plaza', at: [-14, G + 1.5, -24], go: [-14, G + 1.5, -24, Math.PI], kind: 'score', pts: 5000, area: [-31, -31, 31, 31] },
     { id: 'city-score', name: 'Downtown Line', desc: 'Land a 12,000 point line anywhere downtown', at: [0, G, 40], go: [0, G, 38, Math.PI], kind: 'score', pts: 12000, area: [-120, -120, 120, 120] },
+    // the hard ones: one per spot, and very particular about it
+    { id: 'garage-kf', hard: true, name: 'Kickflip the Garage Gap', desc: 'Kickflip from the garage deck on to the first roof', at: [-6, G + 7, -108], go: [-16, G + 7, -100, -Math.PI / 2], kind: 'trick', tricks: ['Kickflip'], from: [-23, -118, -4, -66, G + 6.5], to: [-1, -116, 12, -92, G + 5.5] },
+    { id: 'plaza-tre', hard: true, name: '360 Flip the Plaza Gap', desc: 'A 360 flip off the plaza deck edge', at: [21, G + 1.5, -8], go: [21, G + 1.5, -20, Math.PI], kind: 'trick', tricks: ['360 Flip'], from: [6.7, -14, 26, -5.8, G + 1.2], to: [6, -5.8, 28, 12, -1, G + 0.4] },
+    { id: 'court-crook', hard: true, name: 'Crooked the Courthouse Rail', desc: 'Crooked grind (or overcrook) a courthouse handrail', at: [-3.5, G + 2.4, 82], go: [-3.5, G + 2.4, 90, 0], kind: 'grind', rail: 'Handrail', grind: 'Crooked|Overcrook', area: [-4.5, 76, 4.5, 82] },
+    { id: 'lib-feeble', hard: true, name: 'Feeble the Library Hubba', desc: 'Feeble grind the library hubba', at: [-78.6, G + 1.8, -92], go: [-78.6, G + 1.8, -96, Math.PI], kind: 'grind', rail: 'Hubba', grind: 'Feeble', area: [-80, -89.5, -77.5, -83.5, G + 0.2] },
+    { id: 'bank-line', hard: true, name: 'Bank Plaza Line', desc: 'In one line from the bank plaza: two grinds and a manual, 3,000 points or more', at: [-85, G + 0.9, 2], go: [-95, G + 0.9, 0, -Math.PI / 2], kind: 'line', pts: 3000, area: [-120, -31, -49, 31], need: [['grind', 2], ['Manual', 1]] },
+    { id: 'office-heel', hard: true, name: 'Heelflip the Office Ten', desc: 'Heelflip the whole ten-stair', at: [100, G + 3, -84], go: [100, G + 3, -90, Math.PI], kind: 'trick', tricks: ['Heelflip'], from: [96, -86, 104, -81.7, G + 2.7], to: [94, -78.6, 106, -60, -1, G + 0.5] },
+    { id: 'diy-blunt', hard: true, name: 'Bluntslide the DIY Coping', desc: 'Bluntslide (or nose blunt) the quarterpipe coping', at: [108.4, G + 1.6, -20], go: [100, G, -18, -Math.PI / 2], kind: 'grind', rail: 'Coping', grind: 'Blunt', area: [107, -25, 110, 3] },
+    { id: 'hill-varial', hard: true, name: 'Varial Kickflip the Hill Stairs', desc: 'Varial kickflip down a flight of the Hill Park stairway', at: [-84, K.hillStairTop, 94], go: [-90, K.hillStairTop + 0.3, 94, -Math.PI / 2], kind: 'trick', tricks: ['Varial Kickflip'], drop: 1.2, from: [-87.5, 91, -66, 97, G + 0.4], to: [-87.5, 90, -55, 98, -1, 7] },
+    { id: 'trench-flip', hard: true, name: 'Flip the Trench', desc: 'Off the ply, flip trick over the trench and land beyond it', at: [91.5, G, 66], go: [80, G, 70, -Math.PI / 2], kind: 'trick', trick: FLIP, from: [85, 64, 92, 76, G - 0.2], to: [94.6, 60, 106, 80, G - 0.2, G + 2.5] },
+    { id: 'city-legend', hard: true, name: 'Downtown Legend', desc: 'Land a 30,000 point line anywhere downtown', at: [-20, G, 40], go: [-20, G, 38, Math.PI], kind: 'score', pts: 30000, area: [-120, -120, 120, 120] },
   ];
   // tapes hidden round the district: [x, z, roughly how high the surface there is]
   K.tapes = [[24, -110.5, G + 5.6], [-6, -116, G + 7], [-74, -72.5, G - 1.8], [114, -22, G + 1.6], [108, 100.3, G + 4.0], [0, 15, G - 1.4],
@@ -1522,6 +1535,12 @@ function levelMega() {
     { id: 'dirt-line', name: 'Dirt Line', desc: 'Clear the first gap on the middle dirt line', at: [-322, 1, 382], go: [-349, 4.5, 382, -Math.PI / 2], kind: 'gap', from: [-324, 378, -320.5, 386, 0.6], to: [-319.5, 378, -312, 386, -0.1, 1.2] },
     { id: 'reservoir', name: 'Reservoir Speed', desc: 'Hit 45 km/h in the reservoir bowl', at: [-400, 24, 256], go: [-400, 24, 254, Math.PI], kind: 'speed', speed: 45 / 3.6, area: [-438, 254, -358, 358] },
     { id: 'uni-triple', name: 'University Triple', desc: 'Flip down the first flight of a university set', at: [210, 6, -172], go: [210, 6, -180, Math.PI], kind: 'trick', trick: FLIP, from: [203, -178, 217, -171.9, 5.5], to: [202, -171.9, 218, -164, -1, 4.6] },
+    { id: 'spillway-kf', hard: true, name: 'Kickflip the Spillway', desc: 'Kickflip off the spillway lip into the river', at: [-311, -3.8, 300], go: [-349, 24, 300, -Math.PI / 2], kind: 'trick', tricks: ['Kickflip'], from: [-320, 287, -309, 323, -6], to: [-309, 290, -200, 320, -7, -4] },
+    { id: 'freeway-heel', hard: true, name: 'Heelflip the Freeway', desc: 'Heelflip off the end of the freeway ramp on to the gravel', at: [338, 13, 265], go: [320, 11.4, 265, -Math.PI / 2], kind: 'trick', tricks: ['Heelflip'], from: [328, 262, 341, 278, 11.4], to: [340, 255, 380, 285, -1, 12.3] },
+    { id: 'dock-tre', hard: true, name: '360 Flip into the Dry Dock', desc: 'A 360 flip off the quay into the dry dock', at: [290, 0, 334], go: [290, 0, 328, Math.PI], kind: 'trick', tricks: ['360 Flip'], from: [176, 328, 344, 337, -0.3], to: [180, 336, 340, 424, -10, -6] },
+    { id: 'dirt-long', hard: true, name: 'The Long Dirt Gap', desc: 'Clear the first gap on the far dirt line, the longest one', at: [-322, 1, 412], go: [-349, 4.5, 412, -Math.PI / 2], kind: 'gap', from: [-324, 408, -320.5, 416, 0.6], to: [-318.8, 408, -311, 416, -0.1, 1.2] },
+    { id: 'reservoir-60', hard: true, name: 'Reservoir 60', desc: 'Hit 60 km/h in the reservoir bowl', at: [-400, 24, 358], go: [-400, 24, 254, Math.PI], kind: 'speed', speed: 60 / 3.6, area: [-438, 254, -358, 358] },
+    { id: 'uni-rail', hard: true, name: 'University Handrail', desc: 'Grind a handrail on one of the university triple sets', at: [212, 6, -172], go: [212, 6, -180, Math.PI], kind: 'grind', rail: 'Handrail', area: [203, -172.5, 217, -155] },
   ];
   const tapes = [...K.tapes, [260, 380, -9], [-400, 306, 16], [-80, -362, 6], [338, 270, 13], [-206, -437, 28], [402, 0, -2.6]];
   return {
@@ -2385,8 +2404,9 @@ function bankCombo() {
   const mult = combo.parts.length, total = Math.round(combo.pts * mult);
   stats.score += total; stats.best = Math.max(stats.best, total);
   showCombo(`${combo.sketchy ? 'Sketchy  ·  ' : ''}+${total}`, 'landed');
+  const parts = combo.parts;
   combo.parts = []; combo.pts = 0; combo.ammo = 0; combo.sketchy = false;
-  CH.bank(total);
+  CH.bank(total, parts);
 }
 // Cones and potholes: roll into them fast and you bail (slow, a cone just bumps you); clear them in the air for points
 function checkHazards() {
@@ -3484,9 +3504,9 @@ const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(pro
 const CHAL = LV.challenges || [], TAPES = LV.tapes || [], SPOTS = (LV.spots || []).filter(s => s.area);
 const inBox = (r, p, useY = true, pad = 0) => !!p && p.x >= r[0] - pad && p.x <= r[2] + pad && p.z >= r[1] - pad && p.z <= r[3] + pad && (!useY || ((r[4] ?? -1e9) <= p.y && p.y <= (r[5] ?? 1e9)));
 const beamGeo = new THREE.CylinderGeometry(0.26, 0.26, 40, 10, 1, true).translate(0, 20, 0), ringGeo = new THREE.RingGeometry(0.9, 1.25, 28).rotateX(-Math.PI / 2);
-const GOLD = 0xffc83d, GREEN = 0x6fdc8c;
+const GOLD = 0xffc83d, RED = 0xff4d6d, GREEN = 0x6fdc8c;
 for (const c of CHAL) {
-  c.mat = new THREE.MeshBasicMaterial({ color: prog.done[c.id] ? GREEN : GOLD, transparent: true, opacity: prog.done[c.id] ? 0.1 : 0.3, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  c.mat = new THREE.MeshBasicMaterial({ color: prog.done[c.id] ? GREEN : c.hard ? RED : GOLD, transparent: true, opacity: prog.done[c.id] ? 0.1 : c.hard ? 0.38 : 0.3, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
   const g = new THREE.Group(), ring = new THREE.Mesh(ringGeo, c.mat); ring.position.y = 0.05; g.add(new THREE.Mesh(beamGeo, c.mat), ring); g.position.set(...c.at); scene.add(g); c.mesh = g;
 }
 let bannerT = 0;
@@ -3494,17 +3514,23 @@ function banner(title, sub) { $('banner').querySelector('.t').textContent = titl
 function complete(c) {
   if (prog.done[c.id]) return;
   prog.done[c.id] = true; saveProg(); c.mat.color.set(GREEN); c.mat.opacity = 0.1;
-  banner('Challenge complete', c.name); sfx.win(); buzz(60); refreshChalList();
+  banner(c.hard ? 'Hard challenge complete' : 'Challenge complete', c.name); sfx.win(); buzz(60); refreshChalList();
 }
-CH.trick = () => { if (!S.rail) return; for (const c of CHAL) if (c.kind === 'grind' && !prog.done[c.id] && (!c.rail || S.rail.kind === c.rail) && inBox(c.area, S.pos)) complete(c); };
+CH.trick = () => { if (!S.rail) return; for (const c of CHAL) if (c.kind === 'grind' && !prog.done[c.id] && (!c.rail || S.rail.kind === c.rail) && (!c.grind || new RegExp(c.grind).test(S.grindName || '')) && inBox(c.area, S.pos)) complete(c); };
+const bare = name => name.replace(/^(Fakie |Nollie |Switch )+/, '');          // a trick by name, however you rode into it
+const isGrind = part => /^(Fakie )?(FS|BS) /.test(part) && !/Shuvit/.test(part);
+const trickOk = (c, parts) => c.tricks ? parts.some(t => c.tricks.includes(bare(t))) : !c.trick || new RegExp(c.trick).test(parts.join(' + '));
 CH.land = () => {
-  const parts = combo.parts.slice(S.toffParts || 0).join(' + ');
+  const parts = combo.parts.slice(S.toffParts || 0);
   for (const c of CHAL) if ((c.kind === 'gap' || c.kind === 'trick') && !prog.done[c.id] && inBox(c.from, S.toffPos, true, 0.6) && inBox(c.to, S.pos, true, 0.6)
-    && !(c.notIn && inBox(c.notIn, S.toffPos, false)) && (c.kind === 'gap' || new RegExp(c.trick).test(parts))) complete(c);
+    && !(c.notIn && inBox(c.notIn, S.toffPos, false)) && !(c.drop && S.toffPos.y - S.pos.y < c.drop) && (c.kind === 'gap' || trickOk(c, parts))) complete(c);
 };
-CH.bank = total => {
+CH.bank = (total, parts = []) => {
   const st = S.comboStart;
   for (const c of CHAL) if (c.kind === 'score' && !prog.done[c.id] && total >= c.pts && inBox(c.area, st, false)) complete(c);
+  // a line: so many of each kind of trick in one combo that started here
+  for (const c of CHAL) if (c.kind === 'line' && !prog.done[c.id] && total >= (c.pts || 0) && inBox(c.area, st, false)
+    && c.need.every(([what, n]) => parts.filter(t => what === 'grind' ? isGrind(t) : new RegExp(what).test(t)).length >= n)) complete(c);
   const sp = SPOTS.find(s => inBox(s.area, st, false));
   if (sp && total > (prog.spots[sp.name] || 0)) { const had = prog.spots[sp.name]; prog.spots[sp.name] = total; saveProg(); if (had) banner('New spot best', `${sp.name} · ${total.toLocaleString()}`); }
 };
@@ -3526,10 +3552,11 @@ function chalTick(dt, time) {
   for (const c of CHAL) if (c.kind === 'speed' && !prog.done[c.id] && S.grounded && hv >= c.speed && inBox(c.area, S.pos, false)) complete(c);
   if (bannerT > 0 && (bannerT -= dt) <= 0) $('banner').classList.remove('on');
   // what's here: the nearest challenge marker, or the spot you're in and its best
-  let near = null, nd = 13;
-  for (const c of CHAL) { const d = Math.hypot(S.pos.x - c.at[0], S.pos.z - c.at[2]); if (d < nd && Math.abs(S.pos.y - c.at[1]) < 8) { nd = d; near = c; } }
-  const el = $('chal-prompt'), sp = !near && SPOTS.find(s => inBox(s.area, S.pos, false));
-  if (near) { el.hidden = false; el.className = prog.done[near.id] ? 'done' : ''; el.innerHTML = `<b>${prog.done[near.id] ? '✓' : '★'} ${near.name}</b><small>${near.desc}</small>`; }
+  const near = CHAL.map(c => [c, Math.hypot(S.pos.x - c.at[0], S.pos.z - c.at[2])]).filter(([c, d]) => d < 13 && Math.abs(S.pos.y - c.at[1]) < 8).sort((a, b) => a[1] - b[1]).slice(0, 2).map(([c]) => c);
+  const el = $('chal-prompt'), sp = !near.length && SPOTS.find(s => inBox(s.area, S.pos, false));
+  const mark = c => prog.done[c.id] ? '✓' : c.hard ? '★★' : '★';
+  if (near.length) { el.hidden = false; el.className = near.every(c => prog.done[c.id]) ? 'done' : '';
+    el.innerHTML = near.map(c => `<b class="${c.hard ? 'hard' : ''}${prog.done[c.id] ? ' ok' : ''}">${mark(c)} ${c.name}</b><small>${c.desc}</small>`).join(''); }
   else if (sp) { el.hidden = false; el.className = 'done'; el.innerHTML = `<b>${sp.name}</b><small>spot best ${(prog.spots[sp.name] || 0).toLocaleString()}</small>`; }
   else el.hidden = true;
   if (CHAL.length || TAPES.length) $('prog').textContent = `★ ${CHAL.filter(c => prog.done[c.id]).length}/${CHAL.length}  ·  tapes ${tapeCount()}/${TAPES.length}`;
@@ -3539,7 +3566,7 @@ function refreshChalList() {
   $('chal-set').hidden = false; const host = $('chal-list'); host.innerHTML = '';
   for (const c of CHAL) {
     const row = document.createElement('div'); row.className = 'c' + (prog.done[c.id] ? ' done' : '');
-    row.innerHTML = `<i>${prog.done[c.id] ? '✓' : '★'}</i><span>${c.name}</span><button type="button">Go</button><small>${c.desc}</small>`;
+    row.innerHTML = `<i class="${c.hard ? 'hard' : ''}">${prog.done[c.id] ? '✓' : c.hard ? '★★' : '★'}</i><span>${c.name}${c.hard ? ' <em>hard</em>' : ''}</span><button type="button">Go</button><small>${c.desc}</small>`;
     row.querySelector('button').addEventListener('click', () => { goTo({ pos: V(c.go[0], c.go[1], c.go[2]), yaw: c.go[3] }); togglePanel(); });
     host.appendChild(row);
   }

@@ -314,6 +314,28 @@ either camera with a short shake (*Landing shake*).
   Land it and the beam turns green. Downtown has 15. Port City adds six of its
   own: the spillway, the freeway gap, the dry dock, a dirt gap, the reservoir
   and a university set.
+- **Hard challenges:** every spot also has a hard one, marked by a red beam
+  and ★★. They are particular about it:
+  - **Downtown:**
+    - kickflip the garage gap;
+    - 360 flip the plaza gap;
+    - crooked (or overcrook) a courthouse handrail;
+    - feeble the library hubba;
+    - a bank plaza line with two grinds and a manual worth 3,000;
+    - heelflip the office ten;
+    - bluntslide the DIY coping;
+    - varial kickflip a Hill Park flight;
+    - flip the construction trench;
+    - a 30,000-point line anywhere.
+  - **Port City adds:**
+    - kickflip the spillway;
+    - heelflip the freeway gap;
+    - 360 flip into the dry dock;
+    - the long dirt gap;
+    - 60 km/h in the reservoir;
+    - grind a university handrail.
+
+  A Fakie or Nollie version of the named trick counts.
 - **Spot bests:** every combo that starts inside a spot counts toward that
   spot's best. Beating it puts it up on screen.
 - **Tapes:** cassettes are hidden in hard-to-reach places, such as roofs, the
