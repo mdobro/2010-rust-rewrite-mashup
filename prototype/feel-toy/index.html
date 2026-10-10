@@ -278,7 +278,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
    Tuning: every feel number lives here and on a slider.
    ============================================================ */
 const DEFAULTS = {
-  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.9, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 3.2, runSpeed: 5, sprintSpeed: 7.5, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
+  gravity: 14, slideDecel: 5, slideAngle: 80, revertWindow: 0.4, doubleTap: 0.32, manualMin: 0.2, manualDelay: 0.22, manualDrag: 0.2, manualTip: 0.3, manualAssist: 0.9, manualControl: 0.7, slamBail: 5, curbBail: 2, railCatch: 0.55, walkSpeed: 3.2, runSpeed: 5, sprintSpeed: 7.5, pushImpulse: 1.6, pushInterval: 0.42, pushMax: 8.5, rollFriction: 0.15, brakeDecel: 7,
   turnRate: 2.6, turnRateFast: 1.4, grip: 9, carveKeep: 0.92,
   popSpeed: 5.0, crouchTime: 0.22, coyoteTime: 0.12, airSpin: 7.5, vertAssist: true, vertAngle: 50,
   landClean: 35, landSketchy: 65, flipTime: 0.42, flipForgive: 0.8,
@@ -335,6 +335,7 @@ const SPEC = [
 const STORE_KEY = 'skate-feel-toy-v10';
 const T = { ...DEFAULTS };
 try { Object.assign(T, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch (_) {}
+if (T.manualDrag === 0.9) T.manualDrag = DEFAULTS.manualDrag;           // the old default bled speed too fast: move saved setups on to the new one
 function saveTuning() { try { localStorage.setItem(STORE_KEY, JSON.stringify(T)); } catch (_) {} }
 
 /* ============================================================
