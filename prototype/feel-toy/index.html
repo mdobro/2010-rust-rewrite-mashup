@@ -2390,6 +2390,21 @@ function stepWalk(dt) {
     const g = groundAt(S.pos.x + S.vel.x / hv * ahead || S.pos.x, S.pos.z + S.vel.z / hv * ahead || S.pos.z, S.pos.y + 0.14);
     if (g.h > S.pos.y && g.h - S.pos.y <= 0.44) { S.pos.y = g.h; S.vel.y = 0; break; }
   }
+  // ...and step up on to anything low the body touches while walking toward it, at whatever angle
+  // (coming at a flight of stairs diagonally the body meets the step before the probe ahead does)
+  if (hv > 0.05) {
+    const R = 0.31; let up = -1;
+    const seen = new Set();
+    for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]]) for (const b of near(S.pos.x + ox, S.pos.z + oz)) {
+      if (b.isHubba || seen.has(b)) continue; seen.add(b);
+      const top = b.max[1]; if (top <= S.pos.y + 0.01 || top - S.pos.y > 0.44 || b.mat === 'fence') continue;
+      const cx = clamp(S.pos.x, b.min[0], b.max[0]), cz = clamp(S.pos.z, b.min[2], b.max[2]), dx = cx - S.pos.x, dz = cz - S.pos.z, d = Math.hypot(dx, dz);
+      if (d > R) continue;
+      if (d > 1e-6 && (dx * S.vel.x + dz * S.vel.z) / (d * hv) < 0.2) continue;              // only what you're walking into
+      up = Math.max(up, top);
+    }
+    if (up > S.pos.y) { S.pos.y = up; S.vel.y = 0; }
+  }
   collideBoxes(S.pos, S.vel);
   if (outOfWorld(S.pos)) clampWorld(S.pos);
   const g2 = groundAt(S.pos.x, S.pos.z, S.pos.y + 0.14);
