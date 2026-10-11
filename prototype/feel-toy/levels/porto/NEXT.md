@@ -91,3 +91,154 @@ About 4 hubbas per 6 m with both curbs and sidewalks, so 1 km is about 650. Use 
 - Re-measure emptiness and straightness with `$SP/empty.mjs`.
 - Load time under about 8 s, and the frame budget at the busiest spots.
 - Commit, push, republish the game, and refresh the map artifact v2.
+
+---
+
+# Also next: verticality, quarter pipes, grabs, big air
+
+What the player said: there isn't a lot of terrain height change. Skate 3 has a quarry you drop down into, full of
+stuff, that leads out to a new area, and a mega park with lots of verticality. Fix how quarter pipes work: better
+roll-up and actual air. Add grabs back. No big bridges or big things to air over. We want high speed, high air.
+
+## Where the empty land is (25 m cells, connected patches, measured on the current build)
+| district | size | x | z | ground y |
+|---|---|---|---|---|
+| heights east-centre | 9.2 ha | 250..625 | -575..-125 | 0..43 |
+| heights centre | 8.4 ha | -150..200 | -575..-225 | 1..43 |
+| heights west | 6.1 ha | -675..-125 | -575..-400 | 23..43 |
+| east, east edge | 16.9 ha | 625..1000 | 250..700 | -41..-5 |
+| arroyo, south | 3.1 ha | -750..-225 | 525..925 | -40..-19 |
+| arroyo, middle | 2.9 ha | -625..-500 | 175..525 | -17..0 |
+
+Arroyo also has one big strip along the west map edge.
+
+## A. Quarter pipes that give real air (engine, index.html; me)
+
+### Why they feel flat now
+- Gravity is 14 (heavy) and the top push speed is 8.5 m/s. That only carries you about 2.6 m up a ramp, and most of
+  our quarter pipes are 1.6 to 2.5 m tall, so you barely reach the lip.
+- Most banks are planar hubbas. They launch you forward, not up.
+- Vert assist only kicks in above 50 degrees, and it only straightens you; it adds no lift.
+
+### Fixes
+1. **Pumping.** Crouch (hold ollie) through the flat bottom and stand up on the face to gain speed. Skate does this.
+   - Gain is about +8% of speed for each transition you pump, capped.
+   - That's how you build speed in a bowl or on a mini ramp without pushing.
+2. **Lip pop.** An ollie released within about 0.15 s of leaving a lip steeper than 60 degrees adds a vertical pop
+   along the ramp's normal. A clean, late pop is worth more.
+3. **Air gravity off vert.** When you leave a lip steeper than 60 degrees, use lighter gravity going up (about 10)
+   and the normal 14 coming down. That gives hang time without floaty flat-ground ollies. It can be tuned in the
+   settings panel.
+4. **Proper ramps in the kit.** `K.qp(x0, z0, x1, z1, dir, h, R, vert)` makes a real quarter pipe: an arc to about
+   85 degrees, optional vert, a deck box, coping rail, and a fine ground region.
+   - Sizes: mini 1.2 m, normal 2.4 m, vert 3.6 m, mega 8 m.
+   - `K.spine` and `K.hip` come with it.
+   - Then replace the planar "quarter pipes" in the parks with it.
+5. **A regression ride.** A test rider pumps a 3.6 m quarter pipe from rest. It must get 1.5 m or more above the coping
+   within 4 pumps. A rider at 8 m/s must clear the lip.
+
+## B. Grabs (engine; me)
+Grabs were removed because, in the air, the trick stick lines the board up for a grind. The code already knows "a
+rail below and close enough": that is `railNearby`, used to tell grind setup from grab. So:
+
+### Controls
+- **In the air, with no rail close below:** hold the trick stick in a direction for about 0.1 s to grab.
+  - toe side: Indy
+  - heel side: Melon
+  - up: Nosegrab
+  - down: Tailgrab
+  - up-toe: Mute
+  - down-heel: Stalefish
+  - down-toe: Crail
+  - up-heel: Method
+- **Over a rail:** the stick stays grind setup, like now.
+- **Let go before landing**, or it's sketchy.
+- **Hold longer** for more points: a "Long Indy" after 0.6 s.
+- **Grab while spinning** with the steer stick, for "540 Melon" and the like.
+
+### Animation
+- Bend the knees, bring the board up to the hand, and reach the arm.
+- Tweak the board's roll and yaw per grab.
+- Do it through the existing `boardFlip` and `LIMBS` posing.
+
+### Optional
+A setting to use a separate grab button instead, a small pad above each thumb like Skate's triggers. It's a fallback
+if the stick turns out to be too crowded on a phone.
+
+### Tests
+- A flick test for each grab name.
+- Holding the stick over a rail still grinds.
+
+## C. Big vertical places (level; worktree agents)
+
+### C1. The Quarry
+- **Site:** Heights east-centre, x 280..620, z -560..-250. It cuts into the hillside under the tower ridge.
+- **The pit:**
+  - Rim at y 43, floor at about 0, so 40 m deep.
+  - Four or five benches, each 8 to 10 m high with a near-vertical face.
+  - A haul road spirals down round the pit, built with the winding-road piece. It's a bomb with hairpins and its own guardrails.
+- **Things in it:**
+  - drop-ins off the bench lips onto gravel banks;
+  - a conveyor gantry as a long down rail;
+  - rusting haul trucks and an excavator;
+  - spoil heaps as natural quarter pipes and hips;
+  - a flooded corner as water to bail into;
+  - a rock kicker gap across a bench.
+- **The way out, to a new area:** a cut from the pit floor, south through a short tunnel, into University. The tunnel is a box roof over a carved trench. Add a gate in CONTRACT.md for it, about (560, -230), y about 20.
+- **Fine regions:** res 1 on the faces, res 2 on the benches.
+
+### C2. The Mega Park
+- **Site:** Eastside east edge, x 700..990, z 260..680, on the hillside going down toward the harbour.
+- **The mega ramp:**
+  - A roll-in tower about 24 m tall on the high ground at the north end.
+  - Its run-out leads to a 20 m gap, a landing ramp, then a quarter pipe 8 m tall.
+- **Around it:** a big-air bowl about 4 m deep, a spine line, a hip line, a vert ramp, and a few rails on the slope so it isn't just the ramp.
+- **Lighting and landmark:** the tower is a `P.landmark` you can see from the Heights.
+- **A test:** a rider going down the mega ramp has to clear the gap and land at more than 60% of the speed it had at
+  the lip. That's the point where landing on a slope keeps the velocity along it.
+
+### C3. Bridges and big gaps
+1. **Arroyo Viaduct.** A road bridge 18 to 25 m over the Arroyo between Old Town and the Arroyo, near the footbridge
+   gate at about (-420, 150).
+   - The deck is a box with railings you can grind, piers as decor, and the ditch underneath.
+   - An expansion gap near mid-span about 6 m wide, with a deck kicker, for "the bridge gap".
+   - You can still ride under it in the ditch.
+2. **Harbour Lift Bridge.** A bascule bridge over a new harbour canal between Boardwalk West and Shipyard East, at x
+   about 0.
+   - One leaf is left up at about 20 degrees as a giant kicker, aimed at the far leaf.
+   - The gap is about 25 m over water. Falling in is a bail.
+   - It's the headline "Skate 3 bridge jump". The two harbour gates move to sit on the leaves.
+3. **Boulevard flyover.** A highway overpass crossing the Grand Boulevard in the Financial Core.
+   - An on-ramp kicker from the Boulevard, so you can jump the flyover.
+   - Its rails are about 60 m long.
+4. **Rooftop gaps.** One or two run-ups to the roof of a parking garage in Old Town or University, with a gap of
+   about 12 m to the next roof, and a way down.
+
+### Overall relief
+- The Arroyo gets a deeper canyon reach (up to 20 m) south of the viaduct.
+- Eastside gets one escarpment with a long stair-and-bank line down it.
+- Both reuse `P.ground`.
+
+## D. High speed engine checks (me)
+- **Speed:** confirm there's no hidden cap above about 30 m/s; give the camera more pull-back at speed.
+- **Landing on a slope** keeps the velocity along the slope; landing on flat from more than 8 m costs speed or is a bail.
+- **Hit boxes:** solid-box collision at 30 m/s and 120 Hz is 0.25 m per step. Check that you can't tunnel through
+  thin decks; sweep the step if you can.
+- **Draw distance:** you have to be able to see the landing from the lip at the Quarry and the Mega Park. Add
+  `P.landmark` silhouettes and bring the far plane in less there.
+- **Rides:** add to tools/rides.mjs a quarry-run, a mega-ramp line and the bridge jump.
+
+## Order and how it splits up
+1. **Me, engine:** quarter pipes and air (A), grabs (B), speed checks (D).
+   - Run the flick and regression tests, then publish, so the feel can be tried on the phone first.
+2. **Me, kit:** `P.road` (step 1 above), `K.qp`, `K.spine`, `K.hip`, and a `K.bridge(axis, ...)` helper for a deck, rails, piers, an expansion gap and a kicker.
+3. **Parallel worktree agents, each in its own district files:**
+   - Heights: the winding roads, filling the empty space, and the Quarry.
+   - East: the winding roads, filling the empty space, and the Mega Park.
+   - Arroyo: the winding roads, filling the empty space, the canyon, and the viaduct's Arroyo half.
+   - Old Town: the viaduct's Old Town half and a rooftop gap.
+   - bw and ship: the lift bridge.
+   - fin: the flyover.
+   - uni: the quarry tunnel exit.
+4. **Me:** integrate, then run check `--rhythm`, the rides and the slopes check. Re-measure emptiness and
+   straightness, commit, push, publish, and refresh the map.
