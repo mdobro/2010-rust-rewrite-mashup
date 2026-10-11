@@ -133,6 +133,7 @@ P.tape(x, z, y)                         // a hidden tape to collect (y: the surf
 P.traffic(def), P.peds(def), P.npc(def) // cars, people, other skaters (see 6)
 P.landmark({...})                       // a far-off silhouette (see 6)
 P.water(x0, x1, z0, z1, y)
+P.road({ pts, ... })                    // a winding road carved into your ground, built and registered (see 5, "Winding roads")
 P.shop({...})                           // a skate shop (see 6): every district has at least one, preferably two
 ```
 
@@ -187,6 +188,61 @@ domes; **make each geometry once** outside loops and reuse it), `D.shelter`, `D.
 `D.manhole(x, z)`, `D.overpass(x0, x1, z0, z1, y)`,
 `D.sign(text, x, y, z, w, h, rotY, fg, bg, font)` (a name board: each one is its own mesh and texture,
 so **at most 8 per district**).
+
+### Winding roads (`P.road`)
+
+A road that follows any line, not just x or z: straights joined by round bends, its height smoothed
+off your ground, banked in the bends, carved into the ground with sloped shoulders either side, and
+built with grindable kerbs, sidewalks, guardrails round the tight bends, asphalt and a dashed centre
+line. The code is `portoRoad` / `portoRoadBuild` / `portoRoadRegions` in `levels/porto/base.js`;
+Quarry Lane in `levels/porto/heights/heights_road.js` is the working example.
+
+```js
+P.ground(T);                                     // first: the road reads your ground
+const r = P.road({ name: 'Quarry Lane', hw: 4, sw: 2.5, blend: 14,
+  pts: [[330, -466], [462, -456, 18], [462, -410, 18], [345, -385, 24], [345, -345, 30], [405, -315, 30], [405, -266]] });
+// ... then everything else: it all stands on the ground with the road in it
+const a = r.at(120);                             // { x, z, tx, tz, y, bank, k } 120 m along
+K.lamp(a.x - a.tz * (r.hw + 2), a.z + a.tx * (r.hw + 2));   // on the left sidewalk: left of travel is (-tz, tx)
+```
+
+| option | default | what it does |
+|---|---|---|
+| `pts` | (required) | `[[x, z, r?], ...]`: the corner points. The road runs straight between them and turns each inner corner on an arc of radius `r` (default 30; cut down to fit, with a console warning). Keep radius ≥ 15 for something you can carve at speed, and leave a straight between two bends |
+| `name` | 'Road' | the line's name (check.mjs --rhythm lists it) |
+| `hw`, `sw` | 4, 2.5 | half-width of the carriageway; sidewalk width (0: none) |
+| `blend` | 20 | metres over which the cut or fill slopes back to your ground beyond the sidewalk |
+| `ys` | — | `[[s, y], ...]` heights at distances along (linear between, the ends default to the ground there); without it the road takes the ground under it |
+| `smooth` | 30 | the height profile is box-filtered over this many metres (twice), ends pinned |
+| `bumps` | — | `[{ s, h, len }, ...]` raised-cosine bumps (or dips, h < 0) in the profile: rollers, crests |
+| `bank` | `{ k: 3, max: 0.12, smooth: 16 }` | cross-slope = clamp(curvature × k, ±max), smoothed; about 10 % at R 30. A number sets k; `false`: flat |
+| `curb` | 'both' | grindable 0.15 m kerbs: 'both', 'left', 'right' (of travel) or false |
+| `walk` | as `curb` | which sides get a sidewalk (behind the kerb, level across) |
+| `guard` / `guardR` | true / 80 | a guardrail (a 'Rail' with posts) round the outside of every bend tighter than guardR, 4 m past each end; bends on the same side within 12 m share one |
+| `color`, `curbColor`, `lineColor`, `dashes` | asphalt grey, kerb grey, yellow, true | paint; `dashes: false` leaves the centre line off |
+| `kind`, `main` | 'bomb' if the average grade ≥ 3 %, else 'push'; false | the `P.line` the road registers for you |
+
+What you get back: `r.L` (length), `r.hw`, `r.sw`, `r.core` (hw + sw + 0.5: the flat part), `r.reach`
+(core + blend: where the carving ends), `r.arcs` (`[{ s0, s1, R, sg }]`, sg +1 = a left turn),
+`r.at(s)`, `r.dist(x, z)` (distance from the centre line, Infinity out of reach) and `r.S` (the 2 m
+samples). The road also: makes `LV.surface` 'smooth' within hw + 0.5 of its line, adds itself to
+`K.roadLines` (`K.onRoad(x, z, pad)` is true on any road, the straight `K.roads` rects included), and
+asks for its own ground mesh: each 8 m cell along it is drawn at res 4, 2 or 1, whichever is the
+coarsest that keeps the drawn ground within 2.5 cm of the ridden one (you don't need `P.region` for it).
+
+Rules:
+* **Call it after `P.ground` and before anything reads `K.terrainH`.** The road is carved into the
+  ground; whatever was placed before it stands on the old ground. Roads laid later read the ground
+  with the earlier ones in it, so lay them in order and let a later road end on an earlier one to make a junction.
+* Keep the line (plus `sw + blend`) clear of gates, other streets and buildings: the carving
+  overrides whatever ground is there.
+* Cost, for Quarry Lane (430 m, both kerbs and sidewalks, 5 bends): about 150 grind lines (the
+  kerbs are ~110 of them: a bend needs a chord every ~4 m), about 220 sloped blocks, about 25k
+  triangles and 0.2 s of load. Grind lines are the tight one against the 700 budget: on a long road
+  think about `curb: 'left'` or `curb: false` on stretches nobody will grind.
+* Test it: `node tools/roadtest.mjs --html $SP/<id>.html --only <id> [--road <name>] [--shots $SP]`
+  checks the cross-slope (≤ 2 % on the straights, the bank on the bends), the seams (≤ 5 cm kinks
+  every 0.5 m), the drawn ground against the asphalt, and rides each road top to bottom in three lanes.
 
 ## 6. Data shapes
 

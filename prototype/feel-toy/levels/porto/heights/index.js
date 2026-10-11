@@ -9,6 +9,7 @@ function porto_heights(K, P) {
   const PL = heights_plan();
   const T = heights_terrain(PL, P.baseH);
   P.ground(T);                                   // first, before anything reads K.terrainH
+  if (typeof heights_road === 'function') heights_road(K, P);   // then the winding roads (they carve the ground)
   for (const r of [[-768,-632,-416,-360,1], [-720,-680,-592,-416,2], [-720,-680,-360,-240,2], [-368,-16,-584,-248,4],
                    [-936,-896,-424,-360,4], [-912,-896,-592,-424,4], [-888,-864,-520,-424,4], [-784,-760,-520,-424,4],
                    [472,504,-552,-328,4], [952,968,-552,-328,4], [208,232,-592,-240,4], [256,280,-592,-472,4],

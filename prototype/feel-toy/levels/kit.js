@@ -58,6 +58,11 @@ function cityKit(baseH, seed0 = 1) {
   const pad = (x0, z0, x1, z1, hgt = 0.18) => Bg(x0, z0, x1, z1, hgt, 'pad', { edges: 'nswe' });
   const bench = (x0, z0, x1, z1) => Bg(x0, z0, x1, z1, 0.45, 'wood', { edges: Math.abs(x1 - x0) > Math.abs(z1 - z0) ? 'ns' : 'ew' });
   const posts = [], roads = [];                                              // where the lamps and trees stand, and the roads: nothing gets put on them
+  // roads that aren't axis-aligned rects (Porto's P.road): each has dist(x, z) (from its centre line) and hw (its half-width)
+  const roadLines = [];
+  // is (x, z) on a road (the carriageway, pad metres wider): K.roads' rects and the winding roads alike
+  const onRoad = (x, z, pad = 0) => roads.some(([x0, z0, x1, z1]) => x >= Math.min(x0, x1) - pad && x <= Math.max(x0, x1) + pad && z >= Math.min(z0, z1) - pad && z <= Math.max(z0, z1) + pad)
+    || roadLines.some(r => r.dist(x, z) <= r.hw + pad);
   const tree = (x, z) => { posts.push([x, z]); decorFns.push(D => D.tree(x, terrainH(x, z), z)); };
   const lamp = (x, z, side = 1) => { posts.push([x, z]); decorFns.push(D => D.lamp(x, terrainH(x, z), z, side)); };
   const paintRect = (x0, z0, x1, z1, color, y) => decorFns.push(D => D.plane(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), y ?? terrainH((x0 + x1) / 2, (z0 + z1) / 2) + 0.01, color, false));
@@ -251,7 +256,7 @@ function cityKit(baseH, seed0 = 1) {
   return { rnd, R, pick, col, boxes, hubbas, rails, hazards, fine, decorFns, feats, feat, terrainH, poolS, pool, hump,
     groundMin, groundMax, B, Bg, building, rail, cone, pothole, kicker, SET, stairSpot, lip, ledge, planter, pad, bench, tree, lamp,
     paintRect, dash, street, zebra, car, raisedPlaza, sunkenPlaza, fountainBowl, bankToWall, garage, loadingDock, containers, backyardPool,
-    posts, roads, prop, sit, newsBoxes, trashCan, hydrant, bikeRack, busStop, dumpster, jersey, parkingBlock, picnic, meter, driveway,
+    posts, roads, roadLines, onRoad, prop, sit, newsBoxes, trashCan, hydrant, bikeRack, busStop, dumpster, jersey, parkingBlock, picnic, meter, driveway,
     strip, median, retainWall, construction, crossingGap, regionsFor };
 }
 

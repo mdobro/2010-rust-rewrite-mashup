@@ -104,6 +104,231 @@ function portoBaseRaw(x, z) {
   return h;
 }
 
+/* ---------- P.road: a winding road carved into the ground (see CONTRACT.md 5, "Winding roads") ----------
+   portoRoad(spec, groundH) lays out the centre line (straights and fillet arcs), samples it every ~2 m, reads its height
+   profile off groundH (the ground before this road: the district ground and every earlier road) and returns the road:
+   carve(x, z, h) gives the ground with the road cut into h, dist(x, z) the distance from the centre line. Nothing is built here. */
+function portoRoad(spec, groundH) {
+  const hw = spec.hw ?? 4, sw = spec.sw ?? 2.5, blend = spec.blend ?? 20, core = hw + Math.max(0, sw) + 0.5, reach = core + blend, DS = 2;
+  const sm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  // 1. the centre line: straights between fillet arcs (r at an interior vertex: the arc's radius, default 30, shrunk to fit)
+  const V2 = spec.pts, pieces = [], warn = [];
+  let cur = [V2[0][0], V2[0][1]];
+  for (let i = 1; i < V2.length; i++) {
+    const p = V2[i];
+    if (i === V2.length - 1) { pieces.push({ t: 'L', a: cur, b: [p[0], p[1]] }); break; }
+    const q = V2[i + 1], l1 = Math.hypot(p[0] - V2[i - 1][0], p[1] - V2[i - 1][1]), l2 = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const u1 = [(p[0] - V2[i - 1][0]) / l1, (p[1] - V2[i - 1][1]) / l1], u2 = [(q[0] - p[0]) / l2, (q[1] - p[1]) / l2];
+    const cr = u1[0] * u2[1] - u1[1] * u2[0], th = Math.acos(clamp(u1[0] * u2[0] + u1[1] * u2[1], -1, 1));
+    let r = p[2] ?? 30;
+    if (th < 1e-3 || r <= 0) { pieces.push({ t: 'L', a: cur, b: [p[0], p[1]] }); cur = [p[0], p[1]]; continue; }
+    let T = r * Math.tan(th / 2);
+    const room = Math.min(Math.hypot(p[0] - cur[0], p[1] - cur[1]), i + 1 === V2.length - 1 ? l2 : l2 / 2);
+    if (T > room) { T = room; warn.push(`vertex ${i}: radius ${r} cut to ${(T / Math.tan(th / 2)).toFixed(1)}`); r = T / Math.tan(th / 2); }
+    const A = [p[0] - u1[0] * T, p[1] - u1[1] * T], B = [p[0] + u2[0] * T, p[1] + u2[1] * T], sg = Math.sign(cr);
+    if (Math.hypot(A[0] - cur[0], A[1] - cur[1]) > 1e-6) pieces.push({ t: 'L', a: cur, b: A });
+    const C = [A[0] - u1[1] * r * sg, A[1] + u1[0] * r * sg], a0 = Math.atan2(A[1] - C[1], A[0] - C[0]);
+    pieces.push({ t: 'A', c: C, R: r, a0, a1: a0 + sg * th, sg });
+    cur = B;
+  }
+  if (warn.length) console.warn(`P.road ${spec.name || ''}: ${warn.join('; ')}`);
+  // 2. samples every ~2 m, evenly spaced along the whole line (the smoothing below counts samples, so they must be even):
+  // position, unit tangent, signed curvature (+ turns left, toward (-tz, tx)), distance along
+  const X = [], Z = [], TX = [], TZ = [], KK = [], SS = [], arcs = [];
+  let tot = 0;
+  for (const pc of pieces) { pc.len = pc.t === 'L' ? Math.hypot(pc.b[0] - pc.a[0], pc.b[1] - pc.a[1]) : pc.R * Math.abs(pc.a1 - pc.a0); pc.s0 = tot; tot += pc.len;
+    if (pc.t === 'A') arcs.push({ s0: pc.s0, s1: tot, R: pc.R, sg: pc.sg }); }
+  const NS = Math.max(1, Math.ceil(tot / DS));
+  for (let j = 0, q = 0; j <= NS; j++) {
+    const s = tot * j / NS; while (q < pieces.length - 1 && s > pieces[q].s0 + pieces[q].len) q++;
+    const pc = pieces[q], t = pc.len > 0 ? clamp((s - pc.s0) / pc.len, 0, 1) : 0; let x, z, tx, tz;
+    if (pc.t === 'L') { tx = (pc.b[0] - pc.a[0]) / (pc.len || 1); tz = (pc.b[1] - pc.a[1]) / (pc.len || 1); x = pc.a[0] + (pc.b[0] - pc.a[0]) * t; z = pc.a[1] + (pc.b[1] - pc.a[1]) * t; }
+    else { const a = pc.a0 + (pc.a1 - pc.a0) * t; x = pc.c[0] + pc.R * Math.cos(a); z = pc.c[1] + pc.R * Math.sin(a); tx = -Math.sin(a) * pc.sg; tz = Math.cos(a) * pc.sg; }
+    X.push(x); Z.push(z); TX.push(tx); TZ.push(tz); KK.push(pc.t === 'L' ? 0 : pc.sg / pc.R); SS.push(s);
+  }
+  const N = X.length, L = SS[N - 1];
+  // smoothing: a box filter of radius rad metres, run twice, its window shrinking to nothing at the ends (so the ends stay put)
+  const smooth = (v, rad) => { for (let pass = 0; pass < 2; pass++) { const c = [0]; for (let i = 0; i < N; i++) c.push(c[i] + v[i]);
+    const w = Math.max(0, Math.round(rad / (L / (N - 1) || 1))); v = v.map((_, i) => { const r = Math.min(w, i, N - 1 - i); return (c[i + r + 1] - c[i - r]) / (2 * r + 1); }); } return v; };
+  // 3. the profile: the ground under the line (or the ys keypoints [[s, y], ...]), smoothed over ~30 m, plus the bumps
+  let prof;
+  if (spec.ys && spec.ys.length) {
+    const ks = spec.ys.map(([s, y]) => [s, y]).sort((a, b) => a[0] - b[0]);
+    if (ks[0][0] > 0) ks.unshift([0, groundH(X[0], Z[0])]);
+    if (ks[ks.length - 1][0] < L) ks.push([L, groundH(X[N - 1], Z[N - 1])]);
+    prof = SS.map(s => { let j = 1; while (j < ks.length - 1 && ks[j][0] < s) j++; return lerp(ks[j - 1][1], ks[j][1], clamp((s - ks[j - 1][0]) / (ks[j][0] - ks[j - 1][0] || 1), 0, 1)); });
+  } else prof = X.map((x, i) => groundH(x, Z[i]));
+  prof = smooth(prof, (spec.smooth ?? 30) / 2);
+  for (const b of spec.bumps || []) for (let i = 0; i < N; i++) { const u = (SS[i] - b.s) / b.len; if (Math.abs(u) < 0.5) prof[i] += b.h * 0.5 * (1 + Math.cos(2 * Math.PI * u)); }
+  // 4. the bank: cross-slope dy/d(left) = -curvature * k, clamped, smoothed (lower on the inside of the turn)
+  const bk = spec.bank === false ? { k: 0, max: 0 } : typeof spec.bank === 'number' ? { k: spec.bank } : spec.bank || {};
+  const bankK = bk.k ?? 3, bankMax = bk.max ?? 0.12;
+  const bank = smooth(KK.map(k => clamp(-k * bankK, -bankMax, bankMax)), (bk.smooth ?? 16) / 2);
+  // 5. the segments between samples, indexed in a 16 m grid (each segment in every cell within reach of it)
+  const n = N - 1, AX = new Float64Array(n), AZ = new Float64Array(n), DX = new Float64Array(n), DZ = new Float64Array(n), L2 = new Float64Array(n), LN = new Float64Array(n);
+  const G = 16, KEY = (ix, iz) => (ix + 4096) * 8192 + iz + 4096, cells = new Map();
+  let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9;
+  for (let i = 0; i < n; i++) {
+    AX[i] = X[i]; AZ[i] = Z[i]; DX[i] = X[i + 1] - X[i]; DZ[i] = Z[i + 1] - Z[i]; L2[i] = DX[i] * DX[i] + DZ[i] * DZ[i] || 1e-9; LN[i] = Math.sqrt(L2[i]);
+    const e = reach + 1, x0 = Math.min(X[i], X[i + 1]) - e, x1 = Math.max(X[i], X[i + 1]) + e, z0 = Math.min(Z[i], Z[i + 1]) - e, z1 = Math.max(Z[i], Z[i + 1]) + e;
+    bx0 = Math.min(bx0, x0); bx1 = Math.max(bx1, x1); bz0 = Math.min(bz0, z0); bz1 = Math.max(bz1, z1);
+    for (let ix = Math.floor(x0 / G); ix <= Math.floor(x1 / G); ix++) for (let iz = Math.floor(z0 / G); iz <= Math.floor(z1 / G); iz++) {
+      const k = KEY(ix, iz); if (!cells.has(k)) cells.set(k, []); cells.get(k).push(i); }
+  }
+  let most = 0; for (const [k, v] of cells) { cells.set(k, Int32Array.from(v)); most = Math.max(most, v.length); }
+  const DD = new Float64Array(most), TU = new Float64Array(most), LAT = new Float64Array(most);
+  // distances to the segments in this cell (into DD/TU/LAT); returns the nearest, or Infinity
+  function near(x, z) {
+    if (x < bx0 || x > bx1 || z < bz0 || z > bz1) return Infinity;
+    const list = cells.get(KEY(Math.floor(x / G), Math.floor(z / G))); if (!list) return Infinity;
+    let dmin = Infinity;
+    for (let k = 0; k < list.length; k++) {
+      const i = list[k], rx = x - AX[i], rz = z - AZ[i], tu = (rx * DX[i] + rz * DZ[i]) / L2[i], tc = tu < 0 ? 0 : tu > 1 ? 1 : tu;
+      const ex = rx - DX[i] * tc, ez = rz - DZ[i] * tc, d = Math.sqrt(ex * ex + ez * ez);
+      DD[k] = d; TU[k] = tu; LAT[k] = (rz * DX[i] - rx * DZ[i]) / LN[i];
+      if (d < dmin) dmin = d;
+    }
+    return dmin;
+  }
+  // the ground with the road in it. The road's height is an average over the nearby segments, weighted to the nearest
+  // (sharply on the road, more softly out on the shoulders), so where two stretches of road come close (a hairpin's legs)
+  // the ground between them is continuous. Flat across the sidewalks (|d| > hw); blended back to h over `blend`.
+  function carve(x, z, h) {
+    const dmin = near(x, z); if (dmin >= reach) return h;
+    const list = cells.get(KEY(Math.floor(x / G), Math.floor(z / G))), out = dmin - core, tau = 0.25 + 0.5 * (out > 0 ? out : 0);
+    let sum = 0, ws = 0;
+    for (let k = 0; k < list.length; k++) {
+      const e = DD[k] - dmin; if (e > 6 * tau) continue;
+      const i = list[k], w = Math.exp(-e / tau), t = TU[k] < -0.5 ? -0.5 : TU[k] > 1.5 ? 1.5 : TU[k], tb = t < 0 ? 0 : t > 1 ? 1 : t;
+      const lat = LAT[k] < -hw ? -hw : LAT[k] > hw ? hw : LAT[k];
+      sum += w * (prof[i] + (prof[i + 1] - prof[i]) * t + (bank[i] + (bank[i + 1] - bank[i]) * tb) * lat); ws += w;
+    }
+    const Y = sum / ws, m = out <= 0 ? 1 : sm(1 - out / blend);
+    return h + (Y - h) * m;
+  }
+  // the road at distance s along: centre position, tangent, height, bank
+  function at(s) {
+    s = clamp(s, 0, L); let lo = 0, hi = N - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (SS[m] <= s) lo = m; else hi = m; }
+    const t = (s - SS[lo]) / (SS[hi] - SS[lo] || 1);
+    return { x: lerp(X[lo], X[hi], t), z: lerp(Z[lo], Z[hi], t), tx: lerp(TX[lo], TX[hi], t), tz: lerp(TZ[lo], TZ[hi], t), y: lerp(prof[lo], prof[hi], t), bank: lerp(bank[lo], bank[hi], t), k: lerp(KK[lo], KK[hi], t) };
+  }
+  return { spec, name: spec.name || 'Road', hw, sw, blend, core, reach, L, N, arcs, bbox: [bx0, bx1, bz0, bz1],
+    S: { x: X, z: Z, tx: TX, tz: TZ, k: KK, s: SS, prof, bank }, carve, at, dist: near,
+    grade: Math.abs(prof[N - 1] - prof[0]) / L };
+}
+
+/* the kerbs, sidewalks, guardrails, line paint and asphalt of a road from portoRoad (the ground under it is already carved) */
+function portoRoadBuild(K, r, spec) {
+  const { hw, sw, S, N } = r, T = K.terrainH;
+  const sides = v => v === false ? [] : v === 'left' ? [1] : v === 'right' ? [-1] : [1, -1];   // +1 is the left of travel
+  const curb = sides(spec.curb ?? 'both'), walk = sw > 0.4 ? sides(spec.walk ?? spec.curb ?? 'both') : [];
+  const at = (i, lat) => [S.x[i] - S.tz[i] * lat, S.z[i] + S.tx[i] * lat];
+  // chord ends: each chord runs on while the line it stands for (at every lat in lats) stays within tl metres across and tv
+  // up or down of it, at most mx samples; few chords keep the grind line count down (each chord is one line)
+  const chords = (i0, i1, lats, tl, tv, mx) => {
+    const P = lats.map(lat => { const o = []; for (let i = i0; i <= i1; i++) { const [x, z] = at(i, lat); o.push([x, T(x, z), z]); } return o; });
+    const out = [i0];
+    for (let i = i0; i < i1;) {
+      let j = i + 1;
+      for (let jj = i + 2; jj <= Math.min(i1, i + mx); jj++) {
+        const ok = P.every(o => { const a = o[i - i0], b = o[jj - i0], dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz || 1e-9;
+          for (let m = i + 1; m < jj; m++) { const q = o[m - i0], t = ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / l2;
+            if (Math.abs((q[2] - a[2]) * dx - (q[0] - a[0]) * dz) / Math.sqrt(l2) > tl || Math.abs(q[1] - (a[1] + (b[1] - a[1]) * t)) > tv) return false; }
+          return true; });
+        if (!ok) break; j = jj;
+      }
+      out.push(j); i = j;
+    }
+    return out;
+  };
+  const br = chords(0, N - 1, curb.length ? curb.map(sd => sd * hw) : [hw, -hw], 0.15, 0.03, 16);
+  const slab = (i, j, lat, w, lift, noRails, kind, color) => { const [ax, az] = at(i, lat), [bx, bz] = at(j, lat), p0 = V(ax, T(ax, az) + lift, az), p1 = V(bx, T(bx, bz) + lift, bz), hi = p0.y >= p1.y;
+    K.hubbas.push({ a: hi ? p0 : p1, b: hi ? p1 : p0, w, noRails, kind, color }); };
+  // the kerb: a 0.35 m strip; its road-side edge is the grind (one line, its chords meet end to end)
+  for (const sd of curb) for (let c = 0; c + 1 < br.length; c++) { const i = br[c], j = br[c + 1];
+    slab(i, j, sd * (hw + 0.175), 0.35, 0.15, true, 'Curb', spec.curbColor ?? 0xb9b5ab);
+    const [ax, az] = at(i, sd * hw), [bx, bz] = at(j, sd * hw); K.rail(ax, T(ax, az) + 0.15, az, bx, T(bx, bz) + 0.15, bz, 'Curb', false); }
+  for (const sd of walk) { const c0 = curb.includes(sd) ? 0.35 : 0, w = sw - c0;
+    for (let c = 0; c + 1 < br.length; c++) slab(br[c], br[c + 1], sd * (hw + c0 + w / 2), w, 0.15, true, undefined, 0xc4c0b6); }
+  // guardrails round the outside of each bend tighter than guardR (default 80), from 4 m before it to 4 m after; bends on
+  // the same side that come within 12 m of each other share one rail
+  if (spec.guard !== false) {
+    const runs = { 1: [], '-1': [] };
+    for (const a of r.arcs) if (a.R < (spec.guardR ?? 80)) { const sd = -a.sg, list = runs[sd], s0 = Math.max(0, a.s0 - 4), s1 = Math.min(r.L, a.s1 + 4);
+      if (list.length && s0 - list[list.length - 1][1] < 12) list[list.length - 1][1] = s1; else list.push([s0, s1]); }
+    const idx = s => { let i = 0; while (i < N - 1 && S.s[i] < s) i++; return i; };
+    for (const sd of [1, -1]) for (const [s0, s1] of runs[sd]) {
+      const lat = sd * (walk.includes(sd) ? hw + sw - 0.3 : hw + 0.8), lift = walk.includes(sd) ? 0.9 : 0.75, i0 = idx(s0), i1 = idx(s1);
+      const gb = chords(i0, i1, [lat], 0.2, 0.04, 8);
+      for (let c = 0; c + 1 < gb.length; c++) { const [ax, az] = at(gb[c], lat), [bx, bz] = at(gb[c + 1], lat); K.rail(ax, T(ax, az) + lift, az, bx, T(bx, bz) + lift, bz, 'Rail', true); }
+    }
+  }
+  // the asphalt: a ribbon 2 vertices across per sample (the road is flat across, so that is exact), cut into ~32 m pieces
+  // (one culling patch each), 4 cm over the ground; the centre line's 3 m dashes every 6 m on top of it
+  const asphalt = spec.color ?? 0x56585d, PO = { roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 };
+  const PO2 = { roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 };
+  K.decorFns.push(D => {
+    const quads = (list, color, extra) => { if (!list.length) return; const pos = new Float32Array(list.length * 18); let o = 0;
+      for (const [l0, r0, l1, r1] of list) for (const p of [r0, l0, r1, l0, l1, r1]) { pos[o++] = p[0]; pos[o++] = p[1]; pos[o++] = p[2]; }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.computeVertexNormals(); D.add(g, color, [0, 0, 0], [0, 0, 0], [1, 1, 1], extra); };
+    const edge = (i, lat, lift) => { const [x, z] = at(i, lat); return [x, T(x, z) + lift, z]; };
+    for (let i0 = 0; i0 < N - 1; i0 += 16) { const q = [];
+      for (let i = i0; i < Math.min(N - 1, i0 + 16); i++) q.push([edge(i, hw, 0.04), edge(i, -hw, 0.04), edge(i + 1, hw, 0.04), edge(i + 1, -hw, 0.04)]);
+      quads(q, asphalt, PO); }
+    if (spec.dashes === false) return;
+    const pt = (s, lat) => { const a = r.at(s), x = a.x - a.tz * lat, z = a.z + a.tx * lat; return [x, T(x, z) + 0.055, z]; };
+    let q = [], s00 = null;
+    for (let s = 4; s + 3 < r.L - 3; s += 6) { for (let k = 0; k < 3; k++) q.push([pt(s + k, 0.08), pt(s + k, -0.08), pt(s + k + 1, 0.08), pt(s + k + 1, -0.08)]);
+      if (s00 === null) s00 = s; if (s - s00 >= 30) { quads(q, spec.lineColor ?? 0xe2c044, PO2); q = []; s00 = null; } }
+    quads(q, spec.lineColor ?? 0xe2c044, PO2);
+  });
+}
+
+/* the ground mesh along the roads: each 8 m cell within reach of a road gets the coarsest res of 4, 2 and 1 whose triangles
+   (split on the b-c diagonal, as the ground mesh splits them) stay within tol (2.5 cm) above the true ground H at
+   0.5 m test points, so neither the asphalt (4 cm up) nor the rider sinks into it (4 cm in cells off the carriageway, under
+   the 5 cm the check's sink scan allows); merged into rects. Cells already drawn
+   as fine or finer (covered: the districts' regions and the fine patches) are left to them; the regions they would be drawn
+   coarser in must skip the rects this returns */
+function portoRoadRegions(roads, covered, H, tolRoad = 0.025, tolOff = 0.04) {
+  const res = new Map();   // "ix,iz" -> res
+  const g = new Float64Array(17 * 17);   // H on the cell's 0.5 m grid: the vertices of every res, and the test points
+  const err = (r, st) => {               // how far the res-r mesh of the cell rises above H at the test points every st (1 or 2 grid steps)
+    const n = 2 * r; let e = 0;
+    for (let j = 0; j < 16; j += st) for (let i = 0; i < 16; i += st) {
+      const i0 = i - i % n, j0 = j - j % n, u = (i - i0) / n, w = (j - j0) / n, a = g[j0 * 17 + i0], b = g[j0 * 17 + i0 + n], c = g[(j0 + n) * 17 + i0], d = g[(j0 + n) * 17 + i0 + n];
+      const m = u + w <= 1 ? a + u * (b - a) + w * (c - a) : d + (1 - u) * (c - d) + (1 - w) * (b - d);
+      if (m - g[j * 17 + i] > e) e = m - g[j * 17 + i]; }
+    return e;
+  };
+  for (const r of roads) {
+    const [x0, x1, z0, z1] = r.bbox;
+    for (let x = Math.floor(x0 / 8) * 8; x < x1; x += 8) for (let z = Math.floor(z0 / 8) * 8; z < z1; z += 8) {
+      const cx = x + 4, cz = z + 4, k = x / 8 + ',' + z / 8; if (res.has(k) || r.dist(cx, cz) > r.reach + 5.7) continue;
+      const has = covered.reduce((m, c) => cx > c.x0 && cx < c.x1 && cz > c.z0 && cz < c.z1 ? Math.min(m, c.res) : m, 99);
+      if (has <= 1) continue;
+      const tol = roads.some(o => o.dist(cx, cz) < o.hw + 6.5) ? tolRoad : tolOff;
+      // first the whole metres only (ground that is smooth here passes at res 4 with room to spare), then every 0.5 m
+      for (let j = 0; j < 17; j += 2) for (let i = 0; i < 17; i += 2) g[j * 17 + i] = H(x + i / 2, z + j / 2);
+      let q = 4;
+      if (err(4, 2) > tol / 3) { for (let j = 0; j < 17; j++) for (let i = (j & 1) ? 0 : 1; i < 17; i += (j & 1) ? 1 : 2) g[j * 17 + i] = H(x + i / 2, z + j / 2);
+        q = err(4, 1) <= tol ? 4 : err(2, 1) <= tol ? 2 : 1; }
+      if (q < has) res.set(k, q);
+    }
+  }
+  // merge: runs along x in each row, then rows with the same run on top of each other
+  const rows = new Map();
+  for (const [k, v] of res) { const [i, j] = k.split(',').map(Number); if (!rows.has(j)) rows.set(j, []); rows.get(j).push([i, v]); }
+  const open = new Map(), out = [];
+  for (const j of [...rows.keys()].sort((a, b) => a - b)) {
+    const cs = rows.get(j).sort((a, b) => a[0] - b[0]), runs = [];
+    for (const [i, v] of cs) { const l = runs[runs.length - 1]; if (l && l.i1 === i && l.res === v) l.i1 = i + 1; else runs.push({ i0: i, i1: i + 1, res: v }); }
+    for (const u of runs) { const key = u.i0 + ',' + u.i1 + ',' + u.res, o = open.get(key);
+      if (o && o.j1 === j) { o.j1 = j + 1; } else { const n = { ...u, j0: j, j1: j + 1 }; open.set(key, n); out.push(n); } }
+  }
+  return out.map(o => ({ x0: o.i0 * 8, x1: o.i1 * 8, z0: o.j0 * 8, z1: o.j1 * 8, res: o.res }));
+}
+
 function levelPorto() {
   const q = new URLSearchParams(location.search);
   const ONLY = q.get('only') ? q.get('only').split(',') : null, GRAY = q.has('gray');
@@ -122,16 +347,26 @@ function levelPorto() {
   const bandDist = (r, x, z) => Math.min(r[0] > BX0 ? x - r[0] : 1e9, r[1] < BX1 ? r[1] - x : 1e9, r[2] > BZ0 ? z - r[2] : 1e9, r[3] < BZ1 ? r[3] - z : 1e9);
 
   /* ---------- the ground: each district may shape its own, meeting the base height at its borders ---------- */
-  const GROUND = {}, COL = {}, SURF = {};
+  const GROUND = {}, COL = {}, SURF = {}, ROADS = [];
   function baseH(x, z) {
     const b = portoBaseH(x, z), id = districtAt(x, z), g = id && GROUND[id];
-    if (!g) return b;
-    const w = sm(bandDist(PORTO.districts[id].rect, x, z) / PORTO.BAND);
-    return w <= 0 ? b : lerp(b, g(x, z, b), w);
+    let h = b;
+    if (g) { const w = sm(bandDist(PORTO.districts[id].rect, x, z) / PORTO.BAND); if (w > 0) h = lerp(b, g(x, z, b), w); }
+    for (let i = 0; i < ROADS.length; i++) h = ROADS[i].carve(x, z, h);     // the roads, in the order they were laid (P.road)
+    return h;
   }
   const K = cityKit(baseH, 20261010);
   K.shops = []; K.challenges = []; K.tapes = []; K.traffic = []; K.ringTraffic = []; K.peds = []; K.ringPeds = []; K.npcs = [];
   K.dtCol = () => null; K.dtSurface = () => null;
+  // a winding road (P.road): carve it into the ground (every later road reads the ground with this one in it), then build it
+  function addRoad(id, spec) {
+    const r = portoRoad(spec, baseH); r.district = id;
+    ROADS.push(r); K.roadLines.push(r);
+    portoRoadBuild(K, r, spec);
+    const pts = []; for (let i = 0; i < r.N; i += 4) pts.push([r.S.x[i], r.S.z[i]]); if ((r.N - 1) % 4) pts.push([r.S.x[r.N - 1], r.S.z[r.N - 1]]);
+    lines.push({ name: r.name, pts, kind: spec.kind || (r.grade >= 0.03 ? 'bomb' : 'push'), main: !!spec.main, district: id });
+    return r;
+  }
 
   const extraRegions = [], spots = [], lines = [], fast = [], challenges = [], tapes = [], traffic = [], peds = [], npcs = [], landmarks = [], water = [];
   water.push({ x0: BX0 - 400, x1: BX1 + 400, z0: PORTO.seaZ, z1: BZ1 + 450, y: PORTO.seaY });
@@ -150,6 +385,8 @@ function levelPorto() {
       spot(name, x, y, z, yaw, area) { const s = { name, pos: V(x, y, z), yaw, area, district: id }; spots.push(s); return s; },
       // a line people ride (a street, a path, a route through the district): kind 'push' (streets, plazas) or 'bomb'
       // (descents); main: true for the district's named lines. tools/check.mjs --rhythm checks something skateable comes up often
+      // a winding road carved into the ground, with kerbs, sidewalks, guardrails and its line (see CONTRACT 5, "Winding roads")
+      road(spec) { return addRoad(id, spec); },
       line(name, pts, kind = 'push', main = false) { lines.push({ name, pts, kind, main, district: id }); },
       travel(name, x, y, z, yaw, kind = 'spot') { fast.push({ name, pos: V(x, y, z), yaw, kind, district: id }); },  // kind: 'district' | 'park' | 'spot'
       challenge(c) { challenges.push({ ...c, district: id }); },
@@ -198,10 +435,14 @@ function levelPorto() {
   const regions = [];
   // tiles on the 8 m grid (x -1000 and z -656 are multiples of 8), so their edges fall on grid lines
   const TILE = 256, TZ0 = Math.floor(BZ0 / 8) * 8, TZ1 = Math.ceil((BZ1 + 60) / 8) * 8;
+  const t0 = performance.now(), RR = portoRoadRegions(ROADS, [...XR, ...F], K.terrainH);   // the roads' corridors at res 4, 2 or 1 (where nothing as fine covers them)
+  if (ROADS.length) console.log(`P.road ground: ${RR.length} rects, cells at res 4/2/1: ${[4, 2, 1].map(q => RR.filter(r => r.res === q).reduce((n, r) => n + (r.x1 - r.x0) * (r.z1 - r.z0) / 64, 0)).join('/')}, ${(performance.now() - t0).toFixed(0)} ms`);
   for (let x = BX0; x < BX1; x += TILE) for (let z = TZ0; z < TZ1; z += TILE)
-    regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(TZ1, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F] });
-  for (const r of XR) regions.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, res: r.res, col: groundCol, skip: [...F, ...XR.filter(o => o !== r && o.res < r.res && o.x0 >= r.x0 && o.x1 <= r.x1 && o.z0 >= r.z0 && o.z1 <= r.z1)] });
-  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol(f.y0) : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
+    regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(TZ1, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F, ...RR] });
+  for (const r of RR) regions.push({ ...r, col: groundCol, skip: [] });
+  const inRR = r => RR.filter(o => o.x0 < r.x1 && o.x1 > r.x0 && o.z0 < r.z1 && o.z1 > r.z0);   // finer than r wherever they overlap it
+  for (const r of XR) regions.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, res: r.res, col: groundCol, skip: [...F, ...XR.filter(o => o !== r && o.res < r.res && o.x0 >= r.x0 && o.x1 <= r.x1 && o.z0 >= r.z0 && o.z1 <= r.z1), ...inRR(r)] });
+  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol(f.y0) : groundCol, skip: [...F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res), ...inRR(f)] });
 
   /* ---------- fast travel, spawn ---------- */
   const order = { district: 0, park: 1, spot: 2 };
@@ -210,7 +451,9 @@ function levelPorto() {
   const travel = fast.length ? fast : [fallback];
   return {
     terrainH: K.terrainH, baseH: portoBaseH, PORTO, built,
-    surface: (x, z) => { const id = districtAt(x, z), f = id && SURF[id]; return (f && f(x, z)) || K.dtSurface(x, z) || 'smooth'; },
+    surface: (x, z) => { for (const r of ROADS) if (r.dist(x, z) <= r.hw + 0.5) return 'smooth';
+      const id = districtAt(x, z), f = id && SURF[id]; return (f && f(x, z)) || K.dtSurface(x, z) || 'smooth'; },
+    roads: ROADS,
     regions, boxes: K.boxes, hubbas: K.hubbas, rails: K.rails, hazards: K.hazards,
     districts: travel, spots, lines, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
     landmarks, water, seaZ: PORTO.seaZ,
