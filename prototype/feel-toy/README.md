@@ -33,6 +33,7 @@ does tricks** with Skate's flick-it motions.
 | Set the board up for a grind | Hold the right stick in the air | Arrow keys |
 | Grind (auto near rails, or hold if auto is off) | LB | Shift |
 | Pick the grind (hold while landing on a rail) | Right stick direction | Arrow keys |
+| Grab (in the air; the right stick or arrows pick the grab) | Hold LB or RB | Hold G |
 | Manual / nose manual | Right stick halfway ↓ / ↑ | Hold M / N |
 | Get off and walk / back on | Y | F |
 | Set a spot / return to it | D-pad ↑ / Menu | P / R |
@@ -55,6 +56,16 @@ ollie.
   landing a trick (*Revert: time after landing to keep the combo*) and it adds
   to the combo instead of the combo paying out first. That short window is
   also why a landed combo now pays out a moment after you land.
+- **Grabs: in the air, double tap the left thumb and keep it down.** That's
+  grab mode for as long as it stays down (a double tap you start as you pop
+  counts too). The right thumb's direction picks the grab instead of lining
+  up a grind: toe side Indy, heel side Melon, up Nosegrab, down Tailgrab,
+  up-toe Mute, up-heel Method, down-toe Crail, down-heel Stalefish, no
+  direction Indy. Toe and heel turn round with you riding fakie, like the
+  grinds. Move the right thumb to change grab ("Indy to Melon"; each grab
+  held 0.12 s counts), slide the left thumb to spin, lift it to let go.
+  Still holding when you land is sketchy; past 0.6 s it's a "Long" grab.
+  Reaching a rail ends the grab.
 - **Tap the right thumb to push**, one kick per tap (two quick taps queue
   two). Each kick's speed comes on over the drive of the stride, so the
   camera doesn't jolt. Taps only push while you're rolling on the ground.
@@ -119,9 +130,11 @@ stick come back to the middle and rest there for a moment, or lift your thumb
 and touch again, then do the motion. Each late flip needs its own return to
 neutral (*Late flips: rest the stick in the middle this long first*).
 
-There are no grabs. In the air, holding the trick stick in a direction lines
-the board up for the grind it will land in (see below), so you can set up a
-boardslide or a 5-0 before you reach the rail.
+In the air, holding the trick stick in a direction lines the board up for the
+grind it will land in (see below), so you can set up a boardslide or a 5-0
+before you reach the rail. In grab mode (left thumb double tapped and held, G,
+or LB / RB) the same stick picks the grab instead, and late flips wait until
+you let go of the grab.
 
 ## Grinds
 
@@ -692,7 +705,9 @@ changed, as JSON. Paste them back to Claude to make them the new defaults.
   the deck through ramps. Legs and arms are solved with two-bone IK each frame:
   knees bend out over the toes, the hips drop as you crouch, the upper body
   leans into carves and stays partly upright on steep ramps, the knees tuck
-  when the board rises in a flip, the board lines up for a grind in the air,
+  when the board rises in a flip or a grab (one hand reaches it, the other
+  goes up, and each grab tweaks the board its own way), the board lines up for
+  a grind in the air,
   and the head looks where you're going. Each push is a stride:
   the hips square up to the nose, the back foot reaches forward with the knee
   up, plants beside the front foot, drives back along the ground, then lifts
