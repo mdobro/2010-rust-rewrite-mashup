@@ -313,7 +313,5 @@ What the player said: there's random stuff on some sidewalks, like kickers.
 - **Weather.** A wet day: shinier ground, less grip, puddles you can splash through.
 
 ## Phone quality of life
-- ★ **Session marker** that you place anywhere. Phones can't press "set spot" quickly, so add a double-tap-the-map gesture, or a pin button on the pause menu.
 - **Replay editor.** Trim, slow-mo, and a few camera angles, so you can save a clip of a line.
-- **Haptics.** A short buzz on a land, a grind lock and a bail, where the browser allows it.
 - **Lefty layout.** Swap the thumbs.
