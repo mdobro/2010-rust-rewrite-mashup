@@ -10102,8 +10102,15 @@ function collideBoxes(p, v) {
     if (b.isHubba || p.y >= b.max[1] - Math.max(tol, 0.2) || p.y + 1.6 < b.min[1]) continue;
     const x0 = b.min[0] - r, x1 = b.max[0] + r, z0 = b.min[2] - r, z1 = b.max[2] + r;
     if (p.x <= x0 || p.x >= x1 || p.z <= z0 || p.z >= z1) continue;
-    const pens = [[p.x - x0, -1, 0], [x1 - p.x, 1, 0], [p.z - z0, 0, -1], [z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0]);
-    const [d, nx, nz] = pens[0];
+    let d, nx, nz;
+    const cx = clamp(p.x, b.min[0], b.max[0]), cz = clamp(p.z, b.min[2], b.max[2]);
+    if (cx !== p.x && cz !== p.z) {
+      // off a corner the body is round, not square: brushing past a bench's or a post's corner
+      // nudges you aside instead of stopping you dead as if you'd hit it face on
+      const ox = p.x - cx, oz = p.z - cz, dc = Math.hypot(ox, oz);
+      if (dc >= r) continue;
+      nx = ox / dc; nz = oz / dc; d = r - dc;
+    } else [d, nx, nz] = [[p.x - x0, -1, 0], [x1 - p.x, 1, 0], [p.z - z0, 0, -1], [z1 - p.z, 0, 1]].sort((a, c) => a[0] - c[0])[0];
     p.x += nx * d; p.z += nz * d;
     const vn = v.x * nx + v.z * nz;
     if (vn < 0) { v.x -= 1.2 * vn * nx; v.z -= 1.2 * vn * nz; v.multiplyScalar(0.85); }
