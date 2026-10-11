@@ -441,7 +441,7 @@ south   └───────────────────────
   parks (green), the spots (yellow), the shops (orange squares) and you, as
   an arrow. Tap something, then **Go** to travel there. Escape closes it.
 - **Travel list:** the **Getting around** section of the tuning panel lists
-  the 8 districts, then the 5 parks, then the 17 shops, each with a button.
+  the 8 districts, then the 6 parks, then the 17 shops, each with a button.
 - **Spawn:** you start, and come back after a reset, outside the Corner Skate
   Shop in the Financial Core.
 
