@@ -201,7 +201,7 @@ function levelPorto() {
   for (let x = BX0; x < BX1; x += TILE) for (let z = TZ0; z < TZ1; z += TILE)
     regions.push({ x0: x, x1: Math.min(BX1, x + TILE), z0: z, z1: Math.min(TZ1, z + TILE), res: 8, col: groundCol, skip: [...XR, ...F] });
   for (const r of XR) regions.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, res: r.res, col: groundCol, skip: [...F, ...XR.filter(o => o !== r && o.res < r.res && o.x0 >= r.x0 && o.x1 <= r.x1 && o.z0 >= r.z0 && o.z1 <= r.z1)] });
-  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol(f.y0) : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
+  for (const f of F) regions.push({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, resX: f.resX, resZ: f.resZ, col: f.kind === 'pool' ? poolCol(f.y0) : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) });
 
   /* ---------- fast travel, spawn ---------- */
   const order = { district: 0, park: 1, spot: 2 };

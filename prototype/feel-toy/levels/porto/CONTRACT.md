@@ -151,7 +151,7 @@ are world y, and most "sits on the ground" builders read `K.terrainH` for you):
 
 | builder | what it makes |
 |---|---|
-| `K.B(x0, y0, z0, x1, y1, z1, mat, extra)` | a solid box. mat: 'plaza', 'sidewalk', 'step', 'ledge', 'pad', 'curb' (red-painted), 'marble', 'garage' (rough concrete), 'wood', 'metal', 'car', 'glass', 'fence', 'building'. extra: `{ edges: 'nswe', color, tex, ghost }` (edges = which top edges you can grind) |
+| `K.B(x0, y0, z0, x1, y1, z1, mat, extra)` | a solid box. mat: 'plaza', 'sidewalk', 'step', 'ledge', 'pad', 'curb' (red-painted), 'marble', 'garage' (rough concrete), 'wood', 'metal', 'car', 'glass', 'fence', 'building'. extra: `{ edges: 'nswe', color, tex, ghost, open }` (edges = which top edges you can grind; open = sides, e.g. 'e' or 'ns', that don't stop a rider coming from that side: a ramp deck behind a transition) |
 | `K.Bg(x0, z0, x1, z1, hgt, mat, extra)` | a box sitting on the ground, `hgt` tall above its highest corner |
 | `K.building(x0, z0, x1, z1, floors, color, tex)` | a building (3.4 m a floor). tex: 'brick', 'stone', 'office' |
 | `K.street(axis, c, from, to, y, crossings, opt)` | a painted road along x or z with centre line (y: road height, crossings: the cross streets) |
@@ -163,6 +163,10 @@ are world y, and most "sits on the ground" builders read `K.terrainH` for you):
 | `K.rail(ax, ay, az, bx, by, bz, kind, post)` | a grind line. kind: 'Rail', 'Handrail', 'Flatbar', 'Ledge', 'Curb', 'Coping', 'Pipe', 'Hubba' |
 | `K.lip(ax, az, bx, bz, y)` | a painted grindable edge (a curb, a stair lip) |
 | `K.feat(x0, x1, z0, z1, (x, z, h) => v, op)` | change the ground in a box: op 'min' (dig), 'add', 'set' |
+| `K.qp(x0, z0, x1, z1, dir, h, R, vert, opt)` | a quarter pipe in the ground: a circular arc up to 85° (then 88° for the top `vert` m), coping along the rect's `dir` edge ('n' 's' 'e' 'w', the side the deck is on; n is −z). `h` is the height over the toe (or over `opt.y`). Sizes: **mini 1.2, normal 2.4, vert 3.6 (vert 0.3), mega 8**. `R` 0 = the radius that reaches 85° right at the top (bigger R ends mellower). The transition is W m wide (`K.rampProfile(h, R, vert).W`; 1.3 / 2.6 / 3.9 m for mini / normal / vert), whatever the rect's depth. opt: `deck` (m behind the coping, a box with `open` toward the transition; default 1.6, 0 for none), `taper` (m the ends fade into the ground over, default 0.8 h up to 3; 0 = square ends, put boxes beside them), `y`, `mat`, `color`, `coping` (false = no rail), `res`. Draws its own fine ground (fine across the curve only). Returns `{ y0, top, W, toe, cop, R }` |
+| `K.spine(x0, z0, x1, z1, axis, h, R, vert, opt)` | two `K.qp` back to back with a thin deck (`opt.deck`, 0.3 m) and coping both sides; axis 'x' = the coping runs along x |
+| `K.hip(cx, cz, dir, h, R, len, vert, opt)` | a quarter pipe whose coping bends 90° round the corner (cx, cz), pointing away from `dir`; each half runs `len` m (6) at 45°; the deck is ground (a plateau, `opt.deck` m) |
+| `K.rampProfile(h, R, vert)` | the profile behind the three: `{ f(d), W, R, angle }`, f = height d m in from the toe |
 | `K.pool(x0, x1, z0, z1, [[K.poolS.circle(cx, cz, r), depth], ...], y0)` | a bowl or pool (draws its ground fine on its own) |
 | `K.hump(cx, cz, r, hgt)`, `K.fountainBowl`, `K.sunkenPlaza`, `K.raisedPlaza`, `K.bankToWall`, `K.garage`, `K.loadingDock`, `K.containers(x0, z, n, stack, alongX, gap, y)`, `K.backyardPool`, `K.driveway(axis, c, side, u, RW, w)` | ready-made spots. `K.driveway` now ends on the road wherever the road is, and `K.containers` stands on the ground (or on `y`), so both work on slopes |
 | `K.strip(ax, az, bx, bz, hgt, w, { kind, top, seg, noRails, color })` | a slab that follows the ground along any line, in chords of ≤ 6 m, `hgt` over the ground; both long edges grind as one continuous grind. Sidewalk curbs, ground-hugging ledges, long manual pads |
