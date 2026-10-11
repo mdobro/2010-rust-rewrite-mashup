@@ -326,7 +326,7 @@ Per district, measured with `--only <id>`:
 | | budget |
 |---|---|
 | boxes | 900 (Financial: 1,100 with Downtown; Downtown's own 589 boxes, 717 grind lines and ~950k triangles are counted apart, so Financial's new work gets the same budget as any other district on top) |
-| grind lines | 700 |
+| grind lines | 700 (kerb and guardrail chords made by `P.road` are counted apart, like Downtown's: a road is shared infrastructure, and its kerbs need a chord every ~4 m on tight bends) |
 | buildings (`K.building`) | 70 |
 | triangles added (the check's scene triangles minus about 160k for the empty map) | 450k |
 | `D.sign` boards | 8 |
