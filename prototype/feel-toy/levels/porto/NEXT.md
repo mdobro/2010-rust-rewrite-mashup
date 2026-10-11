@@ -251,3 +251,34 @@ The trick stick does exactly what it does now; it only picks a grab while grab m
    - uni: the quarry tunnel exit.
 4. **Me:** integrate, then run check `--rhythm`, the rides and the slopes check. Re-measure emptiness and
    straightness, commit, push, publish, and refresh the map.
+
+---
+
+# Also next: stuff that doesn't belong on sidewalks
+
+What the player said: there's random stuff on some sidewalks, like kickers.
+
+## Measured
+- There are 231 kicker-shaped slabs in the city. Of the plywood kickers, **65 sit on sidewalks**: heights 38, arroyo 14, east 6, fin 5, old 2.
+- Another 102 plywood kickers are off the sidewalks: east 27, bw 19, arroyo 17, heights 13, fin 11, uni 9, ship 6.
+  Many of those are in parks and DIY spots, which is fine; the rest need a look.
+- The sidewalk ones are filler added to meet the rhythm rule (CONTRACT section 7). They sit at regular spacing, often
+  one every 50 to 100 m down a street, e.g. heights z -447 and z -367 at x 511..952, and arroyo x -808, -646 and -462.
+  They read as random because nobody leaves plywood on a sidewalk.
+
+## Fix
+1. **Rule (CONTRACT section 7).** Plywood kickers, jerseys and cones only go where they'd really be:
+   - skate parks and DIY spots;
+   - construction zones (`K.construction`);
+   - a deliberate spot with a name, such as a kicker set against a wall or a gap launcher.
+   On a plain sidewalk the filler has to be something that's really there. Use the existing kit:
+   - `K.driveway` (driveway kicks), curb cuts, `K.crossingGap` at crossings;
+   - `K.bench`, `K.planter`, `K.ledge`, `K.retainWall`, `K.busStop`, `K.bikeRack`, `K.newsBoxes`, hydrants;
+   - a low wall in front of a house, a loading dock, steps up to a door.
+2. **Check.** Add `tools/check.mjs --clutter`. It lists every kicker, jersey and cone that's on a sidewalk or a road,
+   and isn't inside a park or named spot area or a construction zone. The target is 0.
+3. **Swap.** In the fill-the-space pass, each district agent replaces its flagged kickers with the menu above. Keep the
+   rhythm rule passing: a driveway or curb cut counts as skateable. Where a street really has nothing, fill the empty
+   lots beside it instead of the sidewalk.
+4. **Spot-check the other 102** off-sidewalk kickers the same way: they're fine in parks and spots, and get removed
+   from roads, lawns and bare lots.
