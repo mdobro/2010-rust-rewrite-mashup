@@ -12,7 +12,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), opt = k => { const i = args.indexOf(k); return i < 0 ? null : args[i + 1]; };
 const OUT = opt('--out'), CHECK = args.includes('--check'), ONLY = opt('--only') ? opt('--only').split(',') : null;
 const START = '/* ---------------- a kit for building cities', END = '/* ---------------- the chosen level ---------------- */';
-const LEVELS = ['kit.js', 'dt.js', 'city3.js', 'mega1.js', 'mega2.js', 'mega3.js', 'mega4.js', 'mega45.js', 'mega5.js'];
+const LEVELS = ['kit.js', 'dt.js'];
 const walk = d => readdirSync(d).sort().flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.js') ? [p] : []; });
 // porto: the base first, then each district's files (index.js last in its folder)
 const portoDir = join(ROOT, 'levels', 'porto');
