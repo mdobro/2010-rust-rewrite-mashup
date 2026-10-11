@@ -137,12 +137,15 @@ Arroyo also has one big strip along the west map edge.
 5. **A regression ride.** A test rider pumps a 3.6 m quarter pipe from rest. It must get 1.5 m or more above the coping
    within 4 pumps. A rider at 8 m/s must clear the lip.
 
-## B. Grabs (engine; me)
-Grabs were removed because, in the air, the trick stick lines the board up for a grind. The code already knows "a
-rail below and close enough": that is `railNearby`, used to tell grind setup from grab. So:
+## B. Grabs (engine; me), chosen by the player: double tap left, right thumb picks the grab
+The trick stick does exactly what it does now; it only picks a grab while grab mode is on.
 
 ### Controls
-- **In the air, with no rail close below:** hold the trick stick in a direction for about 0.1 s to grab.
+- **Starting a grab.** In the air, double tap the steering (left) thumb and keep it down. That's grab mode, for as long as it's held.
+  - On the ground the double tap still reverts, as now. In the air it means grab.
+  - The second tap has to come within the double-tap window (`T.doubleTap`, 0.32 s). That window covers the first part of a jump.
+  - A double tap that starts on the ground and finishes in the air counts as a grab, so you can tap as you pop.
+- **Picking the grab.** While grab mode is on, the trick (right) thumb's direction picks the grab instead of lining up a grind.
   - toe side: Indy
   - heel side: Melon
   - up: Nosegrab
@@ -151,23 +154,29 @@ rail below and close enough": that is `railNearby`, used to tell grind setup fro
   - down-heel: Stalefish
   - down-toe: Crail
   - up-heel: Method
-- **Over a rail:** the stick stays grind setup, like now.
-- **Let go before landing**, or it's sketchy.
-- **Hold longer** for more points: a "Long Indy" after 0.6 s.
-- **Grab while spinning** with the steer stick, for "540 Melon" and the like.
+  - no direction (thumb not on the trick stick): Indy
+- **Changing grabs mid-air.** Moving the trick thumb to a new direction mid-grab changes the grab. Each grab you hold
+  at least 0.12 s counts in the combo, like "Indy to Melon".
+- **Spinning.** The held left thumb still steers, so sliding it left or right spins you while you grab, for "540 Melon".
+- **Ending a grab.** Lifting the left thumb ends the grab.
+  - Still holding when you land makes the landing sketchy.
+  - Points grow with hold time; past 0.6 s it's "Long Indy".
+- **Grinds while grabbing.** If you reach a rail mid-grab, the grab ends there. Let go of the left thumb to line up the grind as usual.
+- **Keyboard and gamepad.** Hold G (or LB/RB on a gamepad) for grab mode, and the trick keys or stick pick the grab.
 
 ### Animation
-- Bend the knees, bring the board up to the hand, and reach the arm.
-- Tweak the board's roll and yaw per grab.
-- Do it through the existing `boardFlip` and `LIMBS` posing.
+- Knees bend, the board comes up to the hand, the arm reaches.
+- Each grab tweaks the board's roll and yaw.
+- Done through the existing `boardFlip` and `LIMBS` posing, and the replay records it.
 
-### Optional
-A setting to use a separate grab button instead, a small pad above each thumb like Skate's triggers. It's a fallback
-if the stick turns out to be too crowded on a phone.
+### UI and how-to
+- The combo text shows the grab name live while you hold it.
+- The intro and the how-to list get one line about grabs.
 
 ### Tests
-- A flick test for each grab name.
-- Holding the stick over a rail still grinds.
+- A double tap and hold in the air with each of the 8 trick directions scores the right grab.
+- A double tap on the ground still reverts.
+- Holding the trick stick in the air without grab mode still lines up a grind; flicks and grinds stay unchanged. The flick tests stay at 28/28.
 
 ## C. Big vertical places (level; worktree agents)
 
@@ -229,7 +238,7 @@ if the stick turns out to be too crowded on a phone.
 - **Rides:** add to tools/rides.mjs a quarry-run, a mega-ramp line and the bridge jump.
 
 ## Order and how it splits up
-1. **Me, engine:** quarter pipes and air (A), grabs (B), speed checks (D).
+1. **Me, engine:** quarter pipes and air (A), grabs (B: double tap left, right thumb picks), speed checks (D).
    - Run the flick and regression tests, then publish, so the feel can be tried on the phone first.
 2. **Me, kit:** `P.road` (step 1 above), `K.qp`, `K.spine`, `K.hip`, and a `K.bridge(axis, ...)` helper for a deck, rails, piers, an expansion gap and a kicker.
 3. **Parallel worktree agents, each in its own district files:**
