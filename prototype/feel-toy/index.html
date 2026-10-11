@@ -1240,16 +1240,36 @@ const PORTO = {
     { id: 'spillway',    name: 'Spillway Outlet',     a: 'arroyo',  b: 'bw',     at: [-700, 910],  dir: 'x', w: 24 },
     { id: 'steep',       name: 'Old Town Steep',      a: 'old',     b: 'bw',     at: [-200, 910],  dir: 'x', w: 16 },
     { id: 'hillbomb',    name: 'Eastside Hill Bomb',  a: 'east',    b: 'ship',   at: [600, 910],   dir: 'x', w: 16 },
-    { id: 'harbourRd',   name: 'Harbour Road',        a: 'bw',      b: 'ship',   at: [0, 1020],    dir: 'z', w: 16 },
-    { id: 'boardwalk',   name: 'The Boardwalk',       a: 'bw',      b: 'ship',   at: [0, 1150],    dir: 'z', w: 12 },
+    { id: 'harbourRd',   name: 'Harbour Road',        a: 'bw',      b: 'ship',   at: [0, 1020],    dir: 'z', w: 16, level: true },
+    { id: 'boardwalk',   name: 'The Boardwalk',       a: 'bw',      b: 'ship',   at: [0, 1150],    dir: 'z', w: 12, level: true },
   ],
   GATE_DEPTH: 16, BAND: 12,
+  // level gates (level: true): the base falls along z there (0.67 % at the harbour) and you cross along x, so it would
+  // tip an unsteered rider sideways. Across the gate it is held at its height on the gate's centre line: level for
+  // LEVEL.x metres either side of the border (fading out over the next LEVEL.fx) and w/2 + LEVEL.z either side of the
+  // centre line (fading out over LEVEL.fz). portoLevel(x, z, f) does the same to any height function f.
+  LEVEL: { x: 48, fx: 24, z: 1, fz: 5 },
   // the height of the land along z, from the ridge down to the quay (smoothed where the grade changes)
   profile: [[-650, 44], [-560, 44], [-262, 3], [-218, 0], [230, 0], [880, -40], [1180, -42]],
 };
 // the land before any district shapes it: the profile, the sea past the quay, and a ridge of hills
-// round the three sides that aren't the sea, so the map has edges you can see
-function portoBaseH(x, z) {
+// round the three sides that aren't the sea, so the map has edges you can see; levelled across the level gates
+function portoBaseH(x, z) { return portoLevel(x, z, portoBaseRaw); }
+// f(x, z) held level across each level gate (see PORTO.LEVEL): f on the gate's centre line, blended back to f outside
+function portoLevel(x, z, f) {
+  const L = PORTO.LEVEL, sm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  for (const g of PORTO.gates) {
+    if (!g.level) continue;
+    const [gx, gz] = g.at, [u, v, c] = g.dir === 'z' ? [x - gx, z - gz, gz] : [z - gz, x - gx, gx];   // u across the border, v along it
+    const m = (1 - sm((Math.abs(u) - L.x) / L.fx)) * (1 - sm((Math.abs(v) - g.w / 2 - L.z) / L.fz));
+    if (m <= 0) continue;
+    const h = f(x, z), h0 = g.dir === 'z' ? f(x, c) : f(c, z);
+    return m >= 1 ? h0 : lerp(h, h0, m);
+  }
+  return f(x, z);
+}
+// the base without the gate levelling
+function portoBaseRaw(x, z) {
   const P = PORTO.profile, lin = z => { if (z <= P[0][0]) return P[0][1]; for (let i = 1; i < P.length; i++) if (z <= P[i][0]) return lerp(P[i - 1][1], P[i][1], (z - P[i - 1][0]) / (P[i][0] - P[i - 1][0])); return P[P.length - 1][1]; };
   let h = 0; for (const o of [-24, -12, 0, 12, 24]) h += lin(z + o); h /= 5;   // round off the corners of the profile
   if (z > PORTO.seaZ) h = lerp(-42, -52, clamp((z - PORTO.seaZ) / 6, 0, 1));  // the quay drops to the sea bed
@@ -3591,7 +3611,9 @@ function bw_west_filler(K, P, PL) {
 /* Boardwalk West (bw). Design: levels/porto/design/bw.md. Parts: bw_west, bw_park, bw_gardens, bw_east (each (K, P, PL)). */
 function porto_bw(K, P) {
   const PL = bw_plan();
-  P.ground(PL.ground); P.col(PL.col); P.surface(PL.surface);
+  // the plan's ground is already level across both ship gates (Harbour Road at YN, the boardwalk at YS); it reads the base only
+  // for the edge hills (base - Bz), so it gets the base without the gate levelling (base.js levels the band itself)
+  P.ground((x, z) => PL.ground(x, z, portoBaseRaw(x, z))); P.col(PL.col); P.surface(PL.surface);
   for (const r of PL.REGIONS) P.region(...r);
   if (typeof bw_west === 'function') bw_west(K, P, PL);
   if (typeof bw_park === 'function') bw_park(K, P, PL);
@@ -9014,7 +9036,9 @@ function ship_yard_spots(K, P, PL) {
 /* Shipyard East (ship): the plan, the ground, the parts, the lines and the life. Design: levels/porto/design/ship.md. */
 function porto_ship(K, P) {
   const PL = ship_plan();
-  P.ground(PL.ground);                                  // first, before anything reads terrainH
+  // first, before anything reads terrainH. Held level across the two bw gates (base.js portoLevel): the plate falls 1.9 % along z
+  // at the boardwalk and the base 0.67 % at both, which tipped an unsteered rider sideways through the gate
+  P.ground((x, z) => portoLevel(x, z, (a, c) => PL.ground(a, c, portoBaseH(a, c))));
   P.col((x, z, h) => { const c = PL.col(x, z, h); return c == null ? null : new THREE.Color(c); });
   P.surface(PL.surface);
   for (const r of ship_index_regions()) P.region(...r);
