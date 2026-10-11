@@ -58,13 +58,13 @@ function bw_park(K, P, PL) {
   K.B(-576, YN, 956, -570, YN + 0.5, 964, 'marble', { edges: 'nswe' });
 
   /* ---------- 6.2 Bowl Yard ---------- */
-  // mini ramp: the transitions are ground ('add'), the decks boxes. flat 2 m, quarter arcs R 2.4 up to 1.6 m
-  { const cx = -547, fh = 1, R = 2.4, wt = Math.sqrt(R * R - 0.8 * 0.8), H = 1.6;
-    K.feat(cx - fh - wt, cx + fh + wt, 950, 964, (x) => { const d = Math.abs(x - cx) - fh; return d <= 0 ? 0 : Math.min(H, R - Math.sqrt(Math.max(R * R - d * d, 0))); }, 'add');
+  // mini ramp: two 1.8 m K.qp transitions (85 degrees at the coping) facing each other over a 2.6 m flat, the lips
+  // where they always were (x -547 -+ 3.26); the decks are wood boxes, open on the transition side
+  { const cx = -547, H = 1.8, half = 3.26, W = K.rampProfile(H).W;
     for (const s of [-1, 1]) {
-      const lip = cx + s * (fh + wt), far = lip + s * 2;
-      K.B(Math.min(lip, far), YN - 0.5, 950, Math.max(lip, far), YN + H, 964, 'wood', { edges: 'nswe' });
-      K.rail(lip, YN + H, 950, lip, YN + H, 964, 'Coping', false);
+      const lip = cx + s * half, far = lip + s * 2;
+      K.qp(Math.min(lip, lip - s * W), 950, Math.max(lip, lip - s * W), 964, s < 0 ? 'w' : 'e', H, 0, 0, { y: YN, deck: 0, taper: 0 });
+      K.B(Math.min(lip, far), YN - 0.5, 950, Math.max(lip, far), YN + H, 964, 'wood', { edges: 'nswe', open: s < 0 ? 'e' : 'w' });
       bank(far, YN + H, 957, far + s * 5.5, 957, 10, YN + 0.02);   // a bank up to each deck, so you can get up
     } }
   // Deep End clover, Kidney, Tidepool

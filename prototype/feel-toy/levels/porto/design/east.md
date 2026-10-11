@@ -800,10 +800,10 @@ Three level concrete terraces, x 840..960, z 446..548, stepping down the hill.
   (hubbas from its top edges down to T2: north to z 487, south to 501, west to x 881, east to 899).
   You roll off the Park Bank straight over it.
 * Ledge `K.ledge(850, 494, 874, 494.6)`.
-* **The QP** on the east side: `K.feat(948, 960, 482, 500, (x, z) => { const d = x - 948; return d < 2.97 ? 3.2 - Math.sqrt(10.24 - d * d) : 2.0; }, 'add')`
-  (transition r 3.2, 2 m tall, deck 3 m), coping `K.rail(950.97, -14.09, 482, 950.97, -14.09, 500, 'Coping', false)`,
-  cheeks `K.B(948, -16.6, 480, 961, -14.09, 482, 'park')` and `K.B(948, -16.6, 500, 961, -14.09, 502, 'park')`.
-  Its region is `[944, 952, 480, 504, 0.5]`. Build the K.feat before the coping.
+* **The QP** on the east side: `K.qp(948, 482, 950.97, 500, 'e', 2.4, 0, 0, { y: -16.09, taper: 0, deck: 8.03 })`
+  (2.4 m, 85 degrees at the coping x 950.97, top -13.69, its deck a box back to the T2 east wall, which is raised to -13.69),
+  cheeks `K.B(948, -16.6, 480, 961, -13.69, 482, 'park')` and `K.B(948, -16.6, 500, 961, -13.69, 502, 'park')`.
+  K.qp draws its own fine ground. (It was a 2 m, 68 degree `K.feat` arc before the kit had ramps.)
 
 **T2 → T3:**
 * **The kinked rail** at x 926.45: a flat piece on T2, `K.rail(926.45, -15.51, 503, 926.45, -15.51, 508.4, 'Handrail', true)`,

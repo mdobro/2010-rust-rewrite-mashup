@@ -245,18 +245,94 @@ function cityKit(baseH, seed0 = 1) {
     kicker(ax - ux * 2, az - uz * 2, ux, uz, 2, hgt, 1.6);
     const g = terrainH(bx, bz); hubbas.push({ a: V(bx, g + 0.25, bz), b: V(bx + ux * 2.2, terrainH(bx + ux * 2.2, bz + uz * 2.2) + 0.02, bz + uz * 2.2), w: 2, noRails: true, color: 0xb9b5ab });
   }
+  /* ---------- ramps: real transitions in the ground (a circular arc up to about 85 degrees), coping on top ---------- */
+  // the profile: height at d metres in from the toe; W is how far the toe is from the coping. R defaults to the
+  // radius that reaches 85 degrees right at the top; a bigger R ends mellower, a smaller one goes on straight at 85.
+  // vert: that many metres of the top are (nearly) vertical, 88 degrees.
+  function rampProfile(h, R, vert = 0) {
+    const TOP = 85 * DEG, ha = Math.max(0.05, h - vert), r = R || ha / (1 - Math.cos(TOP));
+    const th = Math.min(TOP, Math.acos(Math.max(-1, 1 - ha / r))), wArc = r * Math.sin(th), hArc = r * (1 - Math.cos(th));
+    const tS = Math.tan(th), wS = (ha - hArc) / tS, tV = Math.tan(88 * DEG), wV = vert / tV, W = wArc + wS + wV;
+    const f = d => d <= 0 ? 0 : d >= W ? h : d <= wArc ? r - Math.sqrt(Math.max(0, r * r - d * d)) : d <= wArc + wS ? hArc + (d - wArc) * tS : ha + (d - wArc - wS) * tV;
+    return { f, W, R: r, angle: th / DEG };
+  }
+  // the way a ramp faces: dir is the side its coping (and deck) is on, 'n' 's' 'e' 'w' (n is -z)
+  const rampAxes = dir => ({ alongX: dir === 'e' || dir === 'w', s: dir === 'e' || dir === 's' ? 1 : -1 });
+  // A quarter pipe in the rect (x0, z0, x1, z1): the coping runs along the rect's `dir` edge, the transition comes
+  // out of it W metres (rampProfile; it doesn't have to fill the rect), the deck (a box, opt.deck m deep, 0 for
+  // none) is behind the coping, outside the rect. Its ends fade into the ground over opt.taper m beyond the rect.
+  // h: coping height over the ground at the toe (or over opt.y). Sizes: mini 1.2, normal 2.4, vert 3.6 (vert 0.3+), mega 8.
+  // Returns { y0, top, W, toe, cop, R }.
+  function qp(x0, z0, x1, z1, dir, h, R, vert = 0, opt = {}) {
+    const P = rampProfile(h, R, vert), W = P.W, { alongX, s } = rampAxes(dir);
+    const cop = alongX ? (s > 0 ? x1 : x0) : (s > 0 ? z1 : z0), toe = cop - s * W;
+    const [a0, a1] = alongX ? [Math.min(z0, z1), Math.max(z0, z1)] : [Math.min(x0, x1), Math.max(x0, x1)], am = (a0 + a1) / 2;
+    const y0 = opt.y ?? (alongX ? terrainH(toe - s * 0.3, am) : terrainH(am, toe - s * 0.3)), top = y0 + h;
+    const tw = opt.taper ?? Math.min(3, Math.max(0.8, h * 0.8)), deck = opt.deck ?? 1.6;
+    const u0 = Math.min(toe, cop), u1 = Math.max(toe, cop);
+    const fr = alongX ? [u0, u1, a0 - tw, a1 + tw] : [a0 - tw, a1 + tw, u0, u1];
+    feat(fr[0], fr[1], fr[2], fr[3], (x, z, g) => {
+      const u = alongX ? x : z, v = alongX ? z : x, k = v < a0 ? (tw > 0 ? smooth01((v - a0 + tw) / tw) : 0) : v > a1 ? (tw > 0 ? smooth01((a1 + tw - v) / tw) : 0) : 1;
+      return Math.max(g, y0 + P.f(s * (u - toe)) * k);
+    }, 'set');
+    const rs = opt.res ?? clamp(W / 20, 0.1, 0.25), ra = tw > 0 ? Math.min(0.5, tw / 3) : 0.5;    // fine across the curve, coarse along the coping
+    fine.push({ x0: fr[0], x1: fr[1], z0: fr[2], z1: fr[3], res: rs, resX: alongX ? rs : ra, resZ: alongX ? ra : rs, kind: 'qp' });
+    if (deck > 0) {
+      const d0 = cop, d1 = cop + s * deck, lo = Math.min(y0, alongX ? groundMin(Math.min(d0, d1), a0, Math.max(d0, d1), a1) : groundMin(a0, Math.min(d0, d1), a1, Math.max(d0, d1))) - 0.4;
+      const open = alongX ? (s > 0 ? 'w' : 'e') : (s > 0 ? 'n' : 's');
+      alongX ? B(d0, lo, a0, d1, top, a1, opt.mat || 'plaza', { open, color: opt.color }) : B(a0, lo, d0, a1, top, d1, opt.mat || 'plaza', { open, color: opt.color });
+    }
+    if (opt.coping !== false) alongX ? rail(cop, top, a0, cop, top, a1, 'Coping', false) : rail(a0, top, cop, a1, top, cop, 'Coping', false);
+    return { y0, top, W, toe, cop, R: P.R };
+  }
+  // A spine: two quarter pipes back to back along a coping line through the middle of the rect, axis 'x' (the
+  // coping runs along x, you ride it north-south) or 'z'. A thin deck (opt.deck, 0.3 m) on top, coping both sides.
+  function spine(x0, z0, x1, z1, axis, h, R, vert = 0, opt = {}) {
+    const W = rampProfile(h, R, vert).W, dk = opt.deck ?? 0.3, c = axis === 'x' ? (z0 + z1) / 2 : (x0 + x1) / 2;
+    const [a0, a1] = axis === 'x' ? [Math.min(x0, x1), Math.max(x0, x1)] : [Math.min(z0, z1), Math.max(z0, z1)];
+    const y = opt.y ?? (axis === 'x' ? terrainH((a0 + a1) / 2, c - dk / 2 - W - 0.3) : terrainH(c - dk / 2 - W - 0.3, (a0 + a1) / 2));
+    const o = { ...opt, y, deck: 0 };
+    const A = axis === 'x' ? qp(a0, c - dk / 2 - W, a1, c - dk / 2, 's', h, R, vert, o) : qp(c - dk / 2 - W, a0, c - dk / 2, a1, 'e', h, R, vert, o);
+    axis === 'x' ? qp(a0, c + dk / 2, a1, c + dk / 2 + W, 'n', h, R, vert, o) : qp(c + dk / 2, a0, c + dk / 2 + W, a1, 'w', h, R, vert, o);
+    if (dk > 0) axis === 'x' ? B(a0, y - 0.4, c - dk / 2, a1, A.top, c + dk / 2, opt.mat || 'plaza', { open: 'ns', color: opt.color })
+                             : B(c - dk / 2, y - 0.4, a0, c + dk / 2, A.top, a1, opt.mat || 'plaza', { open: 'ew', color: opt.color });
+    return A;
+  }
+  // A hip: a quarter pipe whose coping bends round a corner that points out at you, like the corner of a box
+  // of ramps. (cx, cz) is the corner of the coping; dir is the side the deck is on (as for qp); each half of the
+  // coping runs `len` m back from the corner at 45 degrees. The deck is ground (a plateau), so it ends in a drop.
+  function hip(cx, cz, dir, h, R, len = 6, vert = 0, opt = {}) {
+    const P = rampProfile(h, R, vert), W = P.W, { alongX, s } = rampAxes(dir), r2 = Math.SQRT1_2;
+    const D = alongX ? [s, 0] : [0, s], C = alongX ? [0, 1] : [1, 0];
+    const tA = [(D[0] + C[0]) * r2, (D[1] + C[1]) * r2], tB = [(D[0] - C[0]) * r2, (D[1] - C[1]) * r2];
+    const nA = [(C[0] - D[0]) * r2, (C[1] - D[1]) * r2], nB = [(-C[0] - D[0]) * r2, (-C[1] - D[1]) * r2];
+    const y0 = opt.y ?? terrainH(cx - D[0] * (W + 0.5), cz - D[1] * (W + 0.5)), top = y0 + h, tw = opt.taper ?? Math.min(3, Math.max(0.8, h * 0.8)), deck = opt.deck ?? 1.6;
+    const side = (t, nn, x, z) => { const px = x - cx, pz = z - cz, d = px * nn[0] + pz * nn[1], a = px * t[0] + pz * t[1];
+      const k = a > len ? (tw > 0 ? smooth01((len + tw - a) / tw) : 0) : 1; return (d <= 0 ? h : P.f(W - d)) * k; };
+    const pts = [[0, 0], [-D[0] * W * 1.5, -D[1] * W * 1.5]];
+    for (const [t, nn] of [[tA, nA], [tB, nB]]) pts.push([t[0] * (len + tw), t[1] * (len + tw)], [t[0] * (len + tw) + nn[0] * W, t[1] * (len + tw) + nn[1] * W], [t[0] * len + D[0] * deck, t[1] * len + D[1] * deck]);
+    const bx0 = cx + Math.min(...pts.map(q => q[0])), bx1 = cx + Math.max(...pts.map(q => q[0])), bz0 = cz + Math.min(...pts.map(q => q[1])), bz1 = cz + Math.max(...pts.map(q => q[1]));
+    feat(bx0, bx1, bz0, bz1, (x, z, g) => {
+      const px = x - cx, pz = z - cz; if (px * D[0] + pz * D[1] > (len * r2) + deck) return g;     // behind the deck
+      return Math.max(g, y0 + Math.min(side(tA, nA, x, z), side(tB, nB, x, z)));
+    }, 'set');
+    fine.push({ x0: bx0, x1: bx1, z0: bz0, z1: bz1, res: opt.res ?? clamp(W / 16, 0.15, 0.25), kind: 'qp' });
+    if (opt.coping !== false) for (const t of [tA, tB]) rail(cx, top, cz, cx + t[0] * len, top, cz + t[1] * len, 'Coping', false);
+    return { y0, top, W };
+  }
+
   // the ground mesh: coarse over a world rect, finer patches from `fine` cut out of it
   function regionsFor(W, res, groundCol, poolCol = groundCol) {
     const snap = f => ({ ...f, x0: Math.floor(f.x0 / 8) * 8, x1: Math.ceil(f.x1 / 8) * 8, z0: Math.floor(f.z0 / 8) * 8, z1: Math.ceil(f.z1 / 8) * 8 });
     const F = fine.map(snap);
     return [{ ...W, res, col: groundCol, skip: F },
-      ...F.map(f => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, col: f.kind === 'pool' ? poolCol : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) }))];
+      ...F.map(f => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1, res: f.res, resX: f.resX, resZ: f.resZ, col: f.kind === 'pool' ? poolCol : groundCol, skip: F.filter(o => o !== f && o.x0 >= f.x0 && o.x1 <= f.x1 && o.z0 >= f.z0 && o.z1 <= f.z1 && o.res < f.res) }))];
   }
 
   return { rnd, R, pick, col, boxes, hubbas, rails, hazards, fine, decorFns, feats, feat, terrainH, poolS, pool, hump,
     groundMin, groundMax, B, Bg, building, rail, cone, pothole, kicker, SET, stairSpot, lip, ledge, planter, pad, bench, tree, lamp,
     paintRect, dash, street, zebra, car, raisedPlaza, sunkenPlaza, fountainBowl, bankToWall, garage, loadingDock, containers, backyardPool,
     posts, roads, roadLines, onRoad, prop, sit, newsBoxes, trashCan, hydrant, bikeRack, busStop, dumpster, jersey, parkingBlock, picnic, meter, driveway,
-    strip, median, retainWall, construction, crossingGap, regionsFor };
+    strip, median, retainWall, construction, crossingGap, regionsFor, rampProfile, qp, spine, hip };
 }
 

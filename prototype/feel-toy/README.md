@@ -221,6 +221,18 @@ board the same way.
 - **Metal rails:** they throw sparks back the way you came, and the board
   chatters on them. Concrete ledges kick up dust.
 
+## Quarter pipes and air
+- **Pumping:** crouch (hold the ollie thumb) through the curve at the bottom of
+  a ramp and you gain about 8% speed per transition, up to 16 m/s. Let go to
+  pop as usual.
+- **Lip pop:** ollie within 0.15 s of leaving a lip steeper than 60° and you go
+  straight up instead of out, so you come back down onto the ramp.
+- **Hang time:** gravity is lighter (10 instead of 14) while you rise off a
+  steep lip.
+- **High speed:** the camera pulls back from 10 m/s to 25 m/s, and movement is
+  checked in steps of 12 cm or less so you can't pass through things at speed.
+- All of it is on sliders under "Pop and air" and "Camera".
+
 ## Manuals
 
 Tip the trick stick about halfway down for a manual (back wheels, nose up) or
@@ -645,7 +657,9 @@ outside its Corner Skate Shop.
 ### The test block
 
 The old practice block still loads with `?level=block`. The automated tests
-use it.
+use it. Through the gap in the north building there is a ramp yard: halfpipes
+of 1.2, 2.4 and 3.6 m (and one with 0.3 m of vert), a spine, a hip, and a 10 m
+roll-in into an 8 m mega quarter pipe.
 
 ### Building and checking the city
 

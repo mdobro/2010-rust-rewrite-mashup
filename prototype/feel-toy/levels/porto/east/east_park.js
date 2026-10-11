@@ -25,7 +25,7 @@ function east_park(K, P, PL) {
   };
   for (const [a, b, t, wgaps, egaps] of [[446, 476, 0, [[458, 464]], [[458, 464]]], [476, 507, 1, [[488, 494]], []], [507, 538, 2, [[519, 525]], [[519, 525]]]])
     for (const [x, edge, gaps] of [[840, 'e', wgaps], [960, 'w', egaps]]) {
-      if (t === 1 && x === 960) { K.B(959, -16.6, 476, 961, -14.09, 507, 'plaza', { edges: 'w', color: PARKC }); continue; }   // the T2 east wall backs the quarterpipe
+      if (t === 1 && x === 960) { K.B(959, -16.6, 476, 961, -13.69, 507, 'plaza', { edges: 'w', color: PARKC }); continue; }   // the T2 east wall backs the quarterpipe
       let s = a; for (const [g0, g1] of gaps) { wallPiece(x, s, g0, TY[t], edge); s = g1; } wallPiece(x, s, b, TY[t], edge);
     }
   K.B(841, -16.6, 474, 959, -14.22, 478, 'plaza', { edges: 's', color: PARKC });
@@ -45,10 +45,10 @@ function east_park(K, P, PL) {
   K.hubbas.push({ a: V(890, -14.22, 478), b: V(890, -16.07, 486), w: 14, noRails: true, color: PARKC });
   K.stairSpot('z', 478, 1, 920, 932, -14.22, -16.09, 6, 0.4, { hubbas: [919.6, 932.4] });
 
-  // the quarterpipe on T2's east side: the ground first, then the coping
-  K.feat(948, 960, 482, 500, (x, z) => { const d = x - 948; return d < 2.97 ? 3.2 - Math.sqrt(10.24 - d * d) : 2.0; }, 'add');
-  K.rail(950.97, -14.09, 482, 950.97, -14.09, 500, 'Coping', false);
-  K.B(948, -16.6, 480, 961, -14.09, 482, 'plaza', { color: PARKC }); K.B(948, -16.6, 500, 961, -14.09, 502, 'plaza', { color: PARKC });
+  // the quarterpipe on T2's east side: a 2.4 m K.qp (85 degrees at the coping, x 950.97), its deck back to the wall,
+  // square ends (no taper) between the two side boxes
+  K.qp(948, 482, 950.97, 500, 'e', 2.4, 0, 0, { y: -16.09, taper: 0, deck: 8.03, color: PARKC });
+  K.B(948, -16.6, 480, 961, -13.69, 482, 'plaza', { color: PARKC }); K.B(948, -16.6, 500, 961, -13.69, 502, 'plaza', { color: PARKC });
 
   // T2: the pyramid and its four 3 m banks, a ledge
   K.B(884, -16.6, 490, 896, -15.19, 498, 'plaza', { edges: 'nswe', color: PARKC });
