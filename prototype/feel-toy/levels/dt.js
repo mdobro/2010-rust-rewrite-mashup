@@ -270,7 +270,7 @@ function buildDowntown(K) {
     //   a trench to gap, a dirt pile, a pipe on blocks, a scaffold plank, a slab, a dumpster
     building(52, 52, 70, 62, 2, 0xc98f6b, 'brick');
     // ...which is the skate shop: a sign, an awning, a mat at the door. Stop on the mat to go in.
-    K.shop = K.shops[0] = { name: 'Corner Skate Shop', sign: [61, G + 4.75, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] };
+    K.shop = { name: 'Corner Skate Shop', sign: [61, G + 4.75, 62.04, 0, 7], awning: [55, 62, 67, 63.6, G + 3.1], zone: [55.5, 62.3, 66.5, 68], door: [61, G + 0.9, 62.3] }; K.shops.unshift(K.shop);
     B(54, G - 1, 62, 68, G + 0.9, 65, 'plaza', { edges: 'ew' }); SET('z', 65, 1, 58, 64, G + 0.9, G, 3, 0.4); rails.push(handrail('z', 65, 1, 61, G + 0.9, G, 3, 0.4));
     for (const [x0, z0, x1, z1] of [[74, 52, 74.08, 64], [74, 76, 74.08, 118], [74, 52, 90, 52.08], [98, 52, 118, 52.08]]) B(x0, G - 0.1, z0, x1, G + 1.9, z1, 'fence');
     hubbas.push({ a: V(90.4, G + 0.6, 70), b: V(88, G + 0.02, 70), w: 1.4, noRails: true, color: 0xc49a5c });
