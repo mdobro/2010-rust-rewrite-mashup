@@ -105,6 +105,15 @@ function fin_core_ring(K, P, PL) {
 function fin_core_boulevard(K, P, PL) {
   const T = PL.colors;
   K.street('z', -40, 140, 216, 0, [], { rw: 10, sw: 5, lamps: false });
+  // the last 14 m to the Old Town border (z 216..230), where the ground starts down the hill: the sidewalks go on as sloped
+  // slabs 0.15 over the ground in 2 m chords, with the curb grind on the road side, and meet Old Town's walks (which start at
+  // z 230 at the ground + 0.15) edge to edge; the centre dashes keep the 6 m rhythm into Old Town's (z 232, 238, ...)
+  for (const [x0, x1, xe] of [[-55, -50, -50], [-30, -25, -30]]) {
+    const xc = (x0 + x1) / 2, top = z => K.terrainH(xc, z) + 0.15;
+    K.strip(xc, 216, xc, 230, 0.15, x1 - x0, { seg: 2, noRails: true, color: 0xb9b5ab });
+    for (let z = 216; z < 230; z += 2) K.rail(xe, top(z), z, xe, top(z + 2), z + 2, 'Curb', false);
+  }
+  for (const z of [214, 220, 226]) K.dash(-40, z, -40, z + 3);
   // the median: a 6 m curbed island with chamfered ends and four black granite ledges down the middle
   K.B(-43, -0.3, 146, -37, 0.15, 210, 'sidewalk', { edges: 'we' });
   K.hubbas.push({ a: V(-40, 0.15, 146), b: V(-40, 0.02, 144.8), w: 6, noRails: true, color: 0xb9b5ab });

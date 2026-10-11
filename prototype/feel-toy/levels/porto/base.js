@@ -44,7 +44,7 @@ const PORTO = {
     { id: 'planters',    name: 'Planter Alley',       a: 'fin',     b: 'arroyo', at: [-420, -40],  dir: 'z', w: 12 },
     { id: 'boulevard',   name: 'Grand Boulevard',     a: 'fin',     b: 'old',    at: [-40, 230],   dir: 'x', w: 20 },
     { id: 'campus',      name: 'Campus Drive',        a: 'uni',     b: 'east',   at: [650, 230],   dir: 'x', w: 16 },
-    { id: 'crosstown',   name: 'Crosstown Street',    a: 'old',     b: 'east',   at: [300, 560],   dir: 'z', w: 16 },
+    { id: 'crosstown',   name: 'Crosstown Street',    a: 'old',     b: 'east',   at: [300, 560],   dir: 'z', w: 16, bend: 72 },
     { id: 'footbridge',  name: 'Arroyo Footbridge',   a: 'old',     b: 'arroyo', at: [-420, 520],  dir: 'z', w: 8 },
     { id: 'spillway',    name: 'Spillway Outlet',     a: 'arroyo',  b: 'bw',     at: [-700, 910],  dir: 'x', w: 24 },
     { id: 'steep',       name: 'Old Town Steep',      a: 'old',     b: 'bw',     at: [-200, 910],  dir: 'x', w: 16 },
@@ -52,6 +52,10 @@ const PORTO = {
     { id: 'harbourRd',   name: 'Harbour Road',        a: 'bw',      b: 'ship',   at: [0, 1020],    dir: 'z', w: 16, level: true },
     { id: 'boardwalk',   name: 'The Boardwalk',       a: 'bw',      b: 'ship',   at: [0, 1150],    dir: 'z', w: 12, level: true },
   ],
+  // bend: N on a 'z' gate (an east-west street crossing a north-south border, across the fall line) levels the base across
+  // the street there: within N metres north and south of the gate the profile is read at a remapped z that holds still across
+  // the gate's width and catches up by N (see portoBaseH). Without it the border band would tilt the street by the profile's
+  // grade (6 % in Old Town / Eastside), since both districts meet the plain base at the border.
   GATE_DEPTH: 16, BAND: 12,
   // level gates (level: true): the base falls along z there (0.67 % at the harbour) and you cross along x, so it would
   // tip an unsteered rider sideways. Across the gate it is held at its height on the gate's centre line: level for
@@ -79,6 +83,18 @@ function portoLevel(x, z, f) {
 }
 // the base without the gate levelling
 function portoBaseRaw(x, z) {
+  // levelled gates: z → zc + D·p(|z - zc|/D), p(t) = 3t³ - 2t⁴ (p(0) = p'(0) = 0, p(1) = p'(1) = 1, so it joins the plain
+  // profile smoothly at D; with D 72 the grade is 0.6 % at the gate's edge and 1.3 % at 12 m, and peaks at 1.7× the profile's at 0.75 D,
+  // well past the districts' own street shoulders).
+  // Full strength within GATE_DEPTH of the border, eased out over the next 20 m east and west.
+  for (const g of PORTO.gates) {
+    if (!g.bend || g.dir !== 'z') continue;
+    const [gx, gz] = g.at, D = g.bend, dz = z - gz, ax = Math.abs(x - gx) - PORTO.GATE_DEPTH;
+    if (Math.abs(dz) >= D || ax >= 20) continue;
+    const t = Math.abs(dz) / D, zl = gz + Math.sign(dz) * D * t * t * t * (3 - 2 * t);
+    let e = ax <= 0 ? 1 : 1 - ax / 20; e = e * e * (3 - 2 * e);
+    z = z + (zl - z) * e;
+  }
   const P = PORTO.profile, lin = z => { if (z <= P[0][0]) return P[0][1]; for (let i = 1; i < P.length; i++) if (z <= P[i][0]) return lerp(P[i - 1][1], P[i][1], (z - P[i - 1][0]) / (P[i][0] - P[i - 1][0])); return P[P.length - 1][1]; };
   let h = 0; for (const o of [-24, -12, 0, 12, 24]) h += lin(z + o); h /= 5;   // round off the corners of the profile
   if (z > PORTO.seaZ) h = lerp(-42, -52, clamp((z - PORTO.seaZ) / 6, 0, 1));  // the quay drops to the sea bed
