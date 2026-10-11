@@ -231,6 +231,7 @@
       <li><b>Right thumb does tricks</b>, also wherever you touch. <b>Tap it to push</b> (each tap is a kick); <b>tap, then touch and hold</b> to keep pushing until you let go. Pull <b>down</b>, flick <b>up</b>: ollie. Down, then up-left: kickflip. Down, then up-right: heelflip. Down, then <b>arc</b> round the bottom onto the right or left: pop shuvit. Swing in from the right side to the bottom, flick up-left: 360 flip. Push up and flick down for nollies.</li>
       <li><b>Set spot</b> drops a marker where you are, facing the way you're going; <b>Return</b> puts you back there, standing, to try the line again.</li>
       <li>In the air the same motions are late flips. Hold the right stick in a direction to line the board up for a grind before you land on the rail.</li>
+      <li><b>Grabs:</b> in the air, double tap the left thumb and keep it down. The right thumb picks the grab: toe side Indy, heel side Melon, up Nosegrab, down Tailgrab, diagonals Mute, Method, Crail, Stalefish. Lift the left thumb before you land.</li>
     </ul>
     <div class="table-wrap desk-only">
     <table class="controls">
@@ -239,6 +240,7 @@
       <tr><td>Push / brake</td><td>A, or left stick ↑ / ↓</td><td><kbd>W</kbd> <kbd>S</kbd></td></tr>
       <tr><td>Ollie and flip tricks</td><td>Right stick: down, flick up (Skate's flick-it)</td><td><kbd>Space</kbd> (hold, release), then <kbd>Q</kbd> + WASD in the air</td></tr>
       <tr><td>Set the board up for a grind</td><td>Hold the right stick in the air</td><td>Arrow keys</td></tr>
+      <tr><td>Grab (right stick / arrows pick it)</td><td>Hold LB or RB in the air</td><td>Hold <kbd>G</kbd> in the air</td></tr>
       <tr><td>Grind (auto near rails; or hold)</td><td>LB</td><td><kbd>Shift</kbd></td></tr>
       <tr><td>Manual / nose manual</td><td>Right stick halfway ↓ / ↑</td><td>Hold <kbd>M</kbd> / <kbd>N</kbd></td></tr>
       <tr><td>Get off and walk / back on</td><td>Y</td><td><kbd>F</kbd></td></tr>
@@ -10439,9 +10441,9 @@ function collideBoxes(p, v) {
 const keys = new Set();
 let device = 'kbm';
 const MOBILE = matchMedia('(pointer: coarse)').matches;
-const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lastTime: -1e9, t0: 0, moved: 0, lastTapT: -1e9 };
+const touch = { active: false, stickId: null, ox: 0, oy: 0, sx: 0, sy: 0, lastTime: -1e9, t0: 0, moved: 0, lastTapT: -1e9, grabHold: false, grabbed: false };
 // what the trick sticks (touch or controller) ask the skater to do
-const FL = { ollie: false, popNow: false, cancelPop: false, flipName: null, grab: false, grabName: null };
+const FL = { ollie: false, popNow: false, cancelPop: false, flipName: null };
 // where the trick stick is held right now (touch, controller or arrow keys): picks the grind
 const GS = { x: 0, y: 0, touchX: 0, touchY: 0 };
 const IN = { steer: 0, stickY: 0, push: false, brake: false, ollie: false, grab: false, grind: false };
@@ -10482,6 +10484,10 @@ function readPad() {
   return null;
 }
 let padFlick = null; // created once the recogniser is defined
+let padGrab = false;
+// grab mode: double tap the steering thumb and keep it down (touch), hold G, or hold LB / RB.
+// In the air it grabs, and the trick stick picks which grab instead of lining up a grind.
+const grabHeld = () => touch.grabHold || keys.has('KeyG') || padGrab;
 function sampleInput() {
   const p = readPad(), now = performance.now();
   let lx = 0, ly = 0;
@@ -10501,8 +10507,8 @@ function sampleInput() {
     if (nowB[9] && !prevBtn[9]) EDGE_IN.reset = true;
     prevBtn = nowB;
     if (padFlick) flickFeed(padFlick, rx, ry, now);
-    GS.x = rx; GS.y = ry;
-  } else { GS.x = 0; GS.y = 0; }
+    GS.x = rx; GS.y = ry; padGrab = pb(4) || pb(5);
+  } else { GS.x = 0; GS.y = 0; padGrab = false; }
   const ax = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0), ay = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
   for (const [x, y] of [[ax * 0.71 ** (ax && ay ? 1 : 0), ay * 0.71 ** (ax && ay ? 1 : 0)], [GS.touchX, GS.touchY]])
     if (Math.hypot(x, y) > Math.hypot(GS.x, GS.y)) { GS.x = x; GS.y = y; }
@@ -10518,7 +10524,7 @@ function sampleInput() {
   FL.cancelPop = false;
   if (FL.popNow) { FL.popNow = false; EDGE_IN.ollieUp = true; } // latched so a flick inside one frame still pops
   IN.ollie = ollie;
-  IN.grab = false; // no grabs: in the air the trick stick sets the board up for a grind instead
+  IN.grab = grabHeld();
   IN.grind = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(4);
   IN.sprint = keys.has('ShiftLeft') || keys.has('ShiftRight') || pb(10); // on foot: hold to sprint (touch: keep the stick pushed all the way)
 }
@@ -11352,7 +11358,8 @@ function stepParticles(P, dt, g, drag) {
     P.pos[j] += P.vel[j] * dt; P.pos[j + 1] += P.vel[j + 1] * dt; P.pos[j + 2] += P.vel[j + 2] * dt; }
   P.geo.attributes.position.needsUpdate = true;
 }
-const pose = { grind: 0, push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, yawLag: 0, posLag: new THREE.Vector3() };
+const pose = { grind: 0, push: 0, pushBlend: 0, pushSign: 1, crouch: 0, lookFwd: 1, slide: 0, gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, yawLag: 0, posLag: new THREE.Vector3(),
+  grab: 0, grabFront: 0, gp: { lift: 0, roll: 0, yaw: 0, pitch: 0, leanX: 0, leanZ: 0, hx: 0, hy: 0, hz: 0 } };
 
 /* ============================================================
    Skater state and the simulation step (fixed 120 Hz)
@@ -11543,7 +11550,7 @@ function surfaceAxes(n) {
 }
 
 const CH = { trick() {}, land() {}, bank() {} };   // challenge hooks, filled in with the challenges below
-function addTrick(name, pts, ammo) { if (!combo.parts.length) S.comboStart = S.pos.clone(); combo.parts.push(name); combo.pts += pts; combo.ammo += ammo; showCombo(); CH.trick(name); }
+function addTrick(name, pts, ammo) { if (!combo.parts.length) { S.comboStart = S.pos.clone(); grabLinks.clear(); } combo.parts.push(name); combo.pts += pts; combo.ammo += ammo; showCombo(); CH.trick(name); }
 function bankCombo() {
   if (!combo.parts.length) return;
   const mult = combo.parts.length, total = Math.round(combo.pts * mult);
@@ -11778,8 +11785,7 @@ function moveAir(dt) {
       }
     }
     if (S.trick && S.trick.t >= T.flipTime) { addTrick(S.trick.name, S.trick.pts, S.trick.ammo); S.trick = null; }
-    if (IN.grab && !S.trick) S.grabT += dt;
-    else if (S.grabT > 0) { endGrab(); }
+    grabTick(dt);
     if (S.railCool <= 0 && (T.autoGrind || IN.grind)) tryRail();
     if (S.rail) return;
   }
@@ -11794,9 +11800,52 @@ function moveAir(dt) {
     land(g);
   }
 }
+// Grabs: in grab mode the trick stick picks the grab, board-relative like the grinds (turned round
+// riding fakie): right is the toe edge, left the heel edge, up the leading end. The stance is the one
+// you started the grab in, so spinning mid-grab doesn't swap toe and heel under your thumb.
+// lift: how high the board comes up; roll (+ toe edge up), yaw, pitch (+ nose up): the tweak;
+// hand: which hand grabs, at h (a point on the board); lean: the upper body reaching (x: toward the tail +, z: toward the toes -)
+const GRABS = {
+  Indy:      { mult: 1,    hand: 'back',  h: [0.12, 0.09, 0.04],   lift: 0.36, roll: 0.22,  yaw: 0.08,  pitch: 0.04,  leanX: 0.05,  leanZ: -0.32 },
+  Melon:     { mult: 1.05, hand: 'front', h: [-0.12, 0.09, -0.04], lift: 0.36, roll: -0.3,  yaw: -0.12, pitch: 0.06,  leanX: -0.08, leanZ: -0.1 },
+  Nosegrab:  { mult: 1.1,  hand: 'front', h: [0, 0.1, -0.37],      lift: 0.34, roll: 0,     yaw: 0.05,  pitch: 0.38,  leanX: -0.35, leanZ: -0.2 },
+  Tailgrab:  { mult: 1.05, hand: 'back',  h: [0, 0.1, 0.37],       lift: 0.34, roll: 0,     yaw: -0.05, pitch: -0.38, leanX: 0.35,  leanZ: -0.2 },
+  Mute:      { mult: 1.15, hand: 'front', h: [0.12, 0.09, -0.1],   lift: 0.38, roll: 0.35,  yaw: -0.22, pitch: 0.1,   leanX: -0.15, leanZ: -0.35 },
+  Stalefish: { mult: 1.3,  hand: 'back',  h: [-0.12, 0.09, 0.12],  lift: 0.38, roll: -0.38, yaw: 0.28,  pitch: -0.1,  leanX: 0.15,  leanZ: -0.05 },
+  Crail:     { mult: 1.25, hand: 'back',  h: [0.09, 0.1, -0.3],    lift: 0.36, roll: 0.15,  yaw: 0.2,   pitch: 0.45,  leanX: -0.3,  leanZ: -0.35 },
+  Method:    { mult: 1.3,  hand: 'front', h: [-0.12, 0.09, 0.02],  lift: 0.44, roll: -0.85, yaw: 0.3,   pitch: -0.15, leanX: 0.1,   leanZ: 0.05 },
+};
+const GRAB_OF = { R: 'Indy', L: 'Melon', U: 'Nosegrab', D: 'Tailgrab', UR: 'Mute', DL: 'Stalefish', DR: 'Crail', UL: 'Method' };
+const grabPick = () => { if (Math.hypot(GS.x, GS.y) < 0.45) return 'Indy'; const sec = stickSector();
+  return GRAB_OF[S.grabFakie ? sec.replace(/[UDLR]/g, c => ROT[c]) : sec]; };
+const grabLabel = (name, t) => (t > 0.6 ? 'Long ' : '') + name;
+// combo parts that follow the grab before them in the same hold ("Indy to Melon")
+const grabLinks = new Set();
+function grabTick(dt) {
+  if (!IN.grab || S.trick) { if (S.grabT > 0) endGrab(); return; }
+  if (!(S.grabT > 0)) S.grabFakie = fakie();
+  const want = grabPick();
+  if (!(S.grabT > 0)) { S.grabName = want; S.grabSeg = 0; S.grabCand = null; S.grabChain = 0; touch.grabbed = true; }
+  else if (want !== S.grabName) {                                  // moved the trick thumb: a new grab once it settles there
+    if (S.grabCand !== want) { S.grabCand = want; S.grabCandT = 0; }
+    S.grabCandT += dt;
+    if (S.grabCandT >= 0.05) { S.grabSeg -= S.grabCandT - dt; grabSegment(); S.grabName = want; S.grabSeg = S.grabCandT - dt; S.grabCand = null; }
+  } else S.grabCand = null;
+  S.grabT += dt; S.grabSeg += dt;
+  showCombo(undefined, undefined, grabLabel(S.grabName, S.grabSeg));   // the grab you're holding, live
+}
+// one grab, held long enough, goes in the combo; the longer it's held the more it's worth
+function grabSegment() {
+  const t = S.grabSeg; S.grabSeg = 0;
+  if (!(t >= 0.12)) return;
+  if (S.grabChain > 0 && combo.parts.length) grabLinks.add(combo.parts.length);
+  addTrick(grabLabel(S.grabName, t), Math.round((120 * t + 40) * GRABS[S.grabName].mult), 1 + Math.floor(t / 0.3));
+  S.grabChain++;
+}
 function endGrab() {
-  if (S.grabT > 0.12) addTrick(FL.grabName || (S.grabT > 0.6 ? 'Long Grab' : 'Grab'), Math.round(120 * S.grabT + 40), 1 + Math.floor(S.grabT / 0.3));
-  S.grabT = 0;
+  grabSegment();
+  S.grabT = 0; S.grabCand = null;
+  if (combo.parts.length) showCombo(); else comboTimer = 0;       // a grab too short to count: its live name fades
 }
 
 function land(g) {
@@ -12197,7 +12246,8 @@ function updateVisuals(dt, time) {
   boardOrient.quaternion.setFromRotationMatrix(mBasis);
   // grind stance: turn and tip the board about the point that rides the rail
   // in the air the board turns into the grind you're holding, even mid-flip, so you see it lined up before the rail
-  const setup = !S.rail && !S.grounded && S.bail <= 0;
+  const grabbing = S.grabT > 0 && !S.trick && S.bail <= 0 && !S.walking;
+  const setup = !S.rail && !S.grounded && S.bail <= 0 && !grabbing;  // grabbing, the board is in your hand, not lined up for a grind
   const gk = S.walking ? GRINDS.C : S.rail ? { ...GRINDS[S.grindKey], yaw: S.grindYaw ?? GRINDS[S.grindKey].yaw } : setup ? GRINDS[grindKey()]
     : S.manual && S.grounded ? { ...MANUAL_POSE[S.manual], pitch: MANUAL_POSE[S.manual].pitch * (1 + 0.45 * S.manBal) } : GRINDS.C;
   pose.slide = damp(pose.slide, S.sliding && S.grounded && S.bail <= 0 ? 1 : 0, S.sliding ? 10 : 6, dt);
@@ -12217,7 +12267,15 @@ function updateVisuals(dt, time) {
     const p = clamp(S.trick.t / T.flipTime, 0, 1), a = p * Math.PI * 2;
     boardFlip.rotation.set(0, S.trick.shuv * DEG * p, S.trick.flip * a, 'YXZ');
     boardFlip.position.y = Math.sin(p * Math.PI) * 0.25;
-  } else if (S.grabT > 0) boardFlip.position.y = 0.38;
+  }
+  // grabs: the board comes up to the hand with its own tweak
+  pose.grab = damp(pose.grab, grabbing ? 1 : 0, grabbing ? 14 : 10, dt);
+  if (grabbing) { const G = GRABS[S.grabName], gp = pose.gp;
+    for (const k of ['lift', 'roll', 'yaw', 'pitch', 'leanX', 'leanZ']) gp[k] = damp(gp[k], G[k], 10, dt);
+    gp.hx = damp(gp.hx, G.h[0], 12, dt); gp.hy = damp(gp.hy, G.h[1], 12, dt); gp.hz = damp(gp.hz, G.h[2], 12, dt);
+    pose.grabFront = damp(pose.grabFront, G.hand === 'front' ? 1 : 0, 12, dt); }
+  const gk2 = S.trick ? 0 : pose.grab;
+  if (gk2 > 1e-3) { const gp = pose.gp; boardFlip.rotation.set(gp.pitch * gk2, gp.yaw * gk2, gp.roll * gk2, 'YXZ'); boardFlip.position.y = gp.lift * gk2; }
   if (S.bail > 0) { boardFlip.rotation.z = (1.2 - S.bail) * 9; boardFlip.position.y = 0.05; }
   if (S.walking) { boardFlip.rotation.set(0, 0, Math.PI / 2); boardFlip.position.set(0.36, 0.58, 0.06); } // carried under the arm
   // ---- the rider ----
@@ -12227,7 +12285,7 @@ function updateVisuals(dt, time) {
   // on a rail: low and loaded, the weight over the truck (or the deck) that's grinding
   pose.grind = damp(pose.grind, S.rail ? 1 : 0, S.rail ? 14 : 7, dt);
   const gb = pose.grind, gSlide = S.rail && GRINDS[S.grindKey].slide;
-  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? (gSlide ? 0.45 : 0.58) : 0, air ? 0.25 : 0, pose.slide * 0.45) + S.landDip * 2.5, 0, 1);
+  const crouchTarget = clamp(Math.max(S.crouch * 0.85, S.rail ? (gSlide ? 0.45 : 0.58) : 0, air ? 0.25 : 0, pose.slide * 0.45, gk2 * 0.95) + S.landDip * 2.5, 0, 1);
   pose.crouch = damp(pose.crouch, crouchTarget, S.landDip > 0.05 ? 25 : 14, dt);
   const crouchAmt = pose.crouch;
   const boardLift = boardFlip.position.y;
@@ -12252,6 +12310,8 @@ function updateVisuals(dt, time) {
       const k = (pp - 0.68) / 0.32; backFoot.lerpVectors(drive, tail, k); backFoot.y += Math.sin(k * Math.PI) * 0.2;
     }
   }
+  // on a grab the feet stay on the tweaked board (the knees tuck as it comes up)
+  if (gk2 > 1e-3 && S.bail <= 0) for (const ft of [frontFoot, backFoot]) ft.lerp(V(ft.x, baseY, ft.z).applyEuler(boardFlip.rotation).add(boardFlip.position), gk2);
   // fakie: mirror nose for tail, so the foot nearest the tail stands and the front foot pushes
   if (ps < 0 && pb > 0.01) { const sF = frontFoot, pF = backFoot; backFoot = V(sF.x, sF.y, -sF.z); frontFoot = V(pF.x, pF.y, -pF.z); }
   // hips: lower in a crouch (and on the standing leg while pushing), upper body leans over the
@@ -12266,7 +12326,7 @@ function updateVisuals(dt, time) {
   pelvis.position.set(lerp(-0.05 - 0.07 * crouchAmt, 0.04, pb), baseY + lerp(0.7, 0.46, crouchAmt) - 0.06 * pb - standDip, lerp(0.01, -0.12 * ps, pb) + gb * pose.gPivot * 0.4);
   // the shoulders turn back toward where you're going (most in a slide) and sway for balance
   const gs = Math.sin(time * 2.6) * (0.5 + 0.5 * Math.sin(time * 0.9)), chatter = S.rail && METAL_RAILS.has(S.rail.kind) && !gSlide ? (Math.random() - 0.5) * 0.008 : 0;
-  torso.rotation.set(gb * (0.05 * gs + (gSlide ? 0.12 : 0.06)), -pose.gYaw * 0.55 * gb, gb * 0.04 * gs, 'YXZ');
+  torso.rotation.set(gb * (0.05 * gs + (gSlide ? 0.12 : 0.06)) + pose.gp.leanX * gk2, -pose.gYaw * 0.55 * gb, gb * 0.04 * gs + pose.gp.leanZ * gk2, 'YXZ'); // reaching down for a grab
   boardFlip.position.y += chatter;
   // head turns to look where you're going (back over the other shoulder when fakie)
   pose.lookFwd = damp(pose.lookFwd, fakie() ? -1 : 1, 6, dt);
@@ -12285,6 +12345,7 @@ function updateVisuals(dt, time) {
     const standing = (side === 'front') === (ps > 0);
     L.shoe.rotation.set(0, lerp(side === 'front' ? 0.25 : -0.15, 1.5 * ps, pb * (standing || pose.push > 0 ? 1 : 0)), 0);
     L.shoe.position.y += kickLift(L.shoe.position.z, L.shoe.rotation.y);
+    if (gk2 > 1e-3) { L.shoe.rotation.x = boardFlip.rotation.x * gk2; L.shoe.rotation.z = boardFlip.rotation.z * gk2; }
   }
   // arms: out along the board for balance; while pushing they hang and swing like walking
   const sway = Math.sin(time * 1.7) * 0.03;
@@ -12294,6 +12355,10 @@ function updateVisuals(dt, time) {
     .lerp(toRigT(gSlide ? V(0.3, 0.5 + 0.08 * gs, -0.56) : V(0.26, 0.4 + 0.07 * gs, -0.5)), gb);         // leading arm up and out
   const backHand = toRigT(V(0.08, 0.1 - sway + S.steerVis * 0.12, 0.5)).lerp(shB.clone().add(V(0.08, -0.5, -0.22 * stride * ps)), pb)
     .lerp(toRigT(gSlide ? V(-0.06, 0.32 - 0.08 * gs, 0.56) : V(0.1, 0.08 - 0.07 * gs, 0.52)), gb);       // trailing arm low and back
+  // grab: one hand reaches the board, the other goes up and out
+  if (gk2 > 1e-3) { const gp = pose.gp, at = V(gp.hx, gp.hy, gp.hz).applyEuler(boardFlip.rotation).add(boardFlip.position), gf = pose.grabFront;
+    frontHand.lerp(at, gk2 * gf).lerp(toRigT(V(-0.05, 0.62, -0.5)), gk2 * (1 - gf));
+    backHand.lerp(at, gk2 * (1 - gf)).lerp(toRigT(V(-0.05, 0.62, 0.5)), gk2 * gf); }
   limbIK(LIMBS.front.upper, LIMBS.front.fore, shF, frontHand, V(lerp(-0.3, 0, pb), -1, lerp(-0.4, 0.6, pb)), UPPER_ARM, FOREARM);
   limbIK(LIMBS.back.upper, LIMBS.back.fore, shB, backHand, V(lerp(-0.3, 0, pb), -1, lerp(0.4, 0.6, pb)), UPPER_ARM, FOREARM);
   }
@@ -12322,10 +12387,12 @@ function updateVisuals(dt, time) {
 const $ = id => document.getElementById(id);
 const comboEl = $('combo');
 let comboTimer = 0;
-function showCombo(sub, cls) {
+const comboJoin = () => combo.parts.map((p, i) => (i ? grabLinks.has(i) ? ' to ' : ' + ' : '') + p).join('');
+// live: a trick still going (the grab you're holding), shown after the combo so far
+function showCombo(sub, cls, live) {
   comboEl.className = cls || '';
-  comboEl.querySelector('.name').textContent = cls === 'bail' ? sub : combo.parts.join(' + ');
-  comboEl.querySelector('.pts').textContent = cls === 'bail' ? 'combo lost' : sub || (combo.parts.length > 1 ? `${combo.pts} × ${combo.parts.length}` : `${combo.pts}`);
+  comboEl.querySelector('.name').textContent = cls === 'bail' ? sub : comboJoin() + (live ? (combo.parts.length ? S.grabChain ? ' to ' : ' + ' : '') + live : '');
+  comboEl.querySelector('.pts').textContent = cls === 'bail' ? 'combo lost' : sub || (combo.parts.length > 1 ? `${combo.pts} × ${combo.parts.length}` : combo.parts.length || !live ? `${combo.pts}` : '');
   comboEl.style.opacity = 1; comboTimer = cls ? 1.4 : 99;
 }
 function updateHud(dt) {
@@ -12565,7 +12632,7 @@ function flickFire(f, name, now, flickMs) {
     const speed = clamp(1 - (flickMs - 40) / (T.flickTime * 1000), 0, 1); // faster flick, higher pop
     S.crouch = Math.max(S.crouch, 0.75 + 0.25 * speed); // pop height barely depends on flick speed, so rails are catchable
     f.loaded = false; FL.ollie = false; FL.popNow = true;
-  } else if (S.trick || name === 'Ollie' || name === 'Nollie' || !f.airArmed) { f.rim = []; f.windup = null; return; } // late flips only, one at a time,
+  } else if (S.trick || name === 'Ollie' || name === 'Nollie' || !f.airArmed || grabHeld()) { f.rim = []; f.windup = null; return; } // late flips only, one at a time, not mid-grab,
   // and only once the stick has been back to neutral since the pop (or the last late flip): carrying straight on
   // from the pop just moves the board (sets up a grind) and never fires a trick
   if (!canPop()) f.airArmed = false;
@@ -12709,6 +12776,8 @@ canvas.addEventListener('pointerdown', e => {
     touch.stickId = e.pointerId; stickBase.classList.remove('idle');
     touch.ox = e.clientX; touch.oy = e.clientY; // steering reads from where the thumb lands, so a tap never turns
     touch.t0 = now; touch.moved = 0;
+    // the second touch of a double tap, kept down, is grab mode for as long as it stays down
+    touch.grabHold = now - touch.lastTapT < T.doubleTap * 1000; touch.grabbed = false;
     moveSteerStick(e.clientX, e.clientY);
   } else if (e.clientX >= innerWidth * 0.5 && ts.id === null) {
     Object.assign(ts, { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now, moved: 0, trail: [[e.clientX, e.clientY, now]] });
@@ -12745,10 +12814,12 @@ canvas.addEventListener('pointermove', e => {
 function endCanvasPointer(e) {
   const now = performance.now();
   if (e.pointerId === touch.stickId) {
-    // a double tap of the steering thumb reverts
-    if (e.type === 'pointerup' && now - touch.t0 < 250 && touch.moved < 16) {
+    // a double tap of the steering thumb reverts (unless that second touch grabbed in the air)
+    if (touch.grabbed) touch.lastTapT = -1e9;
+    else if (e.type === 'pointerup' && now - touch.t0 < 250 && touch.moved < 16) {
       if (now - touch.lastTapT < T.doubleTap * 1000) { EDGE_IN.revert = true; touch.lastTapT = -1e9; } else touch.lastTapT = now;
     }
+    touch.grabHold = false; touch.grabbed = false;
     touch.stickId = null; touch.sx = touch.sy = 0; placeIdleStick();
   }
   if (e.pointerId === ts.id) {
