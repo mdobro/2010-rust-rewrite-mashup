@@ -285,7 +285,7 @@ What the player said: there's random stuff on some sidewalks, like kickers.
 
 ---
 
-# Backlog: more gameplay and map ideas (not chosen yet)
+# More gameplay and map ideas (the player said yes to all of them)
 ★ marks the ones I'd do first: they make the most difference on a phone for the least work.
 
 ## Tricks and feel
@@ -315,3 +315,43 @@ What the player said: there's random stuff on some sidewalks, like kickers.
 ## Phone quality of life
 - **Replay editor.** Trim, slow-mo, and a few camera angles, so you can save a clip of a line.
 - **Lefty layout.** Swap the thumbs.
+
+---
+
+# Roadmap: the order everything above gets built
+Each phase ends with check, rides and flick tests, a commit and push, and a republish, so it can be tried on the phone
+before the next phase starts.
+
+1. **Feel** (engine, me):
+   - quarter pipes that give air: pumping, lip pop, hang time, and `K.qp`, `K.spine`, `K.hip`;
+   - grabs: double tap left, the right thumb picks;
+   - high speed checks.
+2. **Tricks** (engine, me): wallrides and wallies, bonks, no-complies and bonelesses, late flips, darkslides, hippie jumps.
+3. **Roads and fill** (`P.road`, then district agents):
+   - winding downhills;
+   - filling the empty space;
+   - clearing the sidewalk kickers, with `check --clutter`.
+4. **Big vertical places** (kit `K.bridge`, then agents):
+   - the Quarry with its tunnel to University;
+   - the Mega Park;
+   - the Arroyo Viaduct, the Harbour Lift Bridge, the Boulevard flyover and rooftop gaps;
+   - the deeper canyon and the escarpment.
+5. **Goals:**
+   - named gaps map-wide, with a list on the map;
+   - downhill races;
+   - Own the Spot;
+   - Game of S.K.A.T.E.;
+   - photo goals;
+   - the sponsor track and unlocks.
+6. **World:**
+   - evening light;
+   - security guards and skate-stoppers;
+   - hidden spots;
+   - the tram or funicular up to the Heights;
+   - wet weather.
+7. **Slams and phone polish:**
+   - a ragdoll-ish tumble, the Hall of Meat and the slam replay;
+   - the replay editor;
+   - the left-handed layout.
+
+The README and the map artifact are updated at the end of each phase that changes the map or the controls.
