@@ -1,7 +1,9 @@
 /* Boardwalk West (bw). Design: levels/porto/design/bw.md. Parts: bw_west, bw_park, bw_gardens, bw_east (each (K, P, PL)). */
 function porto_bw(K, P) {
   const PL = bw_plan();
-  P.ground(PL.ground); P.col(PL.col); P.surface(PL.surface);
+  // the plan's ground is already level across both ship gates (Harbour Road at YN, the boardwalk at YS); it reads the base only
+  // for the edge hills (base - Bz), so it gets the base without the gate levelling (base.js levels the band itself)
+  P.ground((x, z) => PL.ground(x, z, portoBaseRaw(x, z))); P.col(PL.col); P.surface(PL.surface);
   for (const r of PL.REGIONS) P.region(...r);
   if (typeof bw_west === 'function') bw_west(K, P, PL);
   if (typeof bw_park === 'function') bw_park(K, P, PL);

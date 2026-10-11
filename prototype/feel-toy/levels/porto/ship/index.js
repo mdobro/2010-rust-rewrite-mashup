@@ -1,7 +1,9 @@
 /* Shipyard East (ship): the plan, the ground, the parts, the lines and the life. Design: levels/porto/design/ship.md. */
 function porto_ship(K, P) {
   const PL = ship_plan();
-  P.ground(PL.ground);                                  // first, before anything reads terrainH
+  // first, before anything reads terrainH. Held level across the two bw gates (base.js portoLevel): the plate falls 1.9 % along z
+  // at the boardwalk and the base 0.67 % at both, which tipped an unsteered rider sideways through the gate
+  P.ground((x, z) => portoLevel(x, z, (a, c) => PL.ground(a, c, portoBaseH(a, c))));
   P.col((x, z, h) => { const c = PL.col(x, z, h); return c == null ? null : new THREE.Color(c); });
   P.surface(PL.surface);
   for (const r of ship_index_regions()) P.region(...r);
