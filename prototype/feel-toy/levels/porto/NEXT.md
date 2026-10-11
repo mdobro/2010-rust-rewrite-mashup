@@ -282,3 +282,38 @@ What the player said: there's random stuff on some sidewalks, like kickers.
    lots beside it instead of the sidewalk.
 4. **Spot-check the other 102** off-sidewalk kickers the same way: they're fine in parks and spots, and get removed
    from roads, lawns and bare lots.
+
+---
+
+# Backlog: more gameplay and map ideas (not chosen yet)
+★ marks the ones I'd do first: they make the most difference on a phone for the least work.
+
+## Tricks and feel
+- ★ **Wallrides and wallies.** Ride into a wall at an angle while airborne and you stick and roll along it for a moment. Ollie off it for a wallie. The city has hundreds of building faces that do nothing right now.
+- ★ **Bonks and no-complies.**
+  - A bonk is tapping a hydrant, bin or bollard while airborne: a small pop and points.
+  - A no-comply or boneless is a foot-plant pop, done by double tapping the trick thumb on the ground. It gives a higher, slower pop for getting onto things.
+- **Late flips and darkslides.** A late flip is a flick on the way down; a darkslide is a grind with the board flipped. This extends the current trick stick, it doesn't change it.
+- **Hippie jump.** Jump over a bar or a low rail and land back on the board.
+- **Proper slams.** A short ragdoll-ish tumble when you bail, a "Hall of Meat" score for the worst slams, and a slam-cam replay.
+
+## Goals and progression
+- ★ **Named gaps across the whole map.** Clear any defined start-to-end jump and it pays out with a named banner, like "Viaduct Gap" or "Market Stair Gap". A Gaps list on the map shows the ones found and the ones left. This goes with the new bridges, the Quarry and the Mega Park.
+- ★ **Downhill races.** Race NPC skaters down the winding roads, with checkpoints and a time to beat. It uses the `P.road` work directly.
+- **Own the Spot.** Score beats the local NPC skater's best at their spot. Winning puts your name on the spot sign.
+- **Game of S.K.A.T.E. with NPCs.** Set and match flat-ground tricks; it uses the existing trick names.
+- **Photo and film goals.** A photographer NPC at a spot: land a named trick in frame and it saves a still from the replay. "Get a cover" counts toward progress.
+- **Sponsor track.** Challenges unlock decks, wheels and shoes in the shops, and new districts' shop items. It gives a reason to visit all 17 shops.
+
+## Map and world
+- ★ **Day and evening light.** The same city at golden hour or under street lamps, picked in the menu or cycling slowly. Lamps already exist everywhere; they just light up. Cheap, and the city feels new again.
+- **Security and skate-stoppers.** A few plazas get a guard who walks over and moves you on if you keep sessioning. Some ledges have skate-stopper knobs you can grind off with a challenge.
+- **Hidden spots.** Locked gates you open by finding a key tape, a rooftop reached by a fire escape, a drained fountain, a mall interior after hours.
+- **Rideable transit.** A funicular or tram from the harbour up to the Heights: hop on, ride up, and bomb down again without fast travel.
+- **Weather.** A wet day: shinier ground, less grip, puddles you can splash through.
+
+## Phone quality of life
+- ★ **Session marker** that you place anywhere. Phones can't press "set spot" quickly, so add a double-tap-the-map gesture, or a pin button on the pause menu.
+- **Replay editor.** Trim, slow-mo, and a few camera angles, so you can save a clip of a line.
+- **Haptics.** A short buzz on a land, a grind lock and a bail, where the browser allows it.
+- **Lefty layout.** Swap the thumbs.
