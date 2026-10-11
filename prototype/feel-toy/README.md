@@ -2,8 +2,8 @@
 
 A throwaway prototype for one question: **does the skating feel good?**
 
-A street block, a camera that follows behind you, and every movement number on
-a live slider. No netcode and no art. Everything here is written from
+A whole hillside city to skate, a camera that follows behind you, and every
+movement number on a live slider. No netcode and no art. Everything here is written from
 scratch: no code, data or assets from MW2, Skate 3 or Minecraft. The only
 dependency is Three.js, loaded from a CDN.
 
@@ -324,12 +324,11 @@ either camera with a short shake (*Landing shake*).
   - Land a 6,000-point line that starts anywhere downtown (any block, plaza or
     street). Its beam is on the Central Plaza deck.
 
-  Land it and the beam turns green. Downtown has 15. Port City adds six of its
-  own: the spillway, the freeway gap, the dry dock, a dirt gap, the reservoir
-  and a university set.
+  Land it and the beam turns green. Porto Alto has 109, spread over every
+  district.
 - **Hard challenges:** every spot also has a hard one, marked by a red beam
   and ★★. They are particular about it:
-  - **Downtown:**
+  - **In the Financial Core:**
     - kickflip the garage gap;
     - 360 flip the plaza gap;
     - crooked (or overcrook) a courthouse handrail;
@@ -340,13 +339,7 @@ either camera with a short shake (*Landing shake*).
     - varial kickflip a Hill Park flight;
     - flip the construction trench;
     - a 15,000-point line that starts anywhere downtown.
-  - **Port City adds:**
-    - kickflip the spillway;
-    - heelflip the freeway gap;
-    - 360 flip into the dry dock;
-    - the long dirt gap;
-    - 60 km/h in the reservoir;
-    - grind a university handrail.
+  - and every other district has its own.
 
   A Fakie or Nollie version of the named trick counts.
 - **Spot bests:** every combo that starts inside a spot counts toward that
@@ -360,17 +353,15 @@ either camera with a short shake (*Landing shake*).
 
 ## The skate shop
 
-Every map has a skate shop, and Downtown has three:
-- **Downtown:**
-  - **Corner Skate Shop:** the corner store by the construction site, with a
-    three-stair out front.
-  - **Library Lane Skates:** up on the library deck, at its west end.
-  - **Bank Street Boards:** in the bank building, opening on to the south end
-    of the Bank Plaza deck.
-- **Port City:** the same three, in its downtown.
-- **Beach Park:** a shopfront on the boardwalk.
+Porto Alto has 17 skate shops, two or three per district (they're listed
+under **Porto Alto** below). The Financial Core's three are:
+- **Corner Skate Shop:** the corner store by the construction site, with a
+  three-stair out front. This is where you start.
+- **Library Lane Skates:** up on the library deck, at its west end.
+- **Bank Street Boards:** in the bank building, opening on to the south end
+  of the Bank Plaza deck.
 
-You start every map (and come back after a reset) facing a skate shop, a few
+You start (and come back after a reset) facing a skate shop, a few
 metres out from its door. Look for the lit SKATE SHOP sign and the striped awning. Stop on the glowing
 mat at the door, then tap **Enter skate shop** (or press **E**). A sheet opens
 over a slow turntable view of your skater, where you can change:
@@ -388,96 +379,6 @@ over a slow turntable view of your skater, where you can change:
 
 **Random** deals a random look and **Reset** goes back to the default. Your
 look is kept in this browser.
-
-## Other skaters
-
-Other skaters ride around the maps, each with a random look:
-- **Downtown (and Port City's):** two cruise the streets in opposite
-  directions. They ollie the cones and potholes in their way and throw flips,
-  shuvits and manuals. Two more session spots: one keeps grinding a Central
-  Plaza ledge and the other the courthouse flat bar. They pick a different
-  grind each pass and sometimes flip out of it.
-- **Beach Park:** two carve the bowls high on the walls, and one sessions the
-  flat bar in the street plaza.
-
-Run into one faster than about 2.5 m/s (counting both of your speeds) and you
-both slam. Slower than that and you just bump apart. They follow set lines
-rather than the full physics.
-
-## Port City's buildings
-
-Port City's spots come from its buildings: entrances, terraces, ramps and
-railings that a real city would have, which you happen to be able to skate.
-- **West Boulevard,** between the suburbs and the boulevard:
-  - **Harbor Tower:** a glass office on a granite entry plaza 2 m up. It has
-    a wide stair with three handrails. To the north, a row of planters runs
-    along the plaza edge with a bank below, so you can ollie the planters into
-    the bank. To the south, a seat wall stands above the drop.
-  - **Corner Café:** tables and umbrellas on a patio inside a low wall, with
-    two steps and a rail down to the street.
-  - **The Metro entrance:** a stairwell 3.6 m down to the station doors, with
-    three rails and a granite guard wall on each side.
-  - **City Museum:** a colonnade on a podium, with five wide steps and three
-    rails along the front. A 1-in-12 accessibility ramp runs down the north
-    side with a handrail on each side, and a lawn bank slopes down the south
-    side.
-  - **The garage:** two levels of parking. Its ramp climbs the boulevard side
-    with a long handrail down its outer edge, and there are cars on the roof.
-- **Stadium Gates:** ticket booths and rows of queue railings in front of the
-  steps. There's a long Hall of Champions seat wall, and bollards across the
-  plaza.
-- **The Riverview Hotel (Waterfront):** a drive runs up onto the entry deck
-  under the canopy and back down. Planters line the deck's front edge, so you
-  can ollie them off the drop, and steps with rails come down the middle.
-- **Port Authority (Port):** a concrete office on a raised terrace, with a long
-  three-stair and three rails. There are block benches, and a bank runs off
-  the east end.
-- **Fish Market (on the quay):** an open shed with steel tables and crates. A
-  loading platform runs along the back, with a ramp at one end and steps and
-  a rail at the other.
-
-Along the streets you'll find what a city puts there: a bin and newspaper boxes
-at the corners, hydrants by the curb, and bus stops near the end of some blocks.
-
-## Port City's monuments
-
-Public art you can ollie over. Each sculpture stands on a plinth in a small
-plaza below the end of a raised terrace, with benches facing it and its name
-on the plinth. Push up the promenade ramp (it has a handrail on each side, and
-steps come down off the terrace's side), get your speed back along the
-terrace, pop off the end over the statue, and land on the bank beyond. Each one has a
-gap challenge and a hard one with a named trick, and appears in the jump
-list.
-- **The Night Owl (University):** the college's bronze owl, on the campus
-  quad. Hard: Kickflip.
-- **The Anchor (Waterfront):** a ship's anchor stood on end. Hard: Heelflip.
-- **The Propeller (Port):** a three-bladed bronze propeller. Hard: 360 Flip.
-- **The Big Ball (Stadium):** a giant ball on its tee. Hard: Pop Shuvit.
-- **The Big Gear (Industrial):** a rusted cog. Hard: Varial Kickflip.
-- **The Giant Doughnut (Hill Park):** iced and sprinkled, at the top of the
-  hills. Hard: Hardflip.
-- **The Pipe Bridge (Dam):** a water main crossing the spillway about a metre
-  off the slope. Bomb the spillway and flip over it, or grind across it.
-  Hard: a 360 Flip over it at full speed.
-
-You need about full push speed to clear a sculpture. Roll off a deck without
-popping and you hit the statue.
-
-## Traffic and people (Downtown and Port City)
-
-The downtown streets are busy, on both the Downtown level and in Port City's
-downtown:
-- **Cars:** they drive both ways round the downtown ring and the boulevard
-  ring, keeping right. They slow for corners and stop behind whatever is in
-  front of them, including you if they see you in time, and they honk if you
-  stand in the road. Step out right in front of a moving car and it hits you.
-  Skate into a stopped car hard and you slam; slowly and you just stop
-  against it.
-- **People on foot:** they walk round the middle block, round the outside of
-  the downtown ring (over the crosswalks) and along the boulevard sidewalks.
-  They keep right, step round benches, dumpsters and you, and wait at the kerb
-  for a car that's coming. Skate into someone faster than about 3 m/s and you
-  both go down. On foot you just bump.
 
 ## The skater
 
@@ -514,43 +415,155 @@ Everything is synthesized, so there are no samples.
 - **Background:** the city hums in the distance, with cars passing a block
   away and birds. The beach has waves and gulls instead.
 
-## Levels
+## Porto Alto
 
-Pick a level on the intro screen, or in the **Level** section of the tuning
-panel. Switching reloads the page into that level and remembers it. A link
-with `?level=park`, `?level=city` or `?level=mega` opens one directly.
+The game is one connected city, **Porto Alto**, about 2 km on a side. It
+drops from a hilltop ridge 96 m up down to a harbour at sea level, so most
+ways across it are downhill. Eight districts join at 15 gates (a road, stair
+or path that crosses the border), and there's more than one way down from
+each tier.
 
-### Beach Park
+```
+north   ┌──────────────────── The Heights (ridge, y 60–96) ───────────────────┐
+        │ The         ├── Financial Core (y 44–52) ──┬── University (y 44–56) ──┤
+        │ Arroyo      ├── Old Town (44 → 8) ─────────┴── Eastside Hills ────────┤
+        │ (the ditch) │                                  (44 → 8)               │
+        ├──── Boardwalk West (y 2–6) ──────────┬──── Shipyard East (y 2–6) ─────┤
+south   └──────────────────────────── the sea ─────────────────────────────────┘
+        west                                                               east
+```
 
-Laid out after **Venice Beach Skatepark** in Los Angeles: a concrete pad on
-the sand beside the boardwalk. About a third of it is transition and the rest
-is an L-shaped street plaza. The layout follows public descriptions of the
-real park, which is about 16,000–17,000 sq ft. The exact shapes and sizes are
-approximations, not survey data.
+### Getting around
 
-- **Clover bowl**: a deep end about 2.75 m (9 ft) deep with two 1.8 m (6 ft)
-  pockets. Hips where the lobes meet, blue tile, and steel coping.
-- **Flow bowl**: shallower, two lobes and a rounded extension.
-- **Snake run**: starts in a 0.9 m (3 ft) square basin, winds and deepens, and
-  ends in a 2.1 m (7 ft) kidney bowl.
-- **Street plaza**:
-  - a platform in the corner with a bank down one side, and a hubba and stairs
-    with a rail down the other;
-  - ledges, a manual pad, a flat rail and a funbox with banks;
-  - a curved "clamshell" quarter pipe in the far corner.
-- **Surroundings**: seat walls along the edges, palms, the boardwalk and the
-  ocean. **The sand slows you right down.**
+- **Map:** the **Map** button on the touch bar (or in the tuning panel) opens
+  a top-down map. Drag to pan, and pinch or use the mouse wheel to zoom. It
+  shows the districts, the lines (hill bombs in red, main lines bolder), the
+  parks (green), the spots (yellow), the shops (orange squares) and you, as
+  an arrow. Tap something, then **Go** to travel there. Escape closes it.
+- **Travel list:** the **Getting around** section of the tuning panel lists
+  the 8 districts, then the 5 parks, then the 17 shops, each with a button.
+- **Spawn:** you start, and come back after a reset, outside the Corner Skate
+  Shop in the Financial Core.
 
-Rolling over the coping drops you into a bowl rather than grabbing it as a
-grind. Coping grinds need a pop or some air first.
+### The districts
 
-### Downtown
+- **The Heights** (the ridge along the north edge): switchbacks, homes on
+  the crest and the radio tower. Five bombs start up here: the Yellow Line,
+  Reservoir Run, Stargazer, Three Crests and the Ridge Traverse.
+  - Spots: Culvert Head, Ridgeline Lookout, Switchback Top, Observatory
+    Terrace, Ridge Road Descent.
+  - Park: **The Water Tank**, a hidden park in a drained reservoir.
+- **The Arroyo** (the west side, top to bottom): a concrete drainage ditch
+  8–15 m below its banks, with a freight yard and a foundry beside it. The
+  Full Run bombs the whole ditch from the culvert to the sea.
+  - Spots: Pipe Crossing, Seco Yard, Freight Platform, Seco Foundry, Water
+    Board Plaza, Planter Run, Gas Ring, Footbridge Walk.
+  - Park: **DIY Underpass**, under the highway bridge.
+- **Financial Core** (the middle tier): the old Downtown, reworked. Its
+  blocks, lines and hazards are described in detail below.
+  - Spots: City Hall (the 12-set), the Golden Nautilus plaza, Planter Alley,
+    Alto Arena, Central Plaza.
+- **University** (east of the Financial Core): a campus on a terrace with big
+  sets and balustrades.
+  - Spots: Great Steps, Ridge Climb, The Balustrades.
+  - Park: **Bike Shed DIY**.
+- **Old Town** (below the Financial Core): alleys, curbs, gap hops and steep
+  stair streets, down to the sea gate.
+  - Spots: Santa Brisa, Tile Works, Mercado Velho, Pool Row, Porta do Mar.
+- **Eastside Hills** (below University): hillside streets with backyard
+  pools, and the Hill Bomb straight down to the shipyard.
+  - Spots: Hill Bomb, Crosstown Bridge, Bayview Center, Moonrise Drive-In.
+  - Park: **Hillside Park**, a municipal street course.
+- **Boardwalk West** (the west harbour): piers, the ferry terminal, the Sea
+  Wheel and a slappy-curb strip.
+  - Spots: Ferry Pier, Sea Wheel, Spillway Outlet, Eel Run, Long Pier,
+    Ferry Terminal.
+  - Parks: **Harbour Bowl Complex** (the main public park, with bowls and a
+    street course) and **The Drydock** (a hidden park in an old boat-repair
+    dock, below sea level).
+- **Shipyard East** (the east harbour): containers, cranes, loading docks and
+  The Corvina, a beached ship.
+  - Spots: Loading Bay Row, Skyway Stub, The Corvina.
 
-A dense 240 m square of city with no dead space. It has nine blocks on two
-avenues and two streets, and every block is a spot. The spots are laid out
-as lines that cross the street from one block into the next, with curb ramps
-where each line meets a curb. You start outside the Corner Skate Shop. To jump to
-any spot, use the buttons under **Level** in the tuning panel.
+The radio tower, the Golden Nautilus and the cranes are landmarks: they show
+from anywhere, through the fog, so you can always tell which way is downhill.
+The sea and the Arroyo's canal are water. Fall in and you bail and come back
+on the last safe ground.
+
+### Lines and gates
+
+Every district has named lines (178 in all, 47 of them main lines). A line
+has something skateable within 10 m at least every 30 m on push streets and
+every 80 m on bombs, so there are no dead stretches.
+
+The gates are:
+- **Down from the Heights:** Switchback Road and Observatory Steps (to the
+  Financial Core), the Drainage Culvert (to the Arroyo) and Ridge Road (to
+  University).
+- **Across the middle:** University Avenue (Financial Core to University) and
+  Planter Alley (Financial Core to the Arroyo).
+- **Down to the lower slopes:** the Grand Boulevard (Financial Core to Old
+  Town) and Campus Drive (University to Eastside).
+- **Across the lower slopes:** Crosstown Street (Old Town to Eastside) and the
+  Arroyo Footbridge (Old Town to the Arroyo).
+- **Down to the harbour:** the Spillway Outlet (Arroyo to Boardwalk West), the
+  Old Town Steep (Old Town to Boardwalk West) and the Eastside Hill Bomb
+  (Eastside to Shipyard East).
+- **Along the harbour:** Harbour Road and The Boardwalk (Boardwalk West to
+  Shipyard East).
+
+The three long rides from the top to the sea:
+- **West:** Ridgeline Lookout, the Yellow Line, the Switchback, through the
+  Financial Core, down the Grand Boulevard, through Old Town, down the Steep
+  and along the Boardwalk. About 2.8 km and four and a half minutes.
+- **The ditch:** the Culvert, the whole Arroyo and out of the Spillway
+  Outlet onto the Boardwalk. About 1.8 km.
+- **East:** Ridge Road, through University, down Campus Drive, the Eastside
+  Hill Bomb and into the Shipyard. About 1.5 km.
+
+All three ride without a bail, topping out around 75 km/h.
+
+### Challenges, tapes and shops
+
+Porto Alto has 109 challenges (34 of them hard) and 58 tapes. The 17 shops
+are:
+- **The Heights:** Thin Air Skate Supply, Low Gear Boards.
+- **The Arroyo:** Railyard Boardworks, Dry Creek Skate Supply.
+- **Financial Core:** Corner Skate Shop, Library Lane Skates, Bank Street
+  Boards.
+- **University:** Mortarboard Skates, Bluebook Boards.
+- **Old Town:** Tile & Truck, Steep Street Skates.
+- **Eastside Hills:** Crest Corner Skates, Gravity Skate Supply.
+- **Boardwalk West:** Chandlery Skate Supply, Saltwater Skates.
+- **Shipyard East:** Slipway Skates, Deckhand Skate Supply.
+
+### Traffic and people
+
+- **Cars** drive the district streets, keeping right. They slow for corners
+  and stop behind whatever is in front of them, including you if they see
+  you in time, and they honk if you stand in the road. Step out right in
+  front of a moving car and it hits you. Skate into a stopped car hard and
+  you slam; slowly and you just stop against it.
+- **People on foot** (138 of them) walk the sidewalks. They keep right, step
+  round benches, dumpsters and you, and wait at the kerb for a car that's
+  coming. Skate into someone faster than about 3 m/s and you both go down. On
+  foot you just bump.
+- **Other skaters** (20) ride the named lines and session spots, each with a
+  random look. They ollie the cones and potholes in their way and throw
+  flips, shuvits, manuals and grinds. Run into one faster than about 2.5 m/s
+  (counting both of your speeds) and you both slam. They follow set lines
+  rather than the full physics.
+- To keep a phone running, people more than about 38 m away are drawn as
+  simple stand-ins in their own colours, and anyone far enough away isn't
+  simulated at all.
+
+### The Financial Core in detail (the old Downtown)
+
+The heart of the Financial Core is a dense 240 m square of city with no dead
+space. It has nine blocks on two avenues and two streets, and every block is
+a spot. The spots are laid out as lines that cross the street from one block
+into the next, with curb ramps where each line meets a curb. You start
+outside its Corner Skate Shop.
 
 **The lines**
 - **North to south:** push up the garage ramp and ollie the gap to the first
@@ -616,82 +629,44 @@ any spot, use the buttons under **Level** in the tuning panel.
   "Pothole Ollie". Each counts once per jump.
 - Both speeds are on sliders.
 
-### Port City
-
-A whole city, about 880 m on a side, around twenty times the size of
-Downtown. It has nine districts. To jump between them, open the tuning
-panel: under **Level** there is a button for each district.
-
-- **Downtown:** the same dense downtown as the Downtown level, with its
-  lines, challenges and tapes.
-- **Residential Hills (north-west):** a 28 m hill.
-  - The avenues bomb straight down it and flatten at each cross street.
-  - Houses have stoops with little sets and rails, and driveway kickers.
-  - Public stairways climb the middle of each block, flight after flight.
-  - Railed stairways run down the east face to the boulevard.
-  - The overlook park is on top.
-- **Stadium (north):** a concourse 6 m up all the way round.
-  - Long ramps run down the sides, each with a landing at the top.
-  - A two-flight set with a centre rail is in the middle of each long side.
-  - A 20-stair with rails and a hubba is at each end.
-  - The car parks below have curb islands, cart rails and speed bumps.
-  - A park with dirt humps and a drained pond is to the north.
-- **University (north-east):** a campus 6 m above the street.
-  - Three-flight sets with double rails and hubbas come down the south edge,
-    each with a big bank beside it.
-  - More sets come down the west edge.
-  - Inside are quads lined with ledges, the library set, an amphitheatre and a
-    sculpture bank.
-- **Suburbs (west):** streets of houses.
-  - Some backyards have a drained pool behind a fence with a gap in it.
-  - The school yard is sunk below the street, with banks in.
-  - The strip mall has a walkway ramp, a rail and a car park.
-- **Industrial (east):**
-  - warehouses with loading docks;
-  - a 240 m concrete V-ditch with plywood kickers at the bottom;
-  - pipe racks to grind and a rail spur;
-  - gravel humps and pallets.
-- **The Dam (south-west):** reservoir heights 24 m up.
-  - The drained reservoir is one huge bowl.
-  - The spillway is a 24 m concrete drop that ends in a flip-bucket lip
-    launching you into the river channel. It is the biggest air in the game.
-  - Across the river are three dirt-jump lines, each with a start hill to roll
-    in from. The gaps get longer line by line.
-- **Waterfront (south):**
-  - the river promenade with a long rail;
-  - stairs down into the 6 m concrete river channel;
-  - tiers of seating;
-  - a road bridge and a railed footbridge;
-  - plazas and a fountain bowl.
-- **Port (south-east):**
-  - A container yard with a plate leant up as a ramp.
-  - An unfinished freeway on-ramp. Push up it and it ends in mid-air 13 m up,
-    with a gravel pile tipped against the end to land on.
-  - Across the river is the dry dock, an 80 × 44 m basin 9 m deep to drop
-    into.
+### The test block
 
 The old practice block still loads with `?level=block`. The automated tests
 use it.
 
+### Building and checking the city
+
+The level code lives in `levels/`: `kit.js` (the shared building kit),
+`dt.js` (the Financial Core's downtown blocks) and `porto/` (the base map in
+`porto/base.js`, and one folder per district). `porto/CONTRACT.md` has the
+rules each district follows: its rectangle, gates, budgets and the rhythm
+rule. The game page carries a built copy, so after changing a level file:
+
+```sh
+node tools/build.mjs                                   # splice levels/ into index.html
+node tools/check.mjs --html $PWD/index.html --rhythm   # load errors, budgets, gates, dead stretches
+node tools/rides.mjs --html $PWD/index.html --routes tools/porto_routes.json   # ride every gate and long route
+```
+
+`check.mjs` and `rides.mjs` need Playwright and an absolute path to the page.
+
 ## Things to try
 
 1. Push to full speed and carve S-turns. Does turning feel weighty or twitchy?
-   Then drop into the clover bowl (Beach Park), or the DIY quarterpipe (Downtown).
-   (*Turn rate*, *Grip*, *Speed kept when carving*)
-2. Kickflip the Big Four or heelflip the courthouse eight (Downtown), then
-   press X to watch it back.
+   Then drop into the Harbour Bowl Complex or the DIY quarterpipe in the
+   Financial Core. (*Turn rate*, *Grip*, *Speed kept when carving*)
+2. Kickflip the Big Four or heelflip the courthouse eight (Financial Core),
+   then press X to watch it back.
 3. Ollie onto a handrail or a hubba from the top of the stairs, holding a
    direction on the trick stick to pick the grind. Pop about two to four
    metres before the top of the rail.
-4. Bomb the Hill Park knoll, cross the street and bank up onto the bank
-   plaza. Ollie the potholes and cones on the way.
-5. Take the rooftop line: garage gap, roof gap, roll in, across, and off the
-   Big Four gap.
-6. Set a spot at the top of a line, then use Return to retry it.
-7. Pull back to powerslide before the buildings.
-8. In Port City, drop the dam spillway, push up the unfinished freeway and
-   send it off the end, or roll in from the start hill and try the longest
-   dirt-jump line.
+4. Open the Map, travel to Ridgeline Lookout and ride the West route all the
+   way to the Boardwalk without bailing.
+5. Bomb the Eastside Hill Bomb into the Shipyard. Pull back to powerslide
+   before the bottom.
+6. Take the Full Run down the Arroyo and out of the Spillway Outlet.
+7. Find the hidden parks: the Water Tank, the DIY Underpass and the Drydock.
+8. Set a spot at the top of a line, then use Return to retry it.
 
 ## Sharing a setup
 
