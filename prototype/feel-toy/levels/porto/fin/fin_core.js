@@ -189,8 +189,8 @@ function fin_core_filler(K, P, PL) {
 function fin_core_life(K, P, PL) {
   // Boulevard traffic and peds
   P.traffic({ path: [[-40, 140], [-40, 212]], lane: 6.5, dir: 1, n: 3, speed: 11, r: 4 });
-  P.peds({ path: [[-52.5, 142], [-52.5, 212]], n: 1 });
-  P.peds({ path: [[-27.5, 142], [-27.5, 212]], n: 1 });
+  P.peds({ path: [[-52.5, 142], [-52.5, 212]], n: 3 });
+  P.peds({ path: [[-27.5, 142], [-27.5, 212]], n: 3 });
   // a skater sessioning the second median ledge
   P.npc({ kind: 'session', rail: [-40, 166, -40, 176], start: 160, end: 180, back: 3.4, side: 1, speed: 5.4 });
 }

@@ -277,6 +277,17 @@ Per district, measured with `--only <id>`:
 | fine ground (`P.region` at res ≤ 2) | 60,000 m² in total |
 | load time added | 1.5 s |
 
+People don't count against the triangle budget any more. A ped or NPC skater is a ~100-triangle block
+stand-in past 38 m from the camera, and the full figure is only built when someone first comes near
+(two a frame) and freed again past 200 m (`personLod` in `index.html`). The check's scene count
+therefore holds the stand-ins, not full figures. A district can run 15–25 peds; they cost walking
+time on the CPU (each one inside `simDist` steps every frame), not triangles.
+
+The whole map, measured on the full build (C3): 4.1 s load in the check, about 1.9M scene triangles,
+and 400–960 draw calls at the busiest spots (City Hall is the worst). Plain-coloured scenery that
+differs only in colour is merged into one vertex-coloured material per patch, challenge beams past
+300 m and tapes past 140 m are hidden, and the map is drawn out to 480 m (fog 160–460).
+
 Big cheap wins: far buildings as `D.building` boxes, not `K.building`; reuse geometries in `D.add`;
 fewer, longer boxes rather than many short ones; trees and lamps in moderation (each is a solid post).
 

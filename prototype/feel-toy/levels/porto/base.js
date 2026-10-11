@@ -179,7 +179,7 @@ function levelPorto() {
     districts: travel, spots, lines, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
     landmarks, water, seaZ: PORTO.seaZ,
     spawn: travel[0], bounds: [BX0 + 5, BX1 - 5, BZ0 + 5, BZ1 - 5],
-    fog: [170, 520], far: 2800, cullDist: 540, simDist: 280, sky: 0xa9c8de,
+    fog: [160, 460], far: 2800, cullDist: 480, simDist: 280, sky: 0xa9c8de,
     decor(D) { for (const f of K.decorFns) f(D); },
   };
 }

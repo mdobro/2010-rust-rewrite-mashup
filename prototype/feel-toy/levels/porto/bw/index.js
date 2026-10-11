@@ -47,14 +47,14 @@ function bw_index_lines(P, PL) {
   P.line('Ferry Rush', [[-200, 1020], [-120, 1020], [-120, 1033], [-120, 1044], [-62, 1044], [-54, 1050], [-54, 1068], [-54, 1136], [-61.2, 1150], [-61.2, 1168], [-56, 1180], [-56, 1222]], 'push', true);
   P.line('Dry Run', [[-912, 1010], [-912, 1056], [-911, 1100], [-911, 1160]], 'push', true);
 }
-/* traffic, peds and skaters. Each ped is about 22k triangles and each skater about 31k (cars under 1k), so the doc's 30 peds and
-   5 skaters are cut to 2 peds and 1 skater (the parts may add more if they have budget) to stay inside the 450k triangle budget. */
+/* traffic, peds and skaters. Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function bw_index_life(P, PL) {
   const loop = [[-790, 930], [-40, 930], [-40, 1020], [-790, 1020]];
   P.traffic({ path: loop, lane: 2.6, dir: 1, n: 4, speed: 9, r: 8 });
   P.traffic({ path: loop, lane: 2.6, dir: -1, n: 4, speed: 9, r: 8 });
-  P.peds({ path: [[-780, 1148], [-20, 1148], [-20, 1158], [-780, 1158]], n: 1 });
-  P.peds({ path: [[-960, 1015], [-20, 1015], [-20, 1025], [-960, 1025]], n: 1 });
+  P.peds({ path: [[-780, 1148], [-20, 1148], [-20, 1158], [-780, 1158]], n: 3 });
+  P.peds({ path: [[-960, 1015], [-20, 1015], [-20, 1025], [-960, 1025]], n: 3 });
   P.npc({ kind: 'session', rail: [-616, 962, -596, 962], start: -626, end: -586, back: 3.4, side: 1, speed: 5 });
 }
 function bw_index_challenges(P, PL) {

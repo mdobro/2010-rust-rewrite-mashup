@@ -55,20 +55,20 @@ function ship_index_lines(P) {
   P.line('Fish Quay', [[8, 1024], [30, 1072], [90, 1072], [100, 1022], [140, 1022], [140, 985], [165, 1022], [165, 1040], [240, 1020], [250, 1100], [240, 1120], [110, 1122], [110, 1133], [198, 1133], [198, 1150], [100, 1150], [20, 1150]], 'push', true);
   P.line('Reefer Run', [[800, 1020], [906, 1020], [906, 1110], [900, 1120], [790, 1120], [720, 1135], [699, 1147], [699, 1173]], 'push', true);
 }
-/* traffic, peds and skaters (section 10). Each ped is about 22k triangles and each skater about 31k, so the doc's 22 peds
-   and 4 skaters are cut to 7 peds and 3 skaters to stay inside the 450k triangle budget. Traffic never crosses x 593..607. */
+/* traffic, peds and skaters (section 10). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. Traffic never crosses x 593..607. */
 function ship_index_life(P) {
   P.traffic({ path: [[250, 1020], [440, 1020], [440, 1120], [250, 1120]], lane: 3, dir: 1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[250, 1020], [440, 1020], [440, 1120], [250, 1120]], lane: 3, dir: -1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[618, 1020], [936, 1020], [936, 1120], [618, 1120]], lane: 3, dir: 1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[618, 1020], [936, 1020], [936, 1120], [618, 1120]], lane: 3, dir: -1, n: 2, speed: 7, r: 6 });
-  P.peds({ path: [[110, 1142], [196, 1142], [196, 1164], [110, 1164]], n: 2 });
-  P.peds({ path: [[100, 1012], [240, 1012], [240, 1028], [100, 1028]], n: 1 });
-  P.peds({ path: [[620, 1139], [940, 1139], [940, 1142], [620, 1142]], n: 2 });
+  P.peds({ path: [[110, 1142], [196, 1142], [196, 1164], [110, 1164]], n: 6 });
+  P.peds({ path: [[100, 1012], [240, 1012], [240, 1028], [100, 1028]], n: 3 });
+  P.peds({ path: [[620, 1139], [940, 1139], [940, 1142], [620, 1142]], n: 6 });
   P.npc({ kind: 'loop', path: [[30, 932], [580, 932], [580, 936], [30, 936]], speed: 6 });
   P.npc({ kind: 'session', rail: [446, 942, 446, 960], start: 934, end: 966, back: 3, side: -1, speed: 5.4 });
   // designer review: the parts came in at about 262k triangles added, so two of the cut ones are back (about 75k):
   // the Port Authority forecourt (2 peds) and the Net Rack session
-  P.peds({ path: [[108, 1002], [172, 1002], [172, 1008], [108, 1008]], n: 2 });
+  P.peds({ path: [[108, 1002], [172, 1002], [172, 1008], [108, 1008]], n: 6 });
   P.npc({ kind: 'session', rail: [34, 1068, 54, 1068], start: 28, end: 60, back: 3, side: 1, speed: 5 });
 }

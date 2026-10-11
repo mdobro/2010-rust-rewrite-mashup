@@ -63,14 +63,14 @@ function uni_index_lines(P) {
   // L5 The Science Run
   P.line('The Science Run', [[650, -124], [664, -110], [664, -68], [690, -64], [704, -40], [704, 48], [705, 100], [705, 192], [720, 200], [940, 200], [940, 176]], 'push', true);
 }
-/* traffic, peds and skaters (section 10). Each ped is ~22k triangles and each skater ~31k, so the doc's counts are trimmed */
+/* traffic, peds and skaters (section 10). Peds are block stand-ins past 38 m and only built in full up close (see personLod), so they cost little; the counts here are about three times what the triangle budget first allowed. */
 function uni_index_life(P) {
   P.traffic({ path: [[650, 0], [650, 200], [396, 200], [396, 0]], lane: 3.2, dir: 1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[650, 0], [650, 200], [396, 200], [396, 0]], lane: 3.2, dir: -1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[650, -210], [650, -10]], lane: 2.4, dir: 1, n: 2, speed: 10, r: 8 });
-  P.peds({ path: [[726, -80], [894, -80], [894, 12], [726, 12]], n: 2 });
-  P.peds({ path: [[387, -200], [405, -200], [405, 190], [387, 190]], n: 2 });
-  P.peds({ path: [[516, 44], [620, 44], [620, 100], [516, 100]], n: 1 });
+  P.peds({ path: [[726, -80], [894, -80], [894, 12], [726, 12]], n: 6 });
+  P.peds({ path: [[387, -200], [405, -200], [405, 190], [387, 190]], n: 6 });
+  P.peds({ path: [[516, 44], [620, 44], [620, 100], [516, 100]], n: 3 });
   P.npc({ kind: 'session', rail: [730, -93.7, 770, -93.7], start: 724, end: 776, back: 3.4, side: 1, speed: 5.4 });
   P.npc({ kind: 'session', rail: [524, 60.3, 548, 60.3], start: 518, end: 554, back: 3.4, side: 1, speed: 5 });
   P.npc({ kind: 'loop', path: [[732, -78], [888, -78], [888, 10], [732, 10]], speed: 6 });

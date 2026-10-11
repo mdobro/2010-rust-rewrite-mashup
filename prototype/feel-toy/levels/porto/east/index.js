@@ -9,16 +9,16 @@ function porto_east(K, P) {
   east_index_lines(P);
   P.travel('Eastside Hills', 610, -3.75, 318, Math.PI, 'district');
 }
-/* traffic, peds and skaters (section 10). Each ped is about 22k triangles and each skater about 31k (cars under 1k),
-   so the doc's 22 peds and 4 skaters (~620k) are cut to 5 peds and 2 skaters to stay inside the 450k budget. */
+/* traffic, peds and skaters (section 10). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function east_index_life(P) {
   P.traffic({ path: [[340, 560], [900, 560]], lane: 3.2, dir: 1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[340, 560], [900, 560]], lane: 3.2, dir: -1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[410, 290], [410, 830]], lane: 2.6, dir: 1, n: 2, speed: 9, r: 8 });
   P.traffic({ path: [[820, 290], [820, 830]], lane: 2.6, dir: -1, n: 2, speed: 9, r: 8 });
-  P.peds({ path: [[692, 764], [800, 764]], n: 2 });
-  P.peds({ path: [[420, 550], [880, 550], [880, 570], [420, 570]], n: 2 });
-  P.peds({ path: [[430, 590], [484, 590], [484, 612], [430, 612]], n: 1 });
+  P.peds({ path: [[692, 764], [800, 764]], n: 6 });
+  P.peds({ path: [[420, 550], [880, 550], [880, 570], [420, 570]], n: 6 });
+  P.peds({ path: [[430, 590], [484, 590], [484, 612], [430, 612]], n: 3 });
   P.npc({ kind: 'session', rail: [912, 456.3, 940, 456.3], start: 906, end: 946, back: 3.4, side: 1, speed: 5 });
   P.npc({ kind: 'session', rail: [700, 766, 740, 766], start: 694, end: 746, back: 3.4, side: 1, speed: 5 });
 }

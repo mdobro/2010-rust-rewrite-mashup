@@ -56,16 +56,16 @@ function old_index_trim(K, O, b0, r0) {
   K.rails.length = r0; K.rails.push(...keep);
 }
 
-/* traffic, peds and skaters (design 10.3). Each ped is about 22k triangles and each skater about 31k, so the doc's 22 peds
-   and 4 skaters are cut to stay inside the triangle budget. */
+/* traffic, peds and skaters (design 10.3). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function old_index_life(P) {
   P.traffic({ path: [[-40, 236], [-40, 396]], lane: 6.5, dir: 1, n: 2, speed: 9, r: 6 });
   P.traffic({ path: [[-40, 236], [-40, 396]], lane: 6.5, dir: -1, n: 2, speed: 9, r: 6 });
   P.traffic({ path: [[-200, 560], [120, 560], [120, 872], [-200, 872]], lane: 2.5, dir: 1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[-200, 560], [120, 560], [120, 872], [-200, 872]], lane: 2.5, dir: -1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[-320, 560], [-200, 560], [-200, 750], [-320, 750]], lane: 2.5, dir: 1, n: 2, speed: 8, r: 8 });
-  P.peds({ path: [[-215, 410], [-35, 410], [-35, 462], [-215, 462]], n: 1 });          // Fountain Square
-  P.peds({ path: [[-300, 553.5], [200, 553.5], [200, 566.5], [-300, 566.5]], n: 1 });  // Crosstown
+  P.peds({ path: [[-215, 410], [-35, 410], [-35, 462], [-215, 462]], n: 3 });          // Fountain Square
+  P.peds({ path: [[-300, 553.5], [200, 553.5], [200, 566.5], [-300, 566.5]], n: 3 });  // Crosstown
   
   P.npc({ kind: 'session', rail: [-158, 438.3, -142, 438.3], start: -162, end: -138, back: 3.6, side: -1, speed: 5 });   // fountain wall
   P.npc({ kind: 'session', rail: [-183, 763.8, -50, 763.8], start: -150, end: -80, back: 3.4, side: -1, speed: 5.4 });  // Miradouro wall

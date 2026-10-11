@@ -2062,7 +2062,7 @@ function levelPorto() {
     districts: travel, spots, lines, challenges, tapes, shop: K.shops[0] || undefined, shops: K.shops.filter(Boolean), npcs, traffic, peds,
     landmarks, water, seaZ: PORTO.seaZ,
     spawn: travel[0], bounds: [BX0 + 5, BX1 - 5, BZ0 + 5, BZ1 - 5],
-    fog: [170, 520], far: 2800, cullDist: 540, simDist: 280, sky: 0xa9c8de,
+    fog: [160, 460], far: 2800, cullDist: 480, simDist: 280, sky: 0xa9c8de,
     decor(D) { for (const f of K.decorFns) f(D); },
   };
 }
@@ -3221,10 +3221,10 @@ function arroyo_index_lines(P, PL) {
 function arroyo_index_life(P, PL) {
   const E = [[-638, -16], [-470, -16], [-470, 862], [-638, 862]], W = [[-880, 214], [-800, 214], [-800, 862], [-880, 862]];
   for (const path of [E, W]) for (const dir of [1, -1]) P.traffic({ path, lane: 2.5, dir, n: 3, speed: 9, r: 8 });
-  P.peds({ path: [[-656, 220], [-656, 840]], n: 2 });
-  P.peds({ path: [[-440, 520], [-640, 520]], n: 1 });
-  P.peds({ path: [[-600, -130], [-540, -130], [-540, -80], [-600, -80]], n: 1 });
-  P.peds({ path: [[-795, 230], [-795, 500]], n: 1 });
+  P.peds({ path: [[-656, 220], [-656, 840]], n: 6 });
+  P.peds({ path: [[-440, 520], [-640, 520]], n: 3 });
+  P.peds({ path: [[-600, -130], [-540, -130], [-540, -80], [-600, -80]], n: 3 });
+  P.peds({ path: [[-795, 230], [-795, 500]], n: 3 });
   P.npc({ kind: 'session', rail: [-707, 108, -707, 140], start: 98, end: 150, back: 3.4, side: 1, speed: 5 });       // DIY slappy curb
   P.npc({ kind: 'session', rail: [-628, -48, -440, -48], start: -600, end: -540, back: 3.4, side: 1, speed: 5 });    // Planter Run coping
   P.npc({ kind: 'session', rail: [-783, -120, -783, 40], start: -128, end: 48, back: 3.4, side: 1, speed: 5 });      // Freight Platform
@@ -4329,14 +4329,14 @@ function bw_index_lines(P, PL) {
   P.line('Ferry Rush', [[-200, 1020], [-120, 1020], [-120, 1033], [-120, 1044], [-62, 1044], [-54, 1050], [-54, 1068], [-54, 1136], [-61.2, 1150], [-61.2, 1168], [-56, 1180], [-56, 1222]], 'push', true);
   P.line('Dry Run', [[-912, 1010], [-912, 1056], [-911, 1100], [-911, 1160]], 'push', true);
 }
-/* traffic, peds and skaters. Each ped is about 22k triangles and each skater about 31k (cars under 1k), so the doc's 30 peds and
-   5 skaters are cut to 2 peds and 1 skater (the parts may add more if they have budget) to stay inside the 450k triangle budget. */
+/* traffic, peds and skaters. Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function bw_index_life(P, PL) {
   const loop = [[-790, 930], [-40, 930], [-40, 1020], [-790, 1020]];
   P.traffic({ path: loop, lane: 2.6, dir: 1, n: 4, speed: 9, r: 8 });
   P.traffic({ path: loop, lane: 2.6, dir: -1, n: 4, speed: 9, r: 8 });
-  P.peds({ path: [[-780, 1148], [-20, 1148], [-20, 1158], [-780, 1158]], n: 1 });
-  P.peds({ path: [[-960, 1015], [-20, 1015], [-20, 1025], [-960, 1025]], n: 1 });
+  P.peds({ path: [[-780, 1148], [-20, 1148], [-20, 1158], [-780, 1158]], n: 3 });
+  P.peds({ path: [[-960, 1015], [-20, 1015], [-20, 1025], [-960, 1025]], n: 3 });
   P.npc({ kind: 'session', rail: [-616, 962, -596, 962], start: -626, end: -586, back: 3.4, side: 1, speed: 5 });
 }
 function bw_index_challenges(P, PL) {
@@ -5403,16 +5403,16 @@ function porto_east(K, P) {
   east_index_lines(P);
   P.travel('Eastside Hills', 610, -3.75, 318, Math.PI, 'district');
 }
-/* traffic, peds and skaters (section 10). Each ped is about 22k triangles and each skater about 31k (cars under 1k),
-   so the doc's 22 peds and 4 skaters (~620k) are cut to 5 peds and 2 skaters to stay inside the 450k budget. */
+/* traffic, peds and skaters (section 10). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function east_index_life(P) {
   P.traffic({ path: [[340, 560], [900, 560]], lane: 3.2, dir: 1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[340, 560], [900, 560]], lane: 3.2, dir: -1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[410, 290], [410, 830]], lane: 2.6, dir: 1, n: 2, speed: 9, r: 8 });
   P.traffic({ path: [[820, 290], [820, 830]], lane: 2.6, dir: -1, n: 2, speed: 9, r: 8 });
-  P.peds({ path: [[692, 764], [800, 764]], n: 2 });
-  P.peds({ path: [[420, 550], [880, 550], [880, 570], [420, 570]], n: 2 });
-  P.peds({ path: [[430, 590], [484, 590], [484, 612], [430, 612]], n: 1 });
+  P.peds({ path: [[692, 764], [800, 764]], n: 6 });
+  P.peds({ path: [[420, 550], [880, 550], [880, 570], [420, 570]], n: 6 });
+  P.peds({ path: [[430, 590], [484, 590], [484, 612], [430, 612]], n: 3 });
   P.npc({ kind: 'session', rail: [912, 456.3, 940, 456.3], start: 906, end: 946, back: 3.4, side: 1, speed: 5 });
   P.npc({ kind: 'session', rail: [700, 766, 740, 766], start: 694, end: 746, back: 3.4, side: 1, speed: 5 });
 }
@@ -5725,8 +5725,8 @@ function fin_core_filler(K, P, PL) {
 function fin_core_life(K, P, PL) {
   // Boulevard traffic and peds
   P.traffic({ path: [[-40, 140], [-40, 212]], lane: 6.5, dir: 1, n: 3, speed: 11, r: 4 });
-  P.peds({ path: [[-52.5, 142], [-52.5, 212]], n: 1 });
-  P.peds({ path: [[-27.5, 142], [-27.5, 212]], n: 1 });
+  P.peds({ path: [[-52.5, 142], [-52.5, 212]], n: 3 });
+  P.peds({ path: [[-27.5, 142], [-27.5, 212]], n: 3 });
   // a skater sessioning the second median ledge
   P.npc({ kind: 'session', rail: [-40, 166, -40, 176], start: 160, end: 180, back: 3.4, side: 1, speed: 5.4 });
 }
@@ -5811,7 +5811,7 @@ function fin_east(K, P, PL) {
   fin_padx(K, 240, -30, 252, -22, 0.3);
   P.spot('Metro Steps', 190, 1.5, -32, -Math.PI / 2, [150, -44, 210, -20]);
   P.npc({ kind: 'loop', path: [[205, -17], [295, -17], [295, -72], [238, -72], [238, -40], [205, -40]], speed: 5.8 });
-  P.peds({ path: [[208, -20], [290, -20], [290, -68], [242, -68], [242, -43], [208, -43]], n: 1 });
+  P.peds({ path: [[208, -20], [290, -20], [290, -68], [242, -68], [242, -43], [208, -43]], n: 3 });
 
   /* ---------- 7.7 Metro Central and Metro Avenue ---------- */
   K.prop(146, 7.4, -12.5, 206, 15, 14.5, C.glass);
@@ -5860,7 +5860,7 @@ function fin_east(K, P, PL) {
     K.tree(x, z);
   for (const [x, z] of [[244, 63.4], [236, 98], [262, 140], [270, 196], [310, 120]]) K.bench(x - 1.1, z - 0.3, x + 1.1, z + 0.3);
   for (const [x, z] of [[207, 63.5], [255, 63.5], [272, 100], [209, 120], [255, 200], [330, 120]]) K.lamp(x, z, 1);
-  P.peds({ path: [[198, 63], [274, 63], [274, 97], [198, 97]], n: 1 });
+  P.peds({ path: [[198, 63], [274, 63], [274, 97], [198, 97]], n: 3 });
 
   /* ---------- challenges ---------- */
   const gapFrom = [214, -71, 226, -66, 0.3], gapTo = [213, -61, 227, -50, 0, 1.5];
@@ -5982,7 +5982,7 @@ function fin_north(K, P, PL) {
   K.ledge(9.6, -159, 10.4, -146, 0.55, 'ledge'); K.ledge(69, -159, 69.8, -146, 0.55, 'ledge');
   for (const [x0, x1] of [[16, 22], [58, 64]]) K.bench(x0, -148.3, x1, -147.7);
   K.bench(1.7, -158, 2.3, -154); K.bench(77.7, -158, 78.3, -154);
-  P.peds({ path: [[2, -158], [78, -158], [78, -143], [2, -143]], n: 1 });
+  P.peds({ path: [[2, -158], [78, -158], [78, -143], [2, -143]], n: 3 });
 
   /* ---------- Council Garden (x -86..0, z -165..-140) ---------- */
   K.ledge(-60, -155.4, -30, -154.6, 0.5, 'ledge');
@@ -6355,8 +6355,8 @@ function fin_west_filler(K, P, PL) {
 }
 
 function fin_west_life(K, P, PL) {
-  P.peds({ path: [[-170, -53], [-400, -53]], n: 1 });
-  P.peds({ path: [[-170, -27], [-400, -27]], n: 1 });
+  P.peds({ path: [[-170, -53], [-400, -53]], n: 3 });
+  P.peds({ path: [[-170, -27], [-400, -27]], n: 3 });
   P.npc({ kind: 'session', rail: [-269, -50, -257, -50], start: -276, end: -252, back: 3.4, side: -1, speed: 5.2 });
 }
 
@@ -7642,8 +7642,8 @@ function porto_heights(K, P) {
   heights_index_lines(P, PL);
   P.travel('The Heights', 24, 43.9, -578, Math.PI, 'district');
 }
-/* traffic, peds and skaters (design section 8). Cars are cheap; peds and skaters are not (each is a full rider, ~25k triangles),
-   so the doc's 20 peds and 5 skaters are cut to 5 peds and the 3 session skaters to stay inside the 450k triangle budget. */
+/* traffic, peds and skaters (design section 8). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function heights_index_life(P) {
   const west = [[-76,-596], [-904,-596], [-904,-392], [-112,-392], [-86.5,-402.5], [-76,-428], [-86.5,-453.5], [-112,-464], [-272,-464],
                 [-297.5,-474.5], [-308,-500], [-297.5,-525.5], [-272,-536], [-112,-536], [-86.5,-546.5], [-76,-572]];
@@ -7653,10 +7653,10 @@ function heights_index_life(P) {
   P.traffic({ path: east, lane: 2.5, dir: 1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: east, lane: 2.5, dir: -1, n: 3, speed: 10, r: 8 });
   P.traffic({ path: [[220,-596], [268,-596], [268,-476], [220,-476]], lane: 2.0, dir: 1, n: 2, speed: 8, r: 6 });
-  P.peds({ path: [[-30,-586], [84,-586], [84,-563], [-30,-563]], n: 2 });
-  P.peds({ path: [[234,-280], [298,-280], [298,-252], [234,-252]], n: 1 });
-  P.peds({ path: [[504,-446.5], [952,-446.5], [952,-433.5], [504,-433.5]], n: 1 });
-  P.peds({ path: [[504,-366.5], [952,-366.5], [952,-353.5], [504,-353.5]], n: 1 });
+  P.peds({ path: [[-30,-586], [84,-586], [84,-563], [-30,-563]], n: 6 });
+  P.peds({ path: [[234,-280], [298,-280], [298,-252], [234,-252]], n: 3 });
+  P.peds({ path: [[504,-446.5], [952,-446.5], [952,-433.5], [504,-433.5]], n: 3 });
+  P.peds({ path: [[504,-366.5], [952,-366.5], [952,-353.5], [504,-353.5]], n: 3 });
   P.npc({ kind: 'session', rail: [-20, -560.7, 60, -560.7], start: -34, end: 74, back: 3.4, side: -1, speed: 5 });     // brow ledge, from the plaza (north)
   P.npc({ kind: 'session', rail: [236, -466, 236, -436], start: -474, end: -428, back: 3.4, side: -1, speed: 5 });     // Observatory Ledge, podium-top (east) side
   P.npc({ kind: 'session', rail: [-660, -382.9, -632, -382.9], start: -668, end: -624, back: 3.4, side: -1, speed: 5 }); // Pump Curb, lane (north) side
@@ -8803,16 +8803,16 @@ function old_index_trim(K, O, b0, r0) {
   K.rails.length = r0; K.rails.push(...keep);
 }
 
-/* traffic, peds and skaters (design 10.3). Each ped is about 22k triangles and each skater about 31k, so the doc's 22 peds
-   and 4 skaters are cut to stay inside the triangle budget. */
+/* traffic, peds and skaters (design 10.3). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. */
 function old_index_life(P) {
   P.traffic({ path: [[-40, 236], [-40, 396]], lane: 6.5, dir: 1, n: 2, speed: 9, r: 6 });
   P.traffic({ path: [[-40, 236], [-40, 396]], lane: 6.5, dir: -1, n: 2, speed: 9, r: 6 });
   P.traffic({ path: [[-200, 560], [120, 560], [120, 872], [-200, 872]], lane: 2.5, dir: 1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[-200, 560], [120, 560], [120, 872], [-200, 872]], lane: 2.5, dir: -1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[-320, 560], [-200, 560], [-200, 750], [-320, 750]], lane: 2.5, dir: 1, n: 2, speed: 8, r: 8 });
-  P.peds({ path: [[-215, 410], [-35, 410], [-35, 462], [-215, 462]], n: 1 });          // Fountain Square
-  P.peds({ path: [[-300, 553.5], [200, 553.5], [200, 566.5], [-300, 566.5]], n: 1 });  // Crosstown
+  P.peds({ path: [[-215, 410], [-35, 410], [-35, 462], [-215, 462]], n: 3 });          // Fountain Square
+  P.peds({ path: [[-300, 553.5], [200, 553.5], [200, 566.5], [-300, 566.5]], n: 3 });  // Crosstown
   
   P.npc({ kind: 'session', rail: [-158, 438.3, -142, 438.3], start: -162, end: -138, back: 3.6, side: -1, speed: 5 });   // fountain wall
   P.npc({ kind: 'session', rail: [-183, 763.8, -50, 763.8], start: -150, end: -80, back: 3.4, side: -1, speed: 5.4 });  // Miradouro wall
@@ -9760,21 +9760,21 @@ function ship_index_lines(P) {
   P.line('Fish Quay', [[8, 1024], [30, 1072], [90, 1072], [100, 1022], [140, 1022], [140, 985], [165, 1022], [165, 1040], [240, 1020], [250, 1100], [240, 1120], [110, 1122], [110, 1133], [198, 1133], [198, 1150], [100, 1150], [20, 1150]], 'push', true);
   P.line('Reefer Run', [[800, 1020], [906, 1020], [906, 1110], [900, 1120], [790, 1120], [720, 1135], [699, 1147], [699, 1173]], 'push', true);
 }
-/* traffic, peds and skaters (section 10). Each ped is about 22k triangles and each skater about 31k, so the doc's 22 peds
-   and 4 skaters are cut to 7 peds and 3 skaters to stay inside the 450k triangle budget. Traffic never crosses x 593..607. */
+/* traffic, peds and skaters (section 10). Peds and skaters are block stand-ins past 38 m and only built in full up close (see personLod in index.html),
+   so they cost little; ped counts are about three times what the first triangle budget allowed. Traffic never crosses x 593..607. */
 function ship_index_life(P) {
   P.traffic({ path: [[250, 1020], [440, 1020], [440, 1120], [250, 1120]], lane: 3, dir: 1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[250, 1020], [440, 1020], [440, 1120], [250, 1120]], lane: 3, dir: -1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[618, 1020], [936, 1020], [936, 1120], [618, 1120]], lane: 3, dir: 1, n: 2, speed: 7, r: 6 });
   P.traffic({ path: [[618, 1020], [936, 1020], [936, 1120], [618, 1120]], lane: 3, dir: -1, n: 2, speed: 7, r: 6 });
-  P.peds({ path: [[110, 1142], [196, 1142], [196, 1164], [110, 1164]], n: 2 });
-  P.peds({ path: [[100, 1012], [240, 1012], [240, 1028], [100, 1028]], n: 1 });
-  P.peds({ path: [[620, 1139], [940, 1139], [940, 1142], [620, 1142]], n: 2 });
+  P.peds({ path: [[110, 1142], [196, 1142], [196, 1164], [110, 1164]], n: 6 });
+  P.peds({ path: [[100, 1012], [240, 1012], [240, 1028], [100, 1028]], n: 3 });
+  P.peds({ path: [[620, 1139], [940, 1139], [940, 1142], [620, 1142]], n: 6 });
   P.npc({ kind: 'loop', path: [[30, 932], [580, 932], [580, 936], [30, 936]], speed: 6 });
   P.npc({ kind: 'session', rail: [446, 942, 446, 960], start: 934, end: 966, back: 3, side: -1, speed: 5.4 });
   // designer review: the parts came in at about 262k triangles added, so two of the cut ones are back (about 75k):
   // the Port Authority forecourt (2 peds) and the Net Rack session
-  P.peds({ path: [[108, 1002], [172, 1002], [172, 1008], [108, 1008]], n: 2 });
+  P.peds({ path: [[108, 1002], [172, 1002], [172, 1008], [108, 1008]], n: 6 });
   P.npc({ kind: 'session', rail: [34, 1068, 54, 1068], start: 28, end: 60, back: 3, side: 1, speed: 5 });
 }
 
@@ -10670,14 +10670,14 @@ function uni_index_lines(P) {
   // L5 The Science Run
   P.line('The Science Run', [[650, -124], [664, -110], [664, -68], [690, -64], [704, -40], [704, 48], [705, 100], [705, 192], [720, 200], [940, 200], [940, 176]], 'push', true);
 }
-/* traffic, peds and skaters (section 10). Each ped is ~22k triangles and each skater ~31k, so the doc's counts are trimmed */
+/* traffic, peds and skaters (section 10). Peds are block stand-ins past 38 m and only built in full up close (see personLod), so they cost little; the counts here are about three times what the triangle budget first allowed. */
 function uni_index_life(P) {
   P.traffic({ path: [[650, 0], [650, 200], [396, 200], [396, 0]], lane: 3.2, dir: 1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[650, 0], [650, 200], [396, 200], [396, 0]], lane: 3.2, dir: -1, n: 3, speed: 9, r: 8 });
   P.traffic({ path: [[650, -210], [650, -10]], lane: 2.4, dir: 1, n: 2, speed: 10, r: 8 });
-  P.peds({ path: [[726, -80], [894, -80], [894, 12], [726, 12]], n: 2 });
-  P.peds({ path: [[387, -200], [405, -200], [405, 190], [387, 190]], n: 2 });
-  P.peds({ path: [[516, 44], [620, 44], [620, 100], [516, 100]], n: 1 });
+  P.peds({ path: [[726, -80], [894, -80], [894, 12], [726, 12]], n: 6 });
+  P.peds({ path: [[387, -200], [405, -200], [405, 190], [387, 190]], n: 6 });
+  P.peds({ path: [[516, 44], [620, 44], [620, 100], [516, 100]], n: 3 });
   P.npc({ kind: 'session', rail: [730, -93.7, 770, -93.7], start: 724, end: 776, back: 3.4, side: 1, speed: 5.4 });
   P.npc({ kind: 'session', rail: [524, 60.3, 548, 60.3], start: 518, end: 554, back: 3.4, side: 1, speed: 5 });
   P.npc({ kind: 'loop', path: [[732, -78], [888, -78], [888, 10], [732, 10]], speed: 6 });
@@ -11038,13 +11038,30 @@ function decorAdd(geo, mat, matrix) {
   const a = g.attributes.position.array; const k = Math.floor(a[0] / CHUNK) * 1000 + Math.floor(a[2] / CHUNK);
   if (!decorQ.has(mat)) decorQ.set(mat, new Map()); const m = decorQ.get(mat); if (!m.has(k)) m.set(k, []); m.get(k).push(g);
 }
+// plain-coloured materials that differ only in colour share one vertex-coloured material, so a patch is a
+// handful of draw calls rather than one per paint colour
+const foldMats = new Map(), baseCompile = THREE.Material.prototype.onBeforeCompile;
+function foldOf(mat) {
+  if (mat.map || mat.transparent || mat.vertexColors || mat.normalMap || mat.alphaMap || mat.emissiveMap || (mat.emissive && mat.emissive.getHex()) || mat.onBeforeCompile !== baseCompile
+    || !['MeshStandardMaterial', 'MeshBasicMaterial', 'MeshLambertMaterial'].includes(mat.type)) return null;
+  const key = [mat.type, mat.roughness, mat.metalness, mat.side, mat.flatShading, mat.polygonOffset, mat.polygonOffsetFactor, mat.polygonOffsetUnits, !!mat.userData.noShadow, mat.depthWrite, mat.envMapIntensity].join();
+  if (!foldMats.has(key)) { const f = mat.clone(); f.color.set(0xffffff); f.vertexColors = true; f.userData = { ...mat.userData }; foldMats.set(key, f); }
+  return foldMats.get(key);
+}
 function decorFlush() {
-  for (const [mat, chunks] of decorQ) for (const list of chunks.values()) {
-    let n = 0; for (const g of list) n += g.attributes.position.count;
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), withUV = !!mat.map, uv = withUV ? new Float32Array(n * 2) : null; let o = 0;
-    for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (withUV && g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; }
+  const groups = new Map();
+  for (const [mat, chunks] of decorQ) { const fm = foldOf(mat), to = fm || mat;
+    if (!groups.has(to)) groups.set(to, new Map()); const G = groups.get(to);
+    for (const [k, list] of chunks) { if (!G.has(k)) G.set(k, []); const L = G.get(k); for (const g of list) L.push([g, fm ? mat.color : null]); } }
+  for (const [mat, chunks] of groups) for (const list of chunks.values()) {
+    let n = 0; for (const [g] of list) n += g.attributes.position.count;
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), withUV = !!mat.map, uv = withUV ? new Float32Array(n * 2) : null, col = mat.vertexColors ? new Float32Array(n * 3) : null; let o = 0;
+    for (const [g, c] of list) { const cnt = g.attributes.position.count; pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (withUV && g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+      if (col) for (let i = o; i < o + cnt; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+      o += cnt; }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     if (withUV) geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));      // textured decor (stains, graffiti) keeps its mapping
+    if (col) geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.userData.noShadow; m.receiveShadow = true; scene.add(m); cullAdd(m);
   }
   decorQ.clear();
@@ -12748,7 +12765,7 @@ for (const host of [$('levels'), $('levels-panel')]) for (const l of LEVELS) {
 // big levels: jump straight to a district
 function goTo(d) {
   respawn(); S.pos.copy(d.pos); S.pos.y = groundAt(d.pos.x, d.pos.z, d.pos.y + 0.5).h; S.yaw = d.yaw;
-  cam.yaw = S.yaw; cam.pivot.copy(S.pos); spotMarker.visible = false;
+  cam.yaw = S.yaw; cam.pivot.copy(S.pos); spotMarker.visible = false; cullTick(true);
 }
 if (LV.districts) { const host = $('districts'); host.hidden = false;
   for (const d of LV.districts) { const b = document.createElement('button'); b.type = 'button'; b.textContent = d.name; b.addEventListener('click', () => { goTo(d); togglePanel(); }); host.appendChild(b); } }
@@ -13112,6 +13129,7 @@ const tapes = TAPES.map(([x, z, y0], i) => {
 const tapeCount = () => Object.keys(prog.tapes).length;
 function chalTick(dt, time) {
   for (const t of tapes) if (t && t.g.parent) {
+    t.g.visible = (S.pos.x - t.g.position.x) ** 2 + (S.pos.z - t.g.position.z) ** 2 < 140 * 140; if (!t.g.visible) continue;
     t.g.rotation.y = time * 2.2; t.g.position.y += Math.sin(time * 3 + t.i) * 0.002;
     if (t.g.position.distanceTo(S.pos.clone().add(V(0, 0.7, 0))) < 1.2) { scene.remove(t.g); prog.tapes[t.i] = true; saveProg(); banner('Tape found', `${tapeCount()} of ${TAPES.length}`); sfx.tape(); }
   }
@@ -13123,7 +13141,8 @@ function chalTick(dt, time) {
   // a beam fades out once its goal is up on screen (you're there), and none show in a replay
   for (const c of CHAL) {
     const base = prog.done[c.id] ? 0.1 : c.hard ? 0.38 : 0.3, want = near.includes(c) ? 0 : base;
-    c.mat.opacity = RP.active ? 0 : damp(c.mat.opacity, want, 8, dt); c.mesh.visible = c.mat.opacity > 0.005;
+    c.mat.opacity = RP.active ? 0 : damp(c.mat.opacity, want, 8, dt);
+    c.mesh.visible = c.mat.opacity > 0.005 && (S.pos.x - c.at[0]) ** 2 + (S.pos.z - c.at[2]) ** 2 < 300 * 300;     // past that the fog has them anyway
   }
   const el = $('chal-prompt'), sp = !near.length && SPOTS.find(s => inBox(s.area, S.pos, false));
   const mark = c => prog.done[c.id] ? '✓' : c.hard ? '★★' : '★';
@@ -13291,6 +13310,36 @@ const NPC_TRICKS = [['Ollie', 0, 0], ['Kickflip', 1, 0], ['Heelflip', -1, 0], ['
 const NPC_GRINDS = ['C', 'C', 'D', 'U', 'L', 'UL', 'D>L', 'R>U', 'L>U'];
 const NPCS = [];
 let BAKED_MAT = null;              // one vertex-coloured material for every baked figure (see bakeRider)
+// people further off are a few coloured blocks (about 100 triangles), and the full figure is only built
+// the first time someone comes near, a couple a frame, so a big map doesn't spend seconds baking a crowd at load
+const PERSON_NEAR2 = 38 * 38;
+let personBuilds = 0;              // full figures still allowed this frame
+function standIn(st, board) {
+  BAKED_MAT ||= new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
+  const C = c => new THREE.Color(c), box = (w, h, d, x, y, z, c) => ({ g: new THREE.BoxGeometry(w, h, d), m: new THREE.Matrix4().makeTranslation(x, y, z), color: C(c) });
+  const by = board ? 0.1 : 0, parts = [
+    box(0.13, 0.82, 0.16, -0.09, by + 0.47, 0, st.pants), box(0.13, 0.82, 0.16, 0.09, by + 0.47, 0, st.pants),
+    box(0.15, 0.08, 0.27, -0.09, by + 0.04, -0.04, st.shoes), box(0.15, 0.08, 0.27, 0.09, by + 0.04, -0.04, st.shoes),
+    box(0.4, 0.6, 0.22, 0, by + 1.17, 0, st.shirt), box(0.1, 0.55, 0.12, -0.26, by + 1.12, 0, st.shirt), box(0.1, 0.55, 0.12, 0.26, by + 1.12, 0, st.shirt),
+    box(0.19, 0.22, 0.2, 0, by + 1.6, 0, st.skin), box(0.21, 0.07, 0.22, 0, by + 1.73, 0.01, st.capStyle === 'none' ? st.hair : st.cap)];
+  if (board) parts.push(box(0.21, 0.03, 0.8, 0, 0.08, 0, st.deck), box(0.18, 0.05, 0.6, 0, 0.035, 0, 0x8a8f94));
+  for (const p of parts) p.g = p.g.toNonIndexed();
+  const m = new THREE.Mesh(mergeParts(parts), BAKED_MAT); m.castShadow = false; m.visible = false; scene.add(m); return m;
+}
+// show someone at distance d2 from the camera: the full figure (built on demand) near, the blocks further out, nothing past far
+function personLod(o, d2, far2, build, yaw) {
+  if (d2 > far2) {
+    if (o.R && d2 > 200 * 200) { o.R.skater.traverse(m => { if (!m.isMesh) return; if (m.material === BAKED_MAT) m.geometry.dispose(); else if (m.material.map && ![...GRIP_TEX.values()].includes(m.material.map)) m.material.map.dispose(); }); scene.remove(o.R.skater); o.R = null; }   // well gone: free the figure
+    else if (o.R) o.R.skater.visible = false;
+    o.lo.visible = false; return false;
+  }
+  if (d2 < PERSON_NEAR2 && !o.R && personBuilds > 0) { personBuilds--; o.R = build(); scene.add(o.R.skater); }
+  const full = d2 < PERSON_NEAR2 && !!o.R;
+  if (o.R) o.R.skater.visible = full;
+  o.lo.visible = !full;
+  if (!full) { o.lo.position.set(o.x, o.y, o.z); o.lo.rotation.set(0, yaw, 0); }
+  return full;
+}
 // round off a corner: replace it with a short curve from r before it to r after
 function filletPath(pts, r, closed) {
   const out = [];
@@ -13321,11 +13370,11 @@ function npcPath(def) {
 }
 function makeNpc(def, i) {
   let seed = 1234 + i * 977; const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-  const R = bakeRider(buildRider(randomStyle(rnd), 0), true); scene.add(R.skater);
-  const n = { def, R, rnd, x: 0, y: 0, z: 0, dir: V(0, 0, -1), up: UP.clone(), s: rnd() * 50, v: def.speed || 5, trick: null, manualT: 0, nextTrick: 1 + rnd() * 3, bailT: 0, grind: 'C',
+  const st = randomStyle(rnd);
+  const n = { def, R: null, st, lo: standIn(st, true), rnd, x: 0, y: 0, z: 0, dir: V(0, 0, -1), up: UP.clone(), s: rnd() * 50, v: def.speed || 5, trick: null, manualT: 0, nextTrick: 1 + rnd() * 3, bailT: 0, grind: 'C',
     pose: { gYaw: 0, gPitch: 0, gPivot: 0, gDrop: 0, crouch: 0.2, grind: 0 }, vel: V() };
   if (def.kind !== 'carve') {
-    n.path = npcPath(def); if (!n.path) return null;
+    n.path = npcPath(def); if (!n.path) { scene.remove(n.lo); return null; }
     n.cum = [0]; for (let k = 0; k < n.path.length; k++) { const a = n.path[k], b = n.path[(k + 1) % n.path.length]; n.cum.push(n.cum[k] + Math.hypot(b.x - a.x, b.z - a.z)); }
     n.L = n.cum[n.cum.length - 1]; n.seg = 0; n.s %= n.L;
   } else { n.th = rnd() * Math.PI * 2; n.s = 0; }
@@ -13434,10 +13483,10 @@ function poseNpc(n, dt, time) {
 const SIM_D2 = LV.simDist ? LV.simDist ** 2 : Infinity;
 function npcTick(dt, time) {
   for (const n of NPCS) {
-    if (camera.position.distanceToSquared(V(n.x, n.y, n.z)) > SIM_D2) { n.R.skater.visible = false; continue; }
+    if (camera.position.distanceToSquared(V(n.x, n.y, n.z)) > SIM_D2) { personLod(n, Infinity, 0); continue; }
     npcStep(n, dt);
-    const far = camera.position.distanceToSquared(V(n.x, n.y, n.z)) > 110 * 110;
-    n.R.skater.visible = !far; if (!far) poseNpc(n, dt, time);
+    const d2 = camera.position.distanceToSquared(V(n.x, n.y, n.z));
+    if (personLod(n, d2, 110 * 110, () => bakeRider(buildRider(n.st, 0), true), Math.atan2(-n.dir.x, -n.dir.z))) poseNpc(n, dt, time);
     // running into one: fast, and you both slam; slow, and you just bump
     const dx = S.pos.x - n.x, dz = S.pos.z - n.z, d = Math.hypot(dx, dz);
     if (d < 0.7 && Math.abs(S.pos.y - n.y) < 1.1 && n.bailT <= 0 && !SHOP.active) {
@@ -13612,8 +13661,7 @@ function carHitsYou(c) {
 /* ---------- people on foot ---------- */
 function makePed(P, s, dir, rnd) {
   const st = randomStyle(rnd); if (rnd() < 0.55) st.capStyle = 'none';
-  const R = bakeRider(buildRider(st, 0), false); scene.add(R.skater);
-  const p = { R, P, s, dir, speed: 1.05 + rnd() * 0.55, cv: 0, keep: 0.45 + rnd() * 0.3, off: 0, dodge: 0, dodgeT: 0, x: 0, y: 0, z: 0, yaw: 0, ph: rnd() * 6, look: 0, lookT: rnd() * 4, bailT: 0, vel: V() };
+  const p = { R: null, st, lo: standIn(st, false), P, s, dir, speed: 1.05 + rnd() * 0.55, cv: 0, keep: 0.45 + rnd() * 0.3, off: 0, dodge: 0, dodgeT: 0, x: 0, y: 0, z: 0, yaw: 0, ph: rnd() * 6, look: 0, lookT: rnd() * 4, bailT: 0, vel: V() };
   pathAt(P, s); p.x = _pa.x; p.z = _pa.z; p.y = groundAt(p.x, p.z, 30).h; p.yaw = Math.atan2(-_pa.dx * dir, -_pa.dz * dir);
   return p;
 }
@@ -13690,10 +13738,10 @@ function posePed(p, dt) {
 function trafficTick(dt) {
   for (const c of CARS) { if (SIM_D2 < Infinity && camera.position.distanceToSquared(V(c.x, c.y, c.z)) > SIM_D2) { c.mesh.visible = false; continue; } carStep(c, dt); poseCar(c); carHitsYou(c); }
   for (const p of PEDS) {
-    if (camera.position.distanceToSquared(V(p.x, p.y, p.z)) > SIM_D2) { p.R.skater.visible = false; continue; }
+    if (camera.position.distanceToSquared(V(p.x, p.y, p.z)) > SIM_D2) { personLod(p, Infinity, 0); continue; }
     pedStep(p, dt);
-    const far = camera.position.distanceToSquared(V(p.x, p.y, p.z)) > 85 * 85;
-    p.R.skater.visible = !far; if (!far) posePed(p, dt);
+    const d2 = camera.position.distanceToSquared(V(p.x, p.y, p.z));
+    if (personLod(p, d2, 85 * 85, () => bakeRider(buildRider(p.st, 0), false), p.yaw)) posePed(p, dt);
     // skate into someone and you both go down; walk into them and you just bump
     const dx = S.pos.x - p.x, dz = S.pos.z - p.z, d = Math.hypot(dx, dz);
     if (d < 0.6 && Math.abs(S.pos.y - p.y) < 1.2 && p.bailT <= 0 && !SHOP.active) {
@@ -13715,7 +13763,7 @@ let frameErr = 0;
 let cullN = 0;
 function cullTick(force) {
   const R = LV.cullDist; if (!R || (!force && cullN++ % 8)) return;
-  const c = camera.position;
+  const c = force ? S.pos : camera.position;          // (forced on a teleport, before the camera has caught up)
   for (const m of CULL) { const b = m.geometry.boundingSphere; m.visible = Math.hypot(b.center.x - c.x, b.center.z - c.z) - b.radius < R; }
   for (const g of LANDMARKS) g.visible = Math.hypot(g.position.x - c.x, g.position.z - c.z) > g.userData.near;
 }
@@ -13736,6 +13784,7 @@ function frameBody(now) {
   acc += dt;
   while (acc >= DT) { if (!introVisible) step(DT); acc -= DT; simTime += DT; }
   updateVisuals(dt, simTime); if (S.bail <= 0 && !S.rail) keepBoardAboveGround(PLAYER);
+  personBuilds = 2;
   if (!introVisible) { npcTick(Math.min(dt, 0.05), simTime); trafficTick(Math.min(dt, 0.05)); }
   const co = window.__camOverride; // test hook: a fixed camera for screenshots
   if (co) { camera.position.set(...co.pos); camera.lookAt(...co.at); } else updateCamera(dt);
@@ -13747,7 +13796,7 @@ function frameBody(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-window.__toy = { THREE, scene, renderer, gripCanvas, graphicCanvas, deckThumb, buildShopRows, saveStyle, keepBoardAboveGround, CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
+window.__toy = { THREE, scene, renderer, CULL, gripCanvas, graphicCanvas, deckThumb, buildShopRows, saveStyle, keepBoardAboveGround, CARS, PEDS, trafficTick, NPCS, npcTick, SHOP, openShop, closeShop, PLAYER, applyStyle, randomStyle, buildRider, RP, startReplay, stopReplay, prog, CHAL, CH, goTo, LV, S, T, IN, EDGE_IN, FL, stats, cam, respawn, terrainH, step, camera, touch, ts, touchFlick, padFlick, flickFeed, flickRelease, pose, GS, GRINDS, LIMBS, setSpot, returnToSpot, toggleWalk, manualInput, updateCamera, updateVisuals, takeoffForTest: () => takeoff(), collideBoxes, groundAt, hubbaAt, gStick, grindKey, BOXES, RAILS, sfx, comboText: () => document.querySelector('#combo .name').textContent, get device() { return device; } };
 </script>
 <script>
   // Shown only if the 3D module fails to load (for example, offline without the CDN).

@@ -57,10 +57,10 @@ function arroyo_index_lines(P, PL) {
 function arroyo_index_life(P, PL) {
   const E = [[-638, -16], [-470, -16], [-470, 862], [-638, 862]], W = [[-880, 214], [-800, 214], [-800, 862], [-880, 862]];
   for (const path of [E, W]) for (const dir of [1, -1]) P.traffic({ path, lane: 2.5, dir, n: 3, speed: 9, r: 8 });
-  P.peds({ path: [[-656, 220], [-656, 840]], n: 2 });
-  P.peds({ path: [[-440, 520], [-640, 520]], n: 1 });
-  P.peds({ path: [[-600, -130], [-540, -130], [-540, -80], [-600, -80]], n: 1 });
-  P.peds({ path: [[-795, 230], [-795, 500]], n: 1 });
+  P.peds({ path: [[-656, 220], [-656, 840]], n: 6 });
+  P.peds({ path: [[-440, 520], [-640, 520]], n: 3 });
+  P.peds({ path: [[-600, -130], [-540, -130], [-540, -80], [-600, -80]], n: 3 });
+  P.peds({ path: [[-795, 230], [-795, 500]], n: 3 });
   P.npc({ kind: 'session', rail: [-707, 108, -707, 140], start: 98, end: 150, back: 3.4, side: 1, speed: 5 });       // DIY slappy curb
   P.npc({ kind: 'session', rail: [-628, -48, -440, -48], start: -600, end: -540, back: 3.4, side: 1, speed: 5 });    // Planter Run coping
   P.npc({ kind: 'session', rail: [-783, -120, -783, 40], start: -128, end: 48, back: 3.4, side: 1, speed: 5 });      // Freight Platform

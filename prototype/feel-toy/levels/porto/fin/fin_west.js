@@ -216,7 +216,7 @@ function fin_west_filler(K, P, PL) {
 }
 
 function fin_west_life(K, P, PL) {
-  P.peds({ path: [[-170, -53], [-400, -53]], n: 1 });
-  P.peds({ path: [[-170, -27], [-400, -27]], n: 1 });
+  P.peds({ path: [[-170, -53], [-400, -53]], n: 3 });
+  P.peds({ path: [[-170, -27], [-400, -27]], n: 3 });
   P.npc({ kind: 'session', rail: [-269, -50, -257, -50], start: -276, end: -252, back: 3.4, side: -1, speed: 5.2 });
 }
